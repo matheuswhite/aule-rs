@@ -5,6 +5,7 @@ edition = "2024"
 
 
 [dependencies]
+charming = { version = "0.6.0", features = ["ssr"] }
 gl = "0.14.0"
 glfw = "0.59.0"
 ndarray = "0.16.0"

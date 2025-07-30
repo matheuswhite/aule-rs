@@ -39,13 +39,20 @@ impl Iterator for Step {
             if self.sim_time >= max_time {
                 return None;
             }
-
-            self.sim_time += self.dt;
         }
 
-        Some(crate::block::Signal {
-            value: self.value,
-            dt: self.dt,
-        })
+        self.sim_time += self.dt;
+
+        if self.sim_time >= Duration::from_secs(1) {
+            Some(crate::block::Signal {
+                value: self.value,
+                dt: self.dt,
+            })
+        } else {
+            Some(crate::block::Signal {
+                value: 0.0,
+                dt: self.dt,
+            })
+        }
     }
 }
