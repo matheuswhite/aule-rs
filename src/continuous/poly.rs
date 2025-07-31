@@ -4,6 +4,7 @@ use std::{
     ops::{Add, Div, Mul, Neg, Sub},
 };
 
+#[derive(Debug, Clone, PartialEq)]
 pub struct Polynomial(crate::poly::Polynomial);
 
 impl Polynomial {

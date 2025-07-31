@@ -12,6 +12,7 @@ use crate::{discrete::integration::Discretizable, prelude::Euler};
 /// let tf = Tf::new(&[1.0, 2.0], &[1.0, 3.0, 4.0]);
 /// let discretized = tf.discretize();
 /// ```
+#[derive(Debug, Clone, PartialEq)]
 pub struct Tf {
     numerator: crate::continuous::poly::Polynomial,
     denominator: crate::continuous::poly::Polynomial,
