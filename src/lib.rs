@@ -1,6 +1,6 @@
 mod block;
 pub mod chart;
-mod continuous;
+pub mod continuous;
 mod discrete;
 mod gain;
 mod pid;
