@@ -5,7 +5,7 @@ mod discrete;
 mod gain;
 mod pid;
 mod plotter;
-mod poly;
+pub mod poly;
 mod printer;
 mod setpoint;
 mod step;
