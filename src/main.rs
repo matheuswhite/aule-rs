@@ -1,5 +1,4 @@
 use aule::{chart::Chart, prelude::*, writer::Writter};
-use std::{rc::Rc, time::Duration};
 
 struct Motor {
     kv: Gain,
