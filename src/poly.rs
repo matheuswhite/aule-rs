@@ -201,7 +201,8 @@ mod tests {
     #[test]
     fn test_simplify_zero() {
         let p = Polynomial::new(&[0.0]);
-        assert_eq!(p.coeff(), &[]);
+        let expected: &[f32] = &[];
+        assert_eq!(p.coeff(), expected);
     }
 
     #[test]
@@ -233,7 +234,8 @@ mod tests {
         let p1 = Polynomial::new(&[1.0, 2.0, 3.0]);
         let p2 = Polynomial::new(&[-1.0, -2.0, -3.0]);
         let result = p1 + p2;
-        assert_eq!(result.coeff(), &[]);
+        let expected: &[f32] = &[];
+        assert_eq!(result.coeff(), expected);
     }
 
     #[test]
@@ -265,7 +267,8 @@ mod tests {
         let p1 = Polynomial::new(&[1.0, 2.0, 3.0]);
         let p2 = Polynomial::new(&[1.0, 2.0, 3.0]);
         let result = p1 - p2;
-        assert_eq!(result.coeff(), &[]);
+        let expected: &[f32] = &[];
+        assert_eq!(result.coeff(), expected);
     }
 
     #[test]
@@ -297,6 +300,7 @@ mod tests {
         let p1 = Polynomial::empty();
         let p2 = Polynomial::new(&[1.0, 2.0]);
         let result = p1 * p2;
-        assert_eq!(result.coeff(), &[]);
+        let expected: &[f32] = &[];
+        assert_eq!(result.coeff(), expected);
     }
 }

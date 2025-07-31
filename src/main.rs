@@ -91,13 +91,14 @@ fn main() {
 }
 
 fn open_loop_rl_circuit() {
-    let dt = Duration::from_secs_f32(0.01);
+    let time = Time::from((0.01, 10.0));
     let mut rl_circuit = RlCircuit::new(5.0, 0.05);
-    let step = Step::new(dt).with_max_time(Duration::from_secs(10));
+    let mut step = Step::new();
     let mut writer = Writter::new("output/open_loop_rl_circuit.csv", "output");
     let mut chart = Chart::new("output/open_loop_rl_circuit.svg");
 
-    for input in step {
+    for dt in time {
+        let input = dt >> step.as_input();
         let _ = input * rl_circuit.as_block() >> writer.as_monitor() >> chart.as_monitor();
     }
 
@@ -105,14 +106,16 @@ fn open_loop_rl_circuit() {
 }
 
 fn closed_loop_rl_circuit() {
-    let dt = Duration::from_secs_f32(0.01);
+    let time = Time::from((0.01, 10.0));
+
     let mut pid = PID::new(1.0, 0.0, 0.00);
     let mut rl_circuit = RlCircuit::new(5.0, 0.05);
-    let step = Step::new(dt).with_max_time(Duration::from_secs(10));
+    let mut step = Step::new();
     let mut writer = Writter::new("output/closed_loop_rl_circuit.csv", "output");
     let mut chart = Chart::new("output/closed_loop_rl_circuit.svg");
 
-    for input in step {
+    for dt in time {
+        let input = dt >> step.as_input();
         let _ = (input - rl_circuit.last_output()) * pid.as_block() * rl_circuit.as_block()
             >> writer.as_monitor()
             >> chart.as_monitor();
@@ -122,14 +125,16 @@ fn closed_loop_rl_circuit() {
 }
 
 fn test_third_order_system() {
-    let dt = Duration::from_secs_f32(0.01);
-    let step = Step::new(dt).with_max_time(Duration::from_secs(20));
+    let time = Time::from((0.01, 10.0));
+
+    let mut step = Step::new();
     let mut pid = PID::new(25.0, 0.0, 0.00);
     let mut plant = Tf::new(&[1.0], &[1.0, 6.0, 11.0, 6.0]).discretize();
     let mut writer = Writter::new("output/third_order_system.csv", "output");
     let mut chart = Chart::new("output/third_order_system.svg");
 
-    for input in step {
+    for dt in time {
+        let input = dt >> step.as_input();
         let _ = (input - plant.last_output()) * pid.as_block() * plant.as_block()
             >> writer.as_monitor()
             >> chart.as_monitor();

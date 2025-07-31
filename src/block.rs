@@ -10,6 +10,10 @@ pub trait Monitor {
     fn show(&mut self, inputs: Signal);
 }
 
+pub trait Input {
+    fn output(&mut self, dt: Duration) -> Signal;
+}
+
 pub trait AsBlock: Sized + Block + 'static {
     fn as_block(&mut self) -> &mut dyn Block {
         self
@@ -22,7 +26,11 @@ pub trait AsMonitor: Sized + Monitor + 'static {
     }
 }
 
-pub trait Input: Iterator<Item = Signal> {}
+pub trait AsInput: Sized + Input + 'static {
+    fn as_input(&mut self) -> &mut dyn Input {
+        self
+    }
+}
 
 #[derive(Debug, Clone, Copy, Default)]
 pub struct Signal {
@@ -110,5 +118,13 @@ impl Shr<&mut dyn Monitor> for Signal {
     fn shr(self, monitor: &mut dyn Monitor) -> Self::Output {
         monitor.show(self);
         self
+    }
+}
+
+impl Shr<&mut dyn Input> for Duration {
+    type Output = Signal;
+
+    fn shr(self, rhs: &mut dyn Input) -> Self::Output {
+        rhs.output(self)
     }
 }
