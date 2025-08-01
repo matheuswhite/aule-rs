@@ -4,6 +4,27 @@ use crate::{
     poly::Polynomial,
 };
 
+/// A simple Euler integrator for discrete systems.
+/// It uses polynomial coefficients to define the system dynamics.
+/// The input is a polynomial representing the system's inputs,
+/// and the output is a polynomial representing the system's outputs.
+/// The integrator computes the state derivatives and updates the system state accordingly.
+/// It is suitable for systems where the dynamics can be expressed as a polynomial relationship.
+/// This implementation assumes that the input and output polynomials have non-negative degrees.
+///
+/// # Example:
+/// ```
+/// use aule::prelude::*;
+/// use aule::poly::Polynomial;
+///
+/// let inputs = Polynomial::new(&[1.0]);
+/// let outputs = Polynomial::new(&[0.05, 5.0]);
+/// let mut euler = Euler::new(inputs, outputs)
+///     .with_initial_condition(&[0.0], &[0.0]);
+/// let input_signal = Signal { value: 1.0, dt: std::time::Duration::from_secs(1) };
+/// let output_signal = euler.output(input_signal);
+/// assert_eq!(output_signal.value, 20.0); // After one second, y should be 1.0
+/// ```
 pub struct Euler {
     x_dot: Vec<f32>,
     b: Polynomial,
@@ -13,6 +34,26 @@ pub struct Euler {
 }
 
 impl Euler {
+    /// Creates a new Euler integrator with the given input and output polynomials.
+    /// The input polynomial represents the system's inputs, and the output polynomial represents the system's outputs.
+    ///
+    /// # Panics
+    /// Panics if the input or output polynomials have negative degrees.
+    /// # Arguments
+    /// * `inputs` - A polynomial representing the system's inputs.
+    /// * `outputs` - A polynomial representing the system's outputs.
+    /// # Returns
+    /// A new instance of `Euler` integrator.
+    ///
+    /// # Example
+    /// ```
+    /// use aule::prelude::*;
+    /// use aule::poly::Polynomial;
+    ///
+    /// let inputs = Polynomial::new(&[1.0]);
+    /// let outputs = Polynomial::new(&[0.05, 5.0]);
+    /// let euler = Euler::new(inputs, outputs);
+    /// ```
     pub fn new(inputs: Polynomial, outputs: Polynomial) -> Euler {
         if inputs.degree() < 0 || outputs.degree() < 0 {
             panic!("Input and output polynomials must have non-negative degrees.");
@@ -27,6 +68,27 @@ impl Euler {
         }
     }
 
+    /// Sets the initial conditions for the integrator.
+    /// This method initializes the state derivatives for both inputs and outputs.
+    /// It allows the user to specify initial values for the input and output states.
+    ///
+    /// # Arguments
+    /// * `inputs` - A slice of f32 representing the initial conditions for the input states.
+    /// * `outputs` - A slice of f32 representing the initial conditions for the output states.
+    ///
+    /// # Returns
+    /// A `Euler` instance with the initial conditions set.
+    ///
+    /// # Example
+    /// ```
+    /// use aule::prelude::*;
+    /// use aule::poly::Polynomial;
+    ///
+    /// let inputs = Polynomial::new(&[1.0]);
+    /// let outputs = Polynomial::new(&[0.05, 5.0]);
+    /// let euler = Euler::new(inputs, outputs)
+    ///     .with_initial_condition(&[1.0], &[2.0]);
+    /// ```
     pub fn with_initial_condition(mut self, inputs: &[f32], outputs: &[f32]) -> Self {
         for i in 0..usize::min(self.x_dot.len(), inputs.len()) {
             self.x_dot[i] = inputs[i];
@@ -83,6 +145,28 @@ impl Euler {
 }
 
 impl Block for Euler {
+    /// Computes the output of the Euler integrator based on the input signal.
+    /// It updates the state derivatives and returns the last output signal.
+    ///
+    /// # Arguments
+    /// * `input` - A `Signal` representing the input to the integrator.
+    ///
+    /// # Returns
+    /// A `Signal` representing the output of the integrator.
+    ///
+    /// # Example
+    /// ```
+    /// use aule::prelude::*;
+    /// use aule::poly::Polynomial;
+    ///
+    /// let inputs = Polynomial::new(&[1.0]);
+    /// let outputs = Polynomial::new(&[0.05, 5.0]);
+    /// let mut euler = Euler::new(inputs, outputs)
+    ///     .with_initial_condition(&[0.0], &[0.0]);
+    /// let input_signal = Signal { value: 1.0, dt: std::time::Duration::from_secs(1) };
+    /// let output_signal = euler.output(input_signal);
+    /// assert_eq!(output_signal.value, 20.0);
+    /// ```
     fn output(&mut self, input: Signal) -> Signal {
         let dt = input.dt.as_secs_f32();
 
@@ -98,6 +182,27 @@ impl Block for Euler {
         last_output
     }
 
+    /// Returns the last output signal of the integrator.
+    /// This method is useful for retrieving the last computed output after processing an input signal.
+    ///
+    /// # Returns
+    /// An `Option<Signal>` containing the last output signal if available, or `None` if no output has been computed yet.
+    ///
+    /// # Example
+    /// ```
+    /// use aule::prelude::*;
+    /// use aule::poly::Polynomial;
+    ///
+    /// let inputs = Polynomial::new(&[1.0]);
+    /// let outputs = Polynomial::new(&[0.05, 5.0]);
+    /// let mut euler = Euler::new(inputs, outputs)
+    ///     .with_initial_condition(&[0.0], &[0.0]);
+    /// let input_signal = Signal { value: 1.0, dt: std::time::Duration::from_secs(1) };
+    /// let _ = euler.output(input_signal);
+    /// let last_output = euler.last_output();
+    /// assert!(last_output.is_some());
+    /// assert_eq!(last_output.unwrap().value, 20.0);
+    /// ```
     fn last_output(&self) -> Option<Signal> {
         self.last_output
     }
