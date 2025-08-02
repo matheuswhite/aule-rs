@@ -138,20 +138,3 @@ impl Div<s> for f32 {
         self / Polynomial::from(rhs)
     }
 }
-
-impl Div<f32> for s {
-    type Output = Tf;
-
-    /// Divides the continuous variable `s` by a `f32` value, returning a `Tf`.
-    ///
-    /// # Examples
-    /// ```
-    /// use aule::prelude::*;
-    ///
-    /// let result = s / 2.0;
-    /// assert_eq!(result, Tf::new(&[1.0, 0.0], &[2.0]));
-    /// ```
-    fn div(self, rhs: f32) -> Self::Output {
-        Polynomial::from(self) / rhs
-    }
-}

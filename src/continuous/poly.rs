@@ -230,6 +230,9 @@ impl Div for Polynomial {
 
     /// Divides one polynomial by another, returning a transfer function.
     ///
+    /// # Panics
+    /// Panics if the denominator polynomial is zero or has a degree less than the numerator polynomial
+    ///
     /// # Examples
     /// ```
     /// use aule::continuous::{Polynomial, Tf};
@@ -238,6 +241,17 @@ impl Div for Polynomial {
     /// let p2 = Polynomial::new(&[3.0, 4.0]);
     /// let tf = p1 / p2;
     /// assert_eq!(tf, Tf::new(&[1.0, 2.0], &[3.0, 4.0]));
+    /// ```
+    ///
+    /// ```
+    /// use aule::continuous::{Polynomial, Tf};
+    /// use std::panic::catch_unwind;
+    /// let p1 = Polynomial::new(&[1.0, 2.0]);
+    /// let p2 = Polynomial::new(&[0.0]);
+    /// let result = catch_unwind(|| {
+    ///     let _ = p1 / p2;
+    /// });
+    /// assert!(result.is_err());
     /// ```
     fn div(self, rhs: Self) -> Self::Output {
         Tf::new(self.coeff(), rhs.coeff())
@@ -407,5 +421,155 @@ impl Display for Polynomial {
             .join(" + ");
 
         write!(f, "{}", string)
+    }
+}
+
+#[cfg(test)]
+mod test_f32_impl {
+    use super::*;
+
+    #[test]
+    fn test_f32_add() {
+        let p1 = 5.0;
+        let p2 = Polynomial::new(&[1.0, 2.0]);
+        let result = p1 + p2;
+        assert_eq!(result.coeff(), &[1.0, 7.0]);
+        assert_eq!(result.degree(), 1);
+    }
+
+    #[test]
+    fn test_add_f32() {
+        let p1 = Polynomial::new(&[1.0, 2.0]);
+        let p2 = 5.0;
+        let result = p1 + p2;
+        assert_eq!(result.coeff(), &[1.0, 7.0]);
+        assert_eq!(result.degree(), 1);
+    }
+
+    #[test]
+    fn test_f32_sub() {
+        let p1 = 5.0;
+        let p2 = Polynomial::new(&[1.0, 2.0]);
+        let result = p1 - p2;
+        assert_eq!(result.coeff(), &[-1.0, 3.0]);
+        assert_eq!(result.degree(), 1);
+    }
+
+    #[test]
+    fn test_sub_f32() {
+        let p1 = Polynomial::new(&[1.0, 2.0]);
+        let p2 = 5.0;
+        let result = p1 - p2;
+        assert_eq!(result.coeff(), &[1.0, -3.0]);
+        assert_eq!(result.degree(), 1);
+    }
+
+    #[test]
+    fn test_f32_mul() {
+        let p1 = 2.0;
+        let p2 = Polynomial::new(&[1.0, 2.0]);
+        let result = p1 * p2;
+        assert_eq!(result.coeff(), &[2.0, 4.0]);
+        assert_eq!(result.degree(), 1);
+    }
+
+    #[test]
+    fn test_mul_f32() {
+        let p1 = Polynomial::new(&[1.0, 2.0]);
+        let p2 = 2.0;
+        let result = p1 * p2;
+        assert_eq!(result.coeff(), &[2.0, 4.0]);
+        assert_eq!(result.degree(), 1);
+    }
+
+    #[test]
+    fn test_f32_div() {
+        let p1 = 6.0;
+        let p2 = Polynomial::new(&[1.0, 2.0]);
+        let result = p1 / p2;
+        assert_eq!(result, Tf::new(&[6.0], &[1.0, 2.0]));
+    }
+
+    #[test]
+    #[should_panic(expected = "Denominator must have degree greater than or equal to numerator.")]
+    fn test_div_f32() {
+        let p1 = Polynomial::new(&[1.0, 2.0]);
+        let p2 = 6.0;
+        let _result = p1 / p2;
+    }
+}
+
+#[cfg(test)]
+mod test_s_impl {
+    use super::*;
+
+    #[test]
+    fn test_s_add() {
+        let p1 = s;
+        let p2 = Polynomial::new(&[1.0, 2.0]);
+        let result = p1 + p2;
+        assert_eq!(result.coeff(), &[2.0, 2.0]);
+        assert_eq!(result.degree(), 1);
+    }
+
+    #[test]
+    fn test_add_s() {
+        let p1 = Polynomial::new(&[1.0, 2.0]);
+        let p2 = s;
+        let result = p1 + p2;
+        assert_eq!(result.coeff(), &[2.0, 2.0]);
+        assert_eq!(result.degree(), 1);
+    }
+
+    #[test]
+    fn test_s_sub() {
+        let p1 = s;
+        let p2 = Polynomial::new(&[3.0, 2.0]);
+        let result = p1 - p2;
+        assert_eq!(result.coeff(), &[-2.0, -2.0]);
+        assert_eq!(result.degree(), 1);
+    }
+
+    #[test]
+    fn test_sub_s() {
+        let p1 = Polynomial::new(&[3.0, 2.0]);
+        let p2 = s;
+        let result = p1 - p2;
+        assert_eq!(result.coeff(), &[2.0, 2.0]);
+        assert_eq!(result.degree(), 1);
+    }
+
+    #[test]
+    fn test_s_mul() {
+        let p1 = s;
+        let p2 = Polynomial::new(&[1.0, 2.0]);
+        let result = p1 * p2;
+        assert_eq!(result.coeff(), &[1.0, 2.0, 0.0]);
+        assert_eq!(result.degree(), 2);
+    }
+
+    #[test]
+    fn test_mul_s() {
+        let p1 = Polynomial::new(&[1.0, 2.0]);
+        let p2 = s;
+        let result = p1 * p2;
+        assert_eq!(result.coeff(), &[1.0, 2.0, 0.0]);
+        assert_eq!(result.degree(), 2);
+    }
+
+    #[test]
+    fn test_s_div() {
+        let p1 = s;
+        let p2 = Polynomial::new(&[1.0, 2.0]);
+        let result = p1 / p2;
+        assert_eq!(result, Tf::new(&[1.0, 0.0], &[1.0, 2.0]));
+    }
+
+    #[test]
+    #[should_panic(expected = "Denominator must have degree greater than or equal to numerator.")]
+    fn test_div_s() {
+        let p1 = Polynomial::new(&[1.0, 2.0, 3.0]);
+        let p2 = s;
+        let _result = p1 / p2;
     }
 }

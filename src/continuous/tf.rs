@@ -37,7 +37,11 @@ impl Tf {
     /// let tf = Tf::new(&[1.0, 2.0], &[1.0, 3.0, 4.0]);
     /// ```
     pub fn new(numerator: &[f32], denominator: &[f32]) -> Self {
-        assert_ne!(denominator, &[0.0], "Denominator cannot be zero.");
+        assert!(!denominator.is_empty(), "Denominator cannot be empty.");
+        assert!(
+            denominator.len() >= numerator.len(),
+            "Denominator must have degree greater than or equal to numerator."
+        );
 
         Tf {
             numerator: crate::continuous::poly::Polynomial::new(numerator),
