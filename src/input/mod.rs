@@ -2,6 +2,7 @@ use std::{ops::Shr, time::Duration};
 
 use crate::signal::Signal;
 
+pub mod impulse;
 pub mod setpoint;
 pub mod step;
 

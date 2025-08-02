@@ -15,6 +15,7 @@ pub mod prelude {
     pub use crate::continuous::s_var::s;
     pub use crate::discrete::integration::euler::Euler;
     pub use crate::discrete::integration::{Discretizable, Integrator};
+    pub use crate::input::impulse::Impulse;
     pub use crate::input::setpoint::Setpoint;
     pub use crate::input::step::Step;
     pub use crate::input::{AsInput, Input};
