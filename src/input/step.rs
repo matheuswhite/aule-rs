@@ -1,4 +1,4 @@
-use crate::block::{AsInput, Input, Signal};
+use crate::input::{AsInput, Input, Signal};
 use std::time::Duration;
 
 /// A step input block that outputs a constant value after a specified duration.

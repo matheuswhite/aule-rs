@@ -1,4 +1,4 @@
-use crate::block::{AsInput, Input, Signal};
+use crate::input::{AsInput, Input, Signal};
 use core::time::Duration;
 
 /// A setpoint input block that outputs a constant value.
