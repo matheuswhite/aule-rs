@@ -3,7 +3,9 @@ use std::{ops::Shr, time::Duration};
 use crate::signal::Signal;
 
 pub mod impulse;
+pub mod ramp;
 pub mod setpoint;
+pub mod sinusoid;
 pub mod step;
 
 /// The `Input` trait defines the interface for input blocks in a block-based system.
