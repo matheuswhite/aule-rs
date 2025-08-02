@@ -1,7 +1,8 @@
 use crate::{
-    block::{AsBlock, Block, Signal},
+    block::{AsBlock, Block},
     discrete::integration::Integrator,
     poly::Polynomial,
+    signal::Signal,
 };
 
 /// A simple Euler integrator for discrete systems.

@@ -1,11 +1,12 @@
-use crate::block::{AsMonitor, Monitor, Signal};
+use crate::monitor::{AsMonitor, Monitor};
+use crate::signal::Signal;
 use core::str;
 use gl::types::{GLchar, GLfloat, GLint, GLsizei, GLsizeiptr};
 use glfw::{Action, Context, GlfwReceiver, Key};
 use std::{collections::HashMap, ffi::CString, os::raw::c_void, rc::Rc, sync::Mutex};
 
-const VERTEX_SHADER: &str = include_str!("../shaders/vertex.glsl");
-const FRAGMENT_SHADER: &str = include_str!("../shaders/fragment.glsl");
+const VERTEX_SHADER: &str = include_str!("../../shaders/vertex.glsl");
+const FRAGMENT_SHADER: &str = include_str!("../../shaders/fragment.glsl");
 
 struct WindowContext {
     window: glfw::PWindow,

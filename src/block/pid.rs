@@ -1,4 +1,5 @@
-use crate::block::{AsBlock, Block, Signal};
+use crate::block::{AsBlock, Block};
+use crate::signal::Signal;
 
 /// A PID controller block that implements proportional, integral, and derivative control.
 /// It takes a `Signal` input and produces a `Signal` output based on the PID algorithm.

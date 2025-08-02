@@ -1,4 +1,5 @@
-use crate::block::{AsMonitor, Monitor, Signal};
+use crate::monitor::{AsMonitor, Monitor};
+use crate::signal::Signal;
 
 pub struct Printer {
     title: String,

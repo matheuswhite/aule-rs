@@ -1,4 +1,5 @@
-use crate::block::{AsBlock, Block, Signal};
+use crate::block::{AsBlock, Block};
+use crate::signal::Signal;
 
 /// Gain block that multiplies the input signal by a constant value.
 /// This is useful for scaling the amplitude of a signal.

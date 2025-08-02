@@ -1,6 +1,7 @@
 use std::time::Duration;
 
-use crate::block::{AsMonitor, Monitor, Signal};
+use crate::monitor::{AsMonitor, Monitor};
+use crate::signal::Signal;
 use charming::ImageRenderer;
 use charming::{Chart as CharmingChart, component::Axis, element::AxisType, series::Line};
 

@@ -1,10 +1,10 @@
+use crate::monitor::{AsMonitor, Monitor};
+use crate::signal::Signal;
 use std::{
     fs::OpenOptions,
     io::{self, Write},
     time::Duration,
 };
-
-use crate::block::{AsMonitor, Monitor, Signal};
 
 pub struct Writter {
     filename: String,

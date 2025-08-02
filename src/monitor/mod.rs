@@ -1,0 +1,63 @@
+use crate::signal::Signal;
+
+#[cfg(feature = "graphics")]
+pub mod chart;
+#[cfg(feature = "graphics")]
+pub mod plotter;
+pub mod printer;
+pub mod writer;
+
+/// The `Monitor` trait defines the interface for monitoring signals in a block-based system.
+/// It provides a method to display or log the input signal.
+///
+/// # Examples
+/// ```
+/// use aule::prelude::*;
+/// use std::time::Duration;
+///
+/// struct MyMonitor;
+///
+/// impl Monitor for MyMonitor {
+///     fn show(&mut self, inputs: Signal) {
+///         // Display or log the input signal
+///         println!("Monitoring signal: value = {}, dt = {:?}", inputs.value, inputs.dt);
+///     }
+/// }
+///
+/// let mut monitor = MyMonitor;
+/// let input_signal = Signal { value: 1.0, dt: Duration::from_secs(1) };
+/// monitor.show(input_signal);
+/// ```
+pub trait Monitor {
+    fn show(&mut self, inputs: Signal);
+}
+
+/// The `AsMonitor` trait provides a way to treat any type that implements the `Monitor` trait as a dynamic monitor.
+/// It allows for dynamic dispatch of the `show` method.
+/// This is useful for scenarios where you want to work with monitors without knowing their concrete types at compile time.
+///
+/// # Examples
+/// ```
+/// use aule::prelude::*;
+/// use std::time::Duration;
+///
+/// struct MyMonitor;
+///
+/// impl Monitor for MyMonitor {
+///     fn show(&mut self, inputs: Signal) {
+///         println!("Monitoring signal: value = {}, dt = {:?}", inputs.value, inputs.dt);
+///     }
+/// }
+///
+/// impl AsMonitor for MyMonitor {}
+///
+/// let mut monitor = MyMonitor;
+/// let mut monitor: &mut dyn Monitor = monitor.as_monitor();
+/// let input_signal = Signal { value: 1.0, dt: Duration::from_secs(1) };
+/// monitor.show(input_signal);
+/// ```
+pub trait AsMonitor: Sized + Monitor + 'static {
+    fn as_monitor(&mut self) -> &mut dyn Monitor {
+        self
+    }
+}
