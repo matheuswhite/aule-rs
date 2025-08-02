@@ -1,9 +1,11 @@
 mod block;
+#[cfg(feature = "graphics")]
 pub mod chart;
 pub mod continuous;
 mod discrete;
 mod gain;
 mod pid;
+#[cfg(feature = "graphics")]
 mod plotter;
 pub mod poly;
 mod printer;
@@ -20,6 +22,7 @@ pub mod prelude {
     pub use crate::discrete::integration::{Discretizable, Integrator};
     pub use crate::gain::Gain;
     pub use crate::pid::PID;
+    #[cfg(feature = "graphics")]
     pub use crate::plotter::{Plotter, PlotterContext, keep_alive};
     pub use crate::printer::Printer;
     pub use crate::setpoint::Setpoint;

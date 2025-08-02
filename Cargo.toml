@@ -5,7 +5,19 @@ edition = "2024"
 
 
 [dependencies]
-charming = { version = "0.6.0", features = ["ssr"] }
-gl = "0.14.0"
-glfw = "0.59.0"
 ndarray = "0.16.0"
+
+charming = { version = "0.6.0", features = ["ssr"], optional = true }
+gl = { version = "0.14.0", optional = true }
+glfw = { version = "0.59.0", optional = true }
+
+[lib]
+name = "aule"
+
+[features]
+graphics = ["gl", "glfw", "charming"]
+
+[[bin]]
+name = "aule"
+path = "src/main.rs"
+required-features = ["graphics"]
