@@ -1,16 +1,15 @@
-use crate::{discrete::integration::Discretizable, prelude::Euler};
+use std::fmt::Debug;
+
+use crate::{continuous::ss::SS, poly::Polynomial, prelude::Integrator};
 
 /// Represents a transfer function in the continuous domain.
 /// It is defined by a numerator and denominator polynomial.
-/// This struct can be discretized into an Euler integrator.
 ///
 /// # Example
 /// ```
-/// use aule::continuous::tf::Tf;
-/// use crate::aule::prelude::Discretizable;
+/// use aule::prelude::*;
 ///
 /// let tf = Tf::new(&[1.0, 2.0], &[1.0, 3.0, 4.0]);
-/// let discretized = tf.discretize();
 /// ```
 #[derive(Debug, Clone, PartialEq)]
 pub struct Tf {
@@ -50,24 +49,56 @@ impl Tf {
     }
 }
 
-impl Discretizable<Euler> for Tf {
-    /// Converts the transfer function into an Euler integrator.
+impl<I> From<Tf> for SS<I>
+where
+    I: Integrator + Debug,
+{
+    /// Converts the transfer function into a state-space representation.
     ///
     /// # Returns
-    /// An `Euler` instance that represents the discretized version of the transfer function.
+    /// An `SS` instance that represents the state-space equivalent of the transfer function.
     ///
     /// # Example
     /// ```
-    /// use aule::continuous::tf::Tf;
-    /// use aule::prelude::Discretizable;
+    /// use aule::prelude::*;
     ///
     /// let tf = Tf::new(&[1.0, 2.0], &[1.0, 3.0, 4.0]);
-    /// let discretized = tf.discretize();
+    /// let ss: SS<Euler> = SS::from(tf);
     /// ```
-    fn discretize(self) -> Euler {
-        Euler::new(
-            self.numerator.inner().clone(),
-            self.denominator.inner().clone(),
-        )
+    fn from(tf: Tf) -> Self {
+        // Controllable Canonical Form
+
+        // safe because isn't empty
+        let n = tf.denominator.degree() as usize;
+        // safe because isn't empty
+        let m = tf.numerator.degree() as usize;
+
+        let a0 = tf.denominator.lead_coeff();
+        let a = tf
+            .denominator
+            .coeff()
+            .iter()
+            .map(|x| x / a0)
+            .collect::<Vec<_>>();
+
+        let mut b = tf
+            .numerator
+            .coeff()
+            .iter()
+            .map(|x| x / a0)
+            .collect::<Vec<_>>();
+        for _ in 0..n - m {
+            b.insert(0, 0.0);
+        }
+        let b0 = b[0];
+
+        let a_mat = Polynomial::new(&a).companion_matrix();
+
+        let mut b_mat = vec![0.0; n];
+        b_mat[n - 1] = 1.0;
+
+        let c_mat = b[1..].iter().rev().map(|c| *c).collect();
+
+        SS::new(a_mat, b_mat, c_mat, b0)
     }
 }

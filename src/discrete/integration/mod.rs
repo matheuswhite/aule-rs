@@ -1,65 +1,36 @@
-use crate::block::Block;
+use ndarray::Array2;
+use std::time::Duration;
 
 pub mod euler;
 pub mod runge_kutta;
 
-/// A trait for discretizing continuous-time systems into discrete-time systems.
-/// This trait provides a method to convert a continuous-time system into a discrete-time system
-/// using a specific discretization method.
+/// Trait to solve EDOs (Ordinary Differential Equations) integrating them.
+/// This trait defines the interface for integrators that can be used to solve EDOs.
+/// It provides a method to integrate the state of the system over a given time step.
 ///
-/// # Type Parameters
-/// `T`: The type of the discrete-time system that implements the `Integrator` trait.
-///
-/// # Implementations
-/// Implementations of this trait should provide the logic for converting the continuous-time system
-/// into a discrete-time system, typically by applying a specific integration method such as Euler's method
-/// or Runge-Kutta methods.
-///
-/// # Example
+/// # Example:
 /// ```
 /// use aule::prelude::*;
-/// use aule::poly::Polynomial;
-///
-/// struct MyContinuousSystem;
-///
-/// impl Discretizable<Euler> for MyContinuousSystem {
-///     fn discretize(self) -> Euler {
-///         // Logic to convert the continuous system into a discrete system using Euler's method
-///         Euler::new(Polynomial::new(&[1.0]), Polynomial::new(&[1.0, 0.0]))
-///     }
-/// }
-/// ```
-pub trait Discretizable<T> {
-    fn discretize(self) -> T
-    where
-        T: Integrator;
-}
-
-/// A trait for discrete-time integrators.
-/// This trait extends the `Block` trait, allowing discrete-time systems to be treated as blocks
-/// in a signal processing context.
-///
-/// # Implementations
-/// Implementations of this trait should provide the logic for processing input signals and producing output signals
-/// in a discrete-time manner.
-///
-/// # Example
-/// ```
-/// use aule::prelude::*;
+/// use ndarray::Array2;
+/// use std::time::Duration;
 ///
 /// struct MyIntegrator;
 ///
-/// impl Block for MyIntegrator {
-///     fn output(&mut self, input: Signal) -> Signal {
-///         // Logic to compute the output based on the input signal
-///         Signal { value: input.value * 2.0, dt: input.dt }
-///     }
-///
-///     fn last_output(&self) -> Option<Signal> {
-///         None
+/// impl Integrator for MyIntegrator {
+///     fn integrate<F>(old_value: Array2<f32>, dt: Duration, mut slop_estimation: F) -> Array2<f32>
+///     where
+///         F: FnMut(f32, Array2<f32>) -> Array2<f32> {
+///         // Implement the integration logic here
+///         let mut new_value = old_value.clone();
+///         for k in 0..old_value.len() {
+///             new_value[[k, 0]] += slop_estimation(1.0, old_value.clone())[[k, 0]] * dt.as_secs_f32();
+///         }
+///         new_value
 ///     }
 /// }
-///
-/// impl Integrator for MyIntegrator {}
 /// ```
-pub trait Integrator: Block {}
+pub trait Integrator {
+    fn integrate<F>(old_value: Array2<f32>, dt: Duration, slop_estimation: F) -> Array2<f32>
+    where
+        F: FnMut(f32, Array2<f32>) -> Array2<f32>;
+}

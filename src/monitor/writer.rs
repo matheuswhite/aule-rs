@@ -30,7 +30,7 @@ impl Writter {
             .write(true)
             .create(true)
             .open(&self.filename)?
-            .write_all(format!("t;{}\n", variable_name).as_bytes())
+            .write_all(format!("t,{}\n", variable_name).as_bytes())
     }
 
     fn append_line(&self, content: String) -> Result<(), io::Error> {
@@ -45,8 +45,7 @@ impl Monitor for Writter {
     fn show(&mut self, inputs: Signal) {
         self.sim_time += inputs.dt;
 
-        let line =
-            format!("{:.02};{:.02}\n", self.sim_time.as_secs_f32(), inputs.value).replace(".", ",");
+        let line = format!("{},{}\n", self.sim_time.as_secs_f32(), inputs.value);
         self.append_line(line).expect("Failed to write data line");
     }
 }

@@ -86,13 +86,9 @@ impl Input for Step {
     fn output(&mut self, dt: Duration) -> Signal {
         self.sim_time += dt;
 
-        if self.sim_time >= Duration::from_secs(1) {
-            Signal {
-                value: self.value,
-                dt,
-            }
-        } else {
-            Signal { value: 0.0, dt }
+        Signal {
+            value: self.value,
+            dt,
         }
     }
 }

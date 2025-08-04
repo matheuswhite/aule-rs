@@ -1,3 +1,5 @@
+use std::fmt::Debug;
+
 use aule::prelude::*;
 
 struct Motor {
@@ -5,8 +7,8 @@ struct Motor {
     km: Gain,
     tau_l: f32,
     last_output: Option<Signal>,
-    eletrical: Euler,
-    mechanical: Euler,
+    eletrical: SS<Euler>,
+    mechanical: SS<Euler>,
 }
 
 impl Motor {
@@ -16,8 +18,8 @@ impl Motor {
             km: Gain::new(km),
             tau_l,
             last_output: None,
-            eletrical: (1.0 / (la * s + ra)).discretize(),
-            mechanical: (1.0 / (jm * s + fm)).discretize(),
+            eletrical: (1.0 / (la * s + ra)).into(),
+            mechanical: (1.0 / (jm * s + fm)).into(),
         }
     }
 }
@@ -39,11 +41,14 @@ impl Block for Motor {
 
 impl AsBlock for Motor {}
 
+type I = RK4;
+const TIME_STEP: f32 = 0.001;
+
 pub struct RlCircuit {
     r: f32,
     l: f32,
     last_output: Option<Signal>,
-    integrator: Euler,
+    integrator: SS<I>,
 }
 
 impl RlCircuit {
@@ -52,7 +57,7 @@ impl RlCircuit {
             r,
             l,
             last_output: None,
-            integrator: (1.0 / (l * s + r)).discretize(),
+            integrator: (1.0 / (l * s + r)).into(),
         }
     }
 }
@@ -90,7 +95,7 @@ fn main() {
 }
 
 fn open_loop_rl_circuit() {
-    let time = Time::from((0.01, 10.0));
+    let time = Time::from((TIME_STEP, 0.2));
     let mut rl_circuit = RlCircuit::new(5.0, 0.05);
     let mut step = Step::new();
     let mut writer = Writter::new("output/open_loop_rl_circuit.csv", "output");
@@ -105,7 +110,7 @@ fn open_loop_rl_circuit() {
 }
 
 fn closed_loop_rl_circuit() {
-    let time = Time::from((0.01, 10.0));
+    let time = Time::from((TIME_STEP, 0.2));
 
     let mut pid = PID::new(1.0, 0.0, 0.00);
     let mut rl_circuit = RlCircuit::new(5.0, 0.05);
@@ -124,11 +129,11 @@ fn closed_loop_rl_circuit() {
 }
 
 fn test_third_order_system() {
-    let time = Time::from((0.01, 10.0));
+    let time = Time::from((TIME_STEP, 10.0));
 
     let mut step = Step::new();
     let mut pid = PID::new(25.0, 0.0, 0.00);
-    let mut plant = Tf::new(&[1.0], &[1.0, 6.0, 11.0, 6.0]).discretize();
+    let mut plant: SS<I> = Tf::new(&[1.0], &[1.0, 6.0, 11.0, 6.0]).into();
     let mut writer = Writter::new("output/third_order_system.csv", "output");
     let mut chart = Chart::new("output/third_order_system.svg");
 

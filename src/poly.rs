@@ -3,6 +3,8 @@ use std::{
     ops::{Add, Mul, Neg, Sub},
 };
 
+use ndarray::Array2;
+
 /// A polynomial represented by its coefficients.
 /// The coefficients are stored in a vector, where the index represents the power of x.
 /// For example, a polynomial `2*x^2 + 3*x + 4` would be represented as `[2.0, 3.0, 4.0]`.
@@ -215,6 +217,64 @@ impl Polynomial {
     /// ```
     pub fn lead_coeff(&self) -> f32 {
         self.coeff.get(0).copied().unwrap_or(0.0)
+    }
+
+    /// Returns the companion matrix of the polynomial.
+    /// The size of the matrix is determined by the degree of the polynomial.
+    /// The matrix is constructed such that the first row contains the coefficients of the polynomial,
+    /// and the subsequent rows are filled with zeros except for the last row, which contains the negated coefficients.
+    /// If the polynomial is less than one, it returns an empty matrix.
+    ///
+    /// # Returns
+    /// An `Array2<f32>` representing the companion matrix of the polynomial.
+    /// If the polynomial is less than one, it returns an empty matrix.
+    ///
+    /// # Example
+    /// ```
+    /// use aule::poly::Polynomial;
+    /// use ndarray::Array2;
+    ///
+    /// let p = Polynomial::new(&[1.0, 2.0, 3.0]);
+    /// let companion = p.companion_matrix();
+    /// assert_eq!(companion, Array2::from_shape_vec((2, 2), vec![
+    /// 0.0, 1.0,
+    /// -3.0, -2.0,
+    /// ]).unwrap());
+    /// let p2 = Polynomial::empty();
+    /// let companion2 = p2.companion_matrix();
+    /// assert_eq!(companion2, Array2::<f32>::default((0, 0)));
+    /// let p3 = Polynomial::new(&[1.0, 2.0, 3.0, 4.0]);
+    /// let companion3 = p3.companion_matrix();
+    /// assert_eq!(companion3, Array2::from_shape_vec((3, 3), vec![
+    /// 0.0, 1.0, 0.0,
+    /// 0.0, 0.0, 1.0,
+    /// -4.0, -3.0, -2.0,
+    /// ]).unwrap());
+    /// ```
+    pub fn companion_matrix(self) -> Array2<f32> {
+        if self.degree() < 1 {
+            return Array2::<f32>::default((0, 0));
+        }
+
+        let n = self.positive_degree();
+        let mut lines = vec![];
+
+        for i in 0..(n - 1) {
+            let one_col = i + 1;
+            let mut line = vec![0.0; n];
+            line[one_col] = 1.0;
+            lines.extend(line);
+        }
+
+        lines.extend(
+            self.coeff[1..]
+                .iter()
+                .rev()
+                .map(|&c| -c)
+                .collect::<Vec<_>>(),
+        );
+
+        Array2::from_shape_vec((n, n), lines).unwrap()
     }
 }
 
