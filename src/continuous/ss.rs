@@ -1,5 +1,6 @@
 use crate::{
     block::{AsBlock, Block},
+    discrete::integration::StateEstimation,
     prelude::Integrator,
     signal::Signal,
 };
@@ -43,6 +44,7 @@ where
     d: Array2<f32>,
     state: Array2<f32>,
     last_input: f32,
+    current_input: f32,
     last_output: Option<Signal>,
     _marker: PhantomData<I>,
 }
@@ -100,6 +102,7 @@ where
             state: Array2::zeros((an, 1)),
             last_output: None,
             last_input: 0.0,
+            current_input: 0.0,
             _marker: PhantomData,
         }
     }
@@ -147,6 +150,47 @@ where
     }
 }
 
+impl<I> StateEstimation for SS<I>
+where
+    I: Integrator + Debug,
+{
+    /// Estimates the new state of the system based on the current state and a time step.
+    ///
+    /// This method implements the state-space equation:
+    /// x' = A * x + B * u
+    /// where x is the state vector, u is the input, A is the state matrix, and B is the input matrix.
+    /// The input is interpolated between the last and current input based on the time step `dt`.
+    ///
+    /// # Arguments
+    /// * `dt` - The time step for which to estimate the state.
+    /// * `state` - The current state of the system.
+    ///
+    /// # Returns
+    /// An `Array2<f32>` representing the estimated state of the system.
+    ///
+    /// # Example
+    /// ```
+    /// use aule::prelude::*;
+    /// use ndarray::array;
+    /// use std::time::Duration;
+    ///
+    /// let a = array![[0.0, 1.0], [-2.0, -3.0]];
+    /// let b = vec![0.0, 1.0];
+    /// let c = vec![1.0, 0.0];
+    /// let d = 0.0;
+    /// let mut ss: SS<Euler> = SS::new(a, b, c, d)
+    ///     .with_initial_state(vec![0.0, 0.0], Some(0.0));
+    /// let state = array![[0.0], [0.0]];
+    /// let dt = 0.1;
+    /// let estimated_state = ss.estimate(dt, state);
+    /// ```
+    fn estimate(&self, dt: f32, state: Array2<f32>) -> Array2<f32> {
+        let input = (1.0 - dt) * self.last_input + dt * self.current_input;
+        let input_matrix = Array2::from_shape_vec((1, 1), vec![input]).unwrap();
+        self.a.dot(&state) + self.b.dot(&input_matrix)
+    }
+}
+
 impl<I> Block for SS<I>
 where
     I: Integrator + Debug,
@@ -176,11 +220,9 @@ where
     /// assert_eq!(output.value, 0.0);
     /// ```
     fn output(&mut self, input: Signal) -> Signal {
-        self.state = I::integrate(self.state.clone(), input.dt, |k, old_state| {
-            let input = (1.0 - k) * self.last_input + k * input.value;
-            let input_matrix = Array2::from_shape_vec((1, 1), vec![input]).unwrap();
-            self.a.dot(&old_state) + self.b.dot(&input_matrix)
-        });
+        self.current_input = input.value;
+        // TODO: Is this correct? Should I put the result into the self.state? Or should I need to do some shift?
+        self.state = I::integrate(self.state.clone(), input.dt, self);
 
         let input_matrix = Array2::from_shape_vec((1, 1), vec![input.value]).unwrap();
         let output = self.c.dot(&self.state) + self.d.dot(&input_matrix);

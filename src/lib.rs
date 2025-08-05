@@ -15,6 +15,7 @@ pub mod prelude {
     pub use crate::continuous::s_var::s;
     pub use crate::continuous::ss::SS;
     pub use crate::discrete::integration::Integrator;
+    pub use crate::discrete::integration::StateEstimation;
     pub use crate::discrete::integration::euler::Euler;
     pub use crate::discrete::integration::runge_kutta::RK4;
     pub use crate::input::impulse::Impulse;

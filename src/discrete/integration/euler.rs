@@ -1,4 +1,4 @@
-use crate::prelude::Integrator;
+use crate::{discrete::integration::StateEstimation, prelude::Integrator};
 use ndarray::Array2;
 use std::time::Duration;
 
@@ -19,9 +19,14 @@ use std::time::Duration;
 ///
 /// let old_value = Array2::from_shape_vec((3, 1), vec![1.0, 2.0, 3.0]).unwrap();
 /// let dt = Duration::from_secs(1);
-/// let mut slop_estimation = |_, x: Array2<f32>| x * 0.1; // Example estimation function
-/// let new_value = Euler::integrate(old_value, dt, slop_estimation);
-/// assert_eq!(new_value, Array2::from_shape_vec((3, 1), vec![1.1, 2.2, 3.3]).unwrap());
+/// let state_estimation: SS<Euler> = SS::new(
+///     Array2::from_shape_vec((3, 3), vec![0.0, 1.0, 0.0, 0.0, 0.0, 1.0, -2.0, -3.0, 0.0]).unwrap(),
+///     vec![0.0, 0.0, 1.0],
+///     vec![1.0, 0.0, 0.0],
+///     0.0,
+/// );
+/// let new_value = Euler::integrate(old_value, dt, &state_estimation);
+/// assert_eq!(new_value, Array2::from_shape_vec((3, 1), vec![3.0, 5.0, -5.0]).unwrap());
 /// ```
 #[derive(Debug, Clone, Copy)]
 pub struct Euler;
@@ -47,16 +52,22 @@ impl Integrator for Euler {
     ///
     /// let old_value = Array2::from_shape_vec((3, 1), vec![1.0, 2.0, 3.0]).unwrap();
     /// let dt = Duration::from_secs(1);
-    /// let mut slop_estimation = |_, x: Array2<f32>| x * 0.1; // Example estimation function
-    /// let new_value = Euler::integrate(old_value, dt, slop_estimation);
-    /// assert_eq!(new_value, Array2::from_shape_vec((3, 1), vec![1.1, 2.2, 3.3]).unwrap());
+    /// let state_estimation: SS<Euler> = SS::new(
+    ///     Array2::from_shape_vec((3, 3), vec![0.0, 1.0, 0.0, 0.0, 0.0, 1.0, -2.0, -3.0, 0.0]).unwrap(),
+    ///     vec![0.0, 0.0, 1.0],
+    ///     vec![1.0, 0.0, 0.0],
+    ///     0.0,
+    /// );
+    /// let new_value = Euler::integrate(old_value, dt, &state_estimation);
+    /// assert_eq!(new_value, Array2::from_shape_vec((3, 1), vec![3.0, 5.0, -5.0]).unwrap());
     /// ```
-    fn integrate<F>(old_value: Array2<f32>, dt: Duration, mut slop_estimation: F) -> Array2<f32>
-    where
-        F: FnMut(f32, Array2<f32>) -> Array2<f32>,
-    {
+    fn integrate(
+        old_value: Array2<f32>,
+        dt: Duration,
+        state_estimation: &impl StateEstimation,
+    ) -> Array2<f32> {
         let dt_seconds = dt.as_secs_f32();
-        let estimation = slop_estimation(1.0, old_value.clone());
+        let estimation = state_estimation.estimate(1.0, old_value.clone());
         old_value + estimation * dt_seconds
     }
 }
