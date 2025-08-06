@@ -112,7 +112,7 @@ impl Plotter {
 }
 
 impl Monitor for Plotter {
-    fn show(&mut self, _input: Signal) {
+    fn show(&mut self, _input: Vec<Signal>) {
         unsafe {
             gl::ClearColor(0.2, 0.3, 0.3, 1.0);
             gl::Clear(gl::COLOR_BUFFER_BIT);

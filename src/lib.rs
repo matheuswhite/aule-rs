@@ -24,9 +24,7 @@ pub mod prelude {
     pub use crate::input::sinusoid::Sinusoid;
     pub use crate::input::step::Step;
     pub use crate::input::{AsInput, Input};
-    #[cfg(feature = "graphics")]
     pub use crate::monitor::chart::Chart;
-    #[cfg(feature = "graphics")]
     pub use crate::monitor::plotter::{Plotter, PlotterContext, keep_alive};
     pub use crate::monitor::printer::Printer;
     pub use crate::monitor::writer::Writter;

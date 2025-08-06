@@ -3,21 +3,27 @@ use crate::signal::Signal;
 
 pub struct Printer {
     title: String,
-    unit: String,
+    units: Vec<String>,
 }
 
 impl Printer {
-    pub fn new(title: &str, unit: &str) -> Self {
+    pub fn new<const N: usize>(title: &str, units: [&str; N]) -> Self {
         Printer {
             title: title.to_string(),
-            unit: unit.to_string(),
+            units: units.iter().map(|&s| s.to_string()).collect(),
         }
     }
 }
 
 impl Monitor for Printer {
-    fn show(&mut self, input: Signal) {
-        println!("[{}] {} {}", self.title, input.value, self.unit);
+    fn show(&mut self, inputs: Vec<Signal>) {
+        let values = inputs
+            .iter()
+            .zip(self.units.iter())
+            .map(|(input, unit)| format!("{} {}", input.value, unit))
+            .collect::<Vec<_>>()
+            .join(", ");
+        println!("[{}] {}", self.title, values);
     }
 }
 

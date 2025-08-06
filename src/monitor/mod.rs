@@ -1,8 +1,6 @@
 use crate::signal::Signal;
 
-#[cfg(feature = "graphics")]
 pub mod chart;
-#[cfg(feature = "graphics")]
 pub mod plotter;
 pub mod printer;
 pub mod writer;
@@ -18,18 +16,18 @@ pub mod writer;
 /// struct MyMonitor;
 ///
 /// impl Monitor for MyMonitor {
-///     fn show(&mut self, inputs: Signal) {
+///     fn show(&mut self, inputs: Vec<Signal>) {
 ///         // Display or log the input signal
-///         println!("Monitoring signal: value = {}, dt = {:?}", inputs.value, inputs.dt);
+///         println!("Monitoring signal: value = {}, dt = {:?}", inputs[0].value, inputs[0].dt);
 ///     }
 /// }
 ///
 /// let mut monitor = MyMonitor;
 /// let input_signal = Signal { value: 1.0, dt: Duration::from_secs(1) };
-/// monitor.show(input_signal);
+/// monitor.show(vec![input_signal]);
 /// ```
 pub trait Monitor {
-    fn show(&mut self, inputs: Signal);
+    fn show(&mut self, inputs: Vec<Signal>);
 }
 
 /// The `AsMonitor` trait provides a way to treat any type that implements the `Monitor` trait as a dynamic monitor.
@@ -44,8 +42,8 @@ pub trait Monitor {
 /// struct MyMonitor;
 ///
 /// impl Monitor for MyMonitor {
-///     fn show(&mut self, inputs: Signal) {
-///         println!("Monitoring signal: value = {}, dt = {:?}", inputs.value, inputs.dt);
+///     fn show(&mut self, inputs: Vec<Signal>) {
+///         println!("Monitoring signal: value = {}, dt = {:?}", inputs[0].value, inputs[0].dt);
 ///     }
 /// }
 ///
@@ -54,7 +52,7 @@ pub trait Monitor {
 /// let mut monitor = MyMonitor;
 /// let mut monitor: &mut dyn Monitor = monitor.as_monitor();
 /// let input_signal = Signal { value: 1.0, dt: Duration::from_secs(1) };
-/// monitor.show(input_signal);
+/// monitor.show(vec![input_signal]);
 /// ```
 pub trait AsMonitor: Sized + Monitor + 'static {
     fn as_monitor(&mut self) -> &mut dyn Monitor {

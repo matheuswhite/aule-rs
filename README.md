@@ -3,5 +3,5 @@
 ## Run
 
 ```sh
-cargo run --features="graphics"
+cargo run
 ```

@@ -1,6 +1,5 @@
-use std::fmt::Debug;
-
 use aule::prelude::*;
+use std::f32::consts::PI;
 
 struct Motor {
     kv: Gain,
@@ -89,6 +88,8 @@ fn main() {
     closed_loop_rl_circuit();
     println!("Running Third Order System Simulation...");
     test_third_order_system();
+    println!("Running DC Motor Simulation...");
+    test_dc_motor();
 
     println!("All simulations completed successfully!");
     println!("Check the 'output' directory for results.");
@@ -98,7 +99,7 @@ fn open_loop_rl_circuit() {
     let time = Time::from((TIME_STEP, 0.2));
     let mut rl_circuit = RlCircuit::new(5.0, 0.05);
     let mut step = Step::new();
-    let mut writer = Writter::new("output/open_loop_rl_circuit.csv", "output");
+    let mut writer = Writter::new("output/open_loop_rl_circuit.csv", ["output"]);
     let mut chart = Chart::new("output/open_loop_rl_circuit.svg");
 
     for dt in time {
@@ -115,7 +116,7 @@ fn closed_loop_rl_circuit() {
     let mut pid = PID::new(1.0, 0.0, 0.00);
     let mut rl_circuit = RlCircuit::new(5.0, 0.05);
     let mut step = Step::new();
-    let mut writer = Writter::new("output/closed_loop_rl_circuit.csv", "output");
+    let mut writer = Writter::new("output/closed_loop_rl_circuit.csv", ["output"]);
     let mut chart = Chart::new("output/closed_loop_rl_circuit.svg");
 
     for dt in time {
@@ -134,14 +135,37 @@ fn test_third_order_system() {
     let mut step = Step::new();
     let mut pid = PID::new(25.0, 0.0, 0.00);
     let mut plant: SS<I> = Tf::new(&[1.0], &[1.0, 6.0, 11.0, 6.0]).into();
-    let mut writer = Writter::new("output/third_order_system.csv", "output");
+    let mut writer = Writter::new("output/third_order_system.csv", ["output"]);
     let mut chart = Chart::new("output/third_order_system.svg");
 
     for dt in time {
         let input = dt >> step.as_input();
-        let _ = (input - plant.last_output()) * pid.as_block() * plant.as_block()
-            >> writer.as_monitor()
-            >> chart.as_monitor();
+        let output = (input - plant.last_output()) * pid.as_block() * plant.as_block()
+            >> writer.as_monitor();
+
+        let _ = (input, output) >> chart.as_monitor();
+    }
+
+    chart.plot();
+}
+
+fn test_dc_motor() {
+    let k = 1.0;
+    let a = 1.0;
+    let time = Time::from((TIME_STEP, 10.0));
+
+    let mut input = Sinusoid::new(1.0, 1.0 / (2.0 * PI), 0.0);
+    let mut pid = PID::new(10.0, 1.0, 0.1);
+    let mut plant: SS<RK4> = ((k * s) / (s * s + a * k * s)).into();
+    let mut writer = Writter::new("output/dc_motor.csv", ["output"]);
+    let mut chart = Chart::new("output/dc_motor.svg");
+
+    for dt in time {
+        let signal = dt >> input.as_input();
+        let output = (signal - plant.last_output()) * pid.as_block() * plant.as_block()
+            >> writer.as_monitor();
+
+        let _ = (signal, output) >> chart.as_monitor();
     }
 
     chart.plot();

@@ -122,6 +122,23 @@ impl Mul<f32> for s {
     }
 }
 
+impl Mul<s> for s {
+    type Output = Polynomial;
+
+    /// Multiplies the continuous variable `s` by itself, returning a `Polynomial`.
+    ///
+    /// # Examples
+    /// ```
+    /// use aule::prelude::*;
+    ///
+    /// let result = s * s;
+    /// assert_eq!(result.coeff(), &[1.0, 0.0, 0.0]);
+    /// ```
+    fn mul(self, rhs: s) -> Self::Output {
+        Polynomial::from(self) * Polynomial::from(rhs)
+    }
+}
+
 impl Div<s> for f32 {
     type Output = Tf;
 

@@ -15,6 +15,10 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+      - name: Install OpenGL dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y freeglut3-dev libglew-dev libglfw3-dev mesa-utils build-essential cmake
       - name: Build binaries for library
         run: cargo build --lib
   test-lib:
