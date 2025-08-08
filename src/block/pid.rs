@@ -1,4 +1,6 @@
 use crate::block::{AsBlock, Block};
+use crate::error::ErrorMetric;
+use crate::prelude::{GoodHart, IAE, ISE, ITAE};
 use crate::signal::Signal;
 
 /// A PID controller block that implements proportional, integral, and derivative control.
@@ -23,6 +25,10 @@ pub struct PID {
     last_input: f32,
     last_integral: f32,
     last_output: Option<Signal>,
+    iae: Option<IAE>,
+    ise: Option<ISE>,
+    itae: Option<ITAE>,
+    good_hart: Option<GoodHart>,
 }
 
 impl PID {
@@ -52,7 +58,49 @@ impl PID {
             last_input: 0.0,
             last_integral: 0.0,
             last_output: None,
+            iae: None,
+            ise: None,
+            itae: None,
+            good_hart: None,
         }
+    }
+
+    pub fn with_iae(mut self) -> Self {
+        self.iae = Some(IAE::new());
+        self
+    }
+
+    pub fn with_ise(mut self) -> Self {
+        self.ise = Some(ISE::new());
+        self
+    }
+
+    pub fn with_itae(mut self) -> Self {
+        self.itae = Some(ITAE::new());
+        self
+    }
+
+    pub fn with_good_hart(mut self, alpha1: f32, alpha2: f32, alpha3: f32) -> Self {
+        self.good_hart = Some(GoodHart::new(alpha1, alpha2, alpha3));
+        self
+    }
+
+    pub fn error_metrics(&self) -> String {
+        format!(
+            "\n  IAE: {}\n  ISE: {}\n  ITAE: {}\n  Good Hart: {}",
+            self.iae
+                .as_ref()
+                .map_or("N/A".to_string(), |e| e.value().to_string()),
+            self.ise
+                .as_ref()
+                .map_or("N/A".to_string(), |e| e.value().to_string()),
+            self.itae
+                .as_ref()
+                .map_or("N/A".to_string(), |e| e.value().to_string()),
+            self.good_hart
+                .as_ref()
+                .map_or("N/A".to_string(), |gh| gh.value().to_string())
+        )
     }
 }
 
@@ -94,6 +142,18 @@ impl Block for PID {
     /// The `last_input` will be used in the next computation to calculate the derivative term.
     /// The `last_integral` will be used in the next computation to calculate the integral term.
     fn output(&mut self, input: Signal) -> Signal {
+        if let Some(iae) = &mut self.iae {
+            iae.update([input]);
+        }
+
+        if let Some(ise) = &mut self.ise {
+            ise.update([input]);
+        }
+
+        if let Some(itae) = &mut self.itae {
+            itae.update([input]);
+        }
+
         let proportional = input.value;
         let integral = self.last_integral + input.value * input.dt.as_secs_f32();
         let derivative = (input.value - self.last_input) / input.dt.as_secs_f32();
@@ -107,6 +167,10 @@ impl Block for PID {
         self.last_output = Some(output);
         self.last_input = input.value;
         self.last_integral = integral;
+
+        if let Some(good_hart) = &mut self.good_hart {
+            good_hart.update([input, output]);
+        }
 
         output
     }

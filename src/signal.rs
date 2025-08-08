@@ -1,7 +1,7 @@
 use core::time::Duration;
 use std::ops::{Mul, Shr, Sub};
 
-use crate::{block::Block, monitor::Monitor};
+use crate::{block::Block, error::ErrorMetric, monitor::Monitor};
 
 /// The `Signal` struct represents a signal with a value and a time step.
 /// It is used to encapsulate the data that flows through blocks in a block-based system.
@@ -250,6 +250,46 @@ impl Shr<&mut dyn Monitor> for Signal {
     }
 }
 
+impl Shr<&mut dyn ErrorMetric<1>> for Signal {
+    type Output = Signal;
+
+    /// Updates the error metric with the signal and returns the signal.
+    /// This allows the error metric to accumulate or process the signal as needed.
+    ///
+    /// # Examples
+    /// ```
+    /// use aule::prelude::*;
+    /// use std::time::Duration;
+    ///
+    /// struct MyErrorMetric;
+    ///
+    /// impl ErrorMetric<1> for MyErrorMetric {
+    ///     fn update(&mut self, input: [Signal; 1]) -> [Signal; 1] {
+    ///         // Example implementation, could accumulate error
+    ///         println!("Updating error metric with value: {}", input[0].value);
+    ///         input
+    ///     }
+    ///
+    ///     fn value(&self) -> f32 {
+    ///         0.0 // Example implementation, could return accumulated error
+    ///     }
+    /// }
+    ///
+    /// impl AsErrorMetric<1> for MyErrorMetric {}
+    ///
+    /// let mut error_metric = MyErrorMetric;
+    /// let input_signal = Signal { value: 1.0, dt: Duration::from_secs(1) };
+    /// let output_signal = input_signal >> error_metric.as_error_metric();
+    /// assert_eq!(output_signal.value, 1.0);
+    /// assert_eq!(output_signal.dt, Duration::from_secs(1));
+    /// ```
+    fn shr(self, rhs: &mut dyn ErrorMetric<1>) -> Self::Output {
+        let input = [self];
+        let output = rhs.update(input);
+        output[0]
+    }
+}
+
 impl Shr<&mut dyn Monitor> for (Signal, Signal) {
     type Output = (Signal, Signal);
 
@@ -282,6 +322,50 @@ impl Shr<&mut dyn Monitor> for (Signal, Signal) {
     fn shr(self, monitor: &mut dyn Monitor) -> Self::Output {
         monitor.show(vec![self.0, self.1]);
         self
+    }
+}
+
+impl Shr<&mut dyn ErrorMetric<2>> for (Signal, Signal) {
+    type Output = (Signal, Signal);
+
+    /// Updates the error metric with a tuple of two signals and returns the tuple.
+    /// This allows the error metric to accumulate or process both signals as needed.
+    ///
+    /// # Examples
+    /// ```
+    /// use aule::prelude::*;
+    /// use std::time::Duration;
+    ///
+    /// struct MyErrorMetric;
+    ///
+    /// impl ErrorMetric<2> for MyErrorMetric {
+    ///     fn update(&mut self, input: [Signal; 2]) -> [Signal; 2] {
+    ///         // Example implementation, could accumulate error
+    ///         println!("Updating error metric with values: {}, {}", input[0].value, input[1].value);
+    ///         input
+    ///     }
+    ///
+    ///    fn value(&self) -> f32 {
+    ///        0.0 // Example implementation, could return accumulated error
+    ///   }
+    /// }
+    ///
+    /// impl AsErrorMetric<2> for MyErrorMetric {}
+    ///
+    /// let mut error_metric = MyErrorMetric;
+    ///
+    /// let input_signal1 = Signal { value: 1.0, dt: Duration::from_secs(1) };
+    /// let input_signal2 = Signal { value: 2.0, dt: Duration::from_secs(1) };
+    /// let output_signals = (input_signal1, input_signal2) >> error_metric.as_error_metric();
+    /// assert_eq!(output_signals.0.value, 1.0);
+    /// assert_eq!(output_signals.0.dt, Duration::from_secs(1));
+    /// assert_eq!(output_signals.1.value, 2.0);
+    /// assert_eq!(output_signals.1.dt, Duration::from_secs(1));
+    /// ```
+    fn shr(self, rhs: &mut dyn ErrorMetric<2>) -> Self::Output {
+        let input = [self.0, self.1];
+        let output = rhs.update(input);
+        (output[0], output[1])
     }
 }
 

@@ -1,6 +1,7 @@
 mod block;
 pub mod continuous;
 mod discrete;
+mod error;
 mod input;
 mod monitor;
 pub mod poly;
@@ -18,6 +19,11 @@ pub mod prelude {
     pub use crate::discrete::integration::StateEstimation;
     pub use crate::discrete::integration::euler::Euler;
     pub use crate::discrete::integration::runge_kutta::RK4;
+    pub use crate::error::good_hart::GoodHart;
+    pub use crate::error::iae::IAE;
+    pub use crate::error::ise::ISE;
+    pub use crate::error::itae::ITAE;
+    pub use crate::error::{AsErrorMetric, ErrorMetric};
     pub use crate::input::impulse::Impulse;
     pub use crate::input::ramp::Ramp;
     pub use crate::input::setpoint::Setpoint;
