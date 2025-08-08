@@ -154,7 +154,7 @@ fn test_dc_motor() {
 
     let k = 1.0;
     let a = 1.0;
-    let time = Time::from((TIME_STEP, 10.0));
+    let time = RTTime::from((TIME_STEP, 10.0));
 
     let mut input = Sinusoid::new(1.0, 1.0 / (2.0 * PI), 0.0);
     let mut pid = PID::new(10.0, 1.0, 0.1);
@@ -170,8 +170,6 @@ fn test_dc_motor() {
 
         let _ = (signal, output) >> chart.as_monitor();
         let _ = output >> plotter.as_monitor();
-
-        sleep(Duration::from_secs_f32(TIME_STEP));
     }
 
     chart.plot();

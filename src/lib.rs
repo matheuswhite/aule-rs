@@ -30,5 +30,5 @@ pub mod prelude {
     pub use crate::monitor::writer::Writter;
     pub use crate::monitor::{AsMonitor, Monitor};
     pub use crate::signal::Signal;
-    pub use crate::time::Time;
+    pub use crate::time::{RTTime, Time};
 }
