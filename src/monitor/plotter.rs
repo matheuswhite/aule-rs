@@ -68,7 +68,7 @@ impl PlotterContext {
 
         window.make_current();
 
-        process_events(window, events);
+        Self::process_events(window, events);
 
         draw_fn();
 
@@ -86,9 +86,23 @@ impl PlotterContext {
         }
 
         window.make_current();
-        process_events(window, events);
+        Self::process_events(window, events);
 
         self.glfw.poll_events();
+    }
+
+    fn process_events(window: &mut glfw::Window, events: &GlfwReceiver<(f64, glfw::WindowEvent)>) {
+        for (_, event) in glfw::flush_messages(events) {
+            match event {
+                glfw::WindowEvent::FramebufferSize(width, height) => unsafe {
+                    gl::Viewport(0, 0, width, height)
+                },
+                glfw::WindowEvent::Key(Key::Escape, _, Action::Press, _) => {
+                    window.set_should_close(true)
+                }
+                _ => {}
+            }
+        }
     }
 }
 
@@ -118,6 +132,15 @@ pub struct Plotter {
     sim_time: f32,
     max: (f32, f32),
     min: (f32, f32),
+}
+
+pub struct RTPlotter {
+    context: Rc<Mutex<PlotterContext>>,
+    lines: Lines,
+    id: u64,
+    sim_time: f32,
+    max: (f32, f32),
+    min: (f32, f32),
     last_update: Instant,
 }
 
@@ -133,8 +156,7 @@ impl Plotter {
             guard.new_window(title, 400, 300)
         };
 
-        Plotter {
-            last_update: Instant::now(),
+        Self {
             context: context.clone(),
             id,
             lines: Lines::new(),
@@ -144,7 +166,7 @@ impl Plotter {
         }
     }
 
-    pub fn add_point(&mut self, x: f32, y: f32) {
+    fn add_point(&mut self, x: f32, y: f32) {
         let x = (x - self.min.0) / (self.max.0 - self.min.0) * 2.0 - 1.0; // Normalize to [-1, 1]
         let y = (y - self.min.1) / (self.max.1 - self.min.1) * 2.0 - 1.0; // Normalize to [-1, 1]
         let vertices = self.lines.vertices();
@@ -169,7 +191,52 @@ impl Plotter {
     }
 }
 
+impl RTPlotter {
+    pub fn new(
+        title: &str,
+        x_limits: (f32, f32),
+        y_limits: (f32, f32),
+        context: &Rc<Mutex<PlotterContext>>,
+    ) -> Self {
+        let id = {
+            let mut guard = context.lock().unwrap();
+            guard.new_window(title, 400, 300)
+        };
+
+        Self {
+            last_update: Instant::now(),
+            context: context.clone(),
+            id,
+            lines: Lines::new(),
+            sim_time: 0.0,
+            max: (x_limits.1, y_limits.1),
+            min: (x_limits.0, y_limits.0),
+        }
+    }
+
+    fn add_point(&mut self, x: f32, y: f32) {
+        let x = (x - self.min.0) / (self.max.0 - self.min.0) * 2.0 - 1.0; // Normalize to [-1, 1]
+        let y = (y - self.min.1) / (self.max.1 - self.min.1) * 2.0 - 1.0; // Normalize to [-1, 1]
+        let vertices = self.lines.vertices();
+
+        let (last_x, last_y) = if vertices.len() >= 2 {
+            (vertices[vertices.len() - 2], vertices[vertices.len() - 1])
+        } else {
+            (x, y)
+        };
+
+        self.lines.add_line(last_x, last_y, x, y);
+    }
+}
+
 impl Monitor for Plotter {
+    fn show(&mut self, input: Vec<Signal>) {
+        self.sim_time += input[0].dt.as_secs_f32();
+        self.add_point(self.sim_time, input[0].value);
+    }
+}
+
+impl Monitor for RTPlotter {
     fn show(&mut self, input: Vec<Signal>) {
         self.sim_time += input[0].dt.as_secs_f32();
         self.add_point(self.sim_time, input[0].value);
@@ -191,16 +258,4 @@ impl Monitor for Plotter {
 
 impl AsMonitor for Plotter {}
 
-fn process_events(window: &mut glfw::Window, events: &GlfwReceiver<(f64, glfw::WindowEvent)>) {
-    for (_, event) in glfw::flush_messages(events) {
-        match event {
-            glfw::WindowEvent::FramebufferSize(width, height) => unsafe {
-                gl::Viewport(0, 0, width, height)
-            },
-            glfw::WindowEvent::Key(Key::Escape, _, Action::Press, _) => {
-                window.set_should_close(true)
-            }
-            _ => {}
-        }
-    }
-}
+impl AsMonitor for RTPlotter {}
