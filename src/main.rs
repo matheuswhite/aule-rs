@@ -1,5 +1,5 @@
 use aule::prelude::*;
-use std::f32::consts::PI;
+use std::{f32::consts::PI, thread::sleep, time::Duration};
 
 struct Motor {
     kv: Gain,
@@ -150,6 +150,8 @@ fn test_third_order_system() {
 }
 
 fn test_dc_motor() {
+    let plotter_ctx = PlotterContext::new();
+
     let k = 1.0;
     let a = 1.0;
     let time = Time::from((TIME_STEP, 10.0));
@@ -159,6 +161,7 @@ fn test_dc_motor() {
     let mut plant: SS<RK4> = ((k * s) / (s * s + a * k * s)).into();
     let mut writer = Writter::new("output/dc_motor.csv", ["output"]);
     let mut chart = Chart::new("output/dc_motor.svg");
+    let mut plotter = Plotter::new("DC Motor Output", (0.0, 10.0), (-1.0, 1.0), &plotter_ctx);
 
     for dt in time {
         let signal = dt >> input.as_input();
@@ -166,7 +169,15 @@ fn test_dc_motor() {
             >> writer.as_monitor();
 
         let _ = (signal, output) >> chart.as_monitor();
+        let _ = output >> plotter.as_monitor();
+
+        sleep(Duration::from_secs_f32(TIME_STEP));
     }
 
     chart.plot();
+    println!("Running plotter...");
+
+    // plotter.display();
+
+    keep_alive(plotter_ctx);
 }

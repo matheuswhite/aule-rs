@@ -1,6 +1,7 @@
 use crate::signal::Signal;
 
 pub mod chart;
+mod line;
 pub mod plotter;
 pub mod printer;
 pub mod writer;

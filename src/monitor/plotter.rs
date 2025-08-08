@@ -1,12 +1,11 @@
+use crate::monitor::line::Lines;
 use crate::monitor::{AsMonitor, Monitor};
 use crate::signal::Signal;
 use core::str;
-use gl::types::{GLchar, GLfloat, GLint, GLsizei, GLsizeiptr};
 use glfw::{Action, Context, GlfwReceiver, Key};
-use std::{collections::HashMap, ffi::CString, os::raw::c_void, rc::Rc, sync::Mutex};
-
-const VERTEX_SHADER: &str = include_str!("../../shaders/vertex.glsl");
-const FRAGMENT_SHADER: &str = include_str!("../../shaders/fragment.glsl");
+use std::thread::sleep;
+use std::time::{Duration, Instant};
+use std::{collections::HashMap, rc::Rc, sync::Mutex};
 
 struct WindowContext {
     window: glfw::PWindow,
@@ -55,7 +54,10 @@ impl PlotterContext {
         id
     }
 
-    pub fn run(&mut self, id: u64) {
+    pub fn run<F>(&mut self, id: u64, mut draw_fn: F)
+    where
+        F: FnMut(),
+    {
         let Some(WindowContext { window, events }) = self.windows.get_mut(&id) else {
             return;
         };
@@ -68,64 +70,122 @@ impl PlotterContext {
 
         process_events(window, events);
 
-        // TODO: rendering logic
-        // ---------------------------------------
+        draw_fn();
 
         window.swap_buffers();
+        self.glfw.poll_events();
+    }
+
+    pub fn run_without_draw(&mut self, id: u64) {
+        let Some(WindowContext { window, events }) = self.windows.get_mut(&id) else {
+            return;
+        };
+
+        if window.should_close() {
+            return;
+        }
+
+        window.make_current();
+        process_events(window, events);
+
         self.glfw.poll_events();
     }
 }
 
 pub fn keep_alive(plotter_context: Rc<Mutex<PlotterContext>>) {
-    let mut guard = plotter_context.lock().unwrap();
+    loop {
+        let mut guard = plotter_context.lock().unwrap();
+        if guard.windows.is_empty() {
+            break;
+        }
 
-    while !guard.windows.is_empty() {
         guard
             .windows
             .retain(|_, window_context| !window_context.window.should_close());
 
         for id in guard.windows.keys().cloned().collect::<Vec<_>>() {
-            guard.run(id);
+            guard.run_without_draw(id);
         }
+
+        sleep(Duration::from_millis(16)); // Roughly 60 FPS
     }
 }
 
 pub struct Plotter {
     context: Rc<Mutex<PlotterContext>>,
+    lines: Lines,
     id: u64,
-    program: (u32, u32),
+    sim_time: f32,
+    max: (f32, f32),
+    min: (f32, f32),
+    last_update: Instant,
 }
 
 impl Plotter {
-    pub fn new(title: &str, context: &Rc<Mutex<PlotterContext>>) -> Self {
+    pub fn new(
+        title: &str,
+        x_limits: (f32, f32),
+        y_limits: (f32, f32),
+        context: &Rc<Mutex<PlotterContext>>,
+    ) -> Self {
         let id = {
             let mut guard = context.lock().unwrap();
             guard.new_window(title, 400, 300)
         };
 
         Plotter {
+            last_update: Instant::now(),
             context: context.clone(),
             id,
-            program: create_shader_program(VERTEX_SHADER, FRAGMENT_SHADER),
+            lines: Lines::new(),
+            sim_time: 0.0,
+            max: (x_limits.1, y_limits.1),
+            min: (x_limits.0, y_limits.0),
         }
+    }
+
+    pub fn add_point(&mut self, x: f32, y: f32) {
+        let x = (x - self.min.0) / (self.max.0 - self.min.0) * 2.0 - 1.0; // Normalize to [-1, 1]
+        let y = (y - self.min.1) / (self.max.1 - self.min.1) * 2.0 - 1.0; // Normalize to [-1, 1]
+        let vertices = self.lines.vertices();
+
+        let (last_x, last_y) = if vertices.len() >= 2 {
+            (vertices[vertices.len() - 2], vertices[vertices.len() - 1])
+        } else {
+            (x, y)
+        };
+
+        self.lines.add_line(last_x, last_y, x, y);
+    }
+
+    pub fn display(&mut self) {
+        let mut guard = self.context.lock().unwrap();
+        guard.run(self.id, || unsafe {
+            gl::ClearColor(0.2, 0.3, 0.3, 1.0);
+            gl::Clear(gl::COLOR_BUFFER_BIT);
+
+            self.lines.draw([1.0, 0.0, 0.0]);
+        });
     }
 }
 
 impl Monitor for Plotter {
-    fn show(&mut self, _input: Vec<Signal>) {
-        unsafe {
+    fn show(&mut self, input: Vec<Signal>) {
+        self.sim_time += input[0].dt.as_secs_f32();
+        self.add_point(self.sim_time, input[0].value);
+
+        if Instant::now().duration_since(self.last_update) < Duration::from_millis(17) {
+            return;
+        }
+        self.last_update = Instant::now();
+
+        let mut guard = self.context.lock().unwrap();
+        guard.run(self.id, || unsafe {
             gl::ClearColor(0.2, 0.3, 0.3, 1.0);
             gl::Clear(gl::COLOR_BUFFER_BIT);
 
-            // draw our first triangle
-            gl::UseProgram(self.program.0);
-            gl::BindVertexArray(self.program.1);
-            gl::DrawArrays(gl::TRIANGLES, 0, 3);
-            // glBindVertexArray(0); // no need to unbind it every time
-        }
-
-        let mut guard = self.context.lock().unwrap();
-        guard.run(self.id);
+            self.lines.draw([1.0, 0.0, 0.0]);
+        });
     }
 }
 
@@ -142,121 +202,5 @@ fn process_events(window: &mut glfw::Window, events: &GlfwReceiver<(f64, glfw::W
             }
             _ => {}
         }
-    }
-}
-
-fn create_shader_program(vertex_shader_source: &str, fragment_shader_source: &str) -> (u32, u32) {
-    unsafe {
-        // build and compile our shader program
-        // ------------------------------------
-        // vertex shader
-        let vertex_shader = gl::CreateShader(gl::VERTEX_SHADER);
-        let c_str_vert = CString::new(vertex_shader_source.as_bytes()).unwrap();
-        gl::ShaderSource(vertex_shader, 1, &c_str_vert.as_ptr(), std::ptr::null());
-        gl::CompileShader(vertex_shader);
-
-        // check for shader compile errors
-        let mut success = gl::FALSE as GLint;
-        let mut info_log = Vec::with_capacity(512);
-        info_log.set_len(512 - 1); // subtract 1 to skip the trailing null character
-        gl::GetShaderiv(vertex_shader, gl::COMPILE_STATUS, &mut success);
-        if success != gl::TRUE as GLint {
-            gl::GetShaderInfoLog(
-                vertex_shader,
-                512,
-                std::ptr::null_mut(),
-                info_log.as_mut_ptr() as *mut GLchar,
-            );
-            println!(
-                "ERROR::SHADER::VERTEX::COMPILATION_FAILED\n{}",
-                str::from_utf8(&info_log).unwrap()
-            );
-        }
-
-        // fragment shader
-        let fragment_shader = gl::CreateShader(gl::FRAGMENT_SHADER);
-        let c_str_frag = CString::new(fragment_shader_source.as_bytes()).unwrap();
-        gl::ShaderSource(fragment_shader, 1, &c_str_frag.as_ptr(), std::ptr::null());
-        gl::CompileShader(fragment_shader);
-        // check for shader compile errors
-        gl::GetShaderiv(fragment_shader, gl::COMPILE_STATUS, &mut success);
-        if success != gl::TRUE as GLint {
-            gl::GetShaderInfoLog(
-                fragment_shader,
-                512,
-                std::ptr::null_mut(),
-                info_log.as_mut_ptr() as *mut GLchar,
-            );
-            println!(
-                "ERROR::SHADER::FRAGMENT::COMPILATION_FAILED\n{}",
-                str::from_utf8(&info_log).unwrap()
-            );
-        }
-
-        // link shaders
-        let shader_program = gl::CreateProgram();
-        gl::AttachShader(shader_program, vertex_shader);
-        gl::AttachShader(shader_program, fragment_shader);
-        gl::LinkProgram(shader_program);
-        // check for linking errors
-        gl::GetProgramiv(shader_program, gl::LINK_STATUS, &mut success);
-        if success != gl::TRUE as GLint {
-            gl::GetProgramInfoLog(
-                shader_program,
-                512,
-                std::ptr::null_mut(),
-                info_log.as_mut_ptr() as *mut GLchar,
-            );
-            println!(
-                "ERROR::SHADER::PROGRAM::COMPILATION_FAILED\n{}",
-                str::from_utf8(&info_log).unwrap()
-            );
-        }
-        gl::DeleteShader(vertex_shader);
-        gl::DeleteShader(fragment_shader);
-
-        // set up vertex data (and buffer(s)) and configure vertex attributes
-        // ------------------------------------------------------------------
-        // HINT: type annotation is crucial since default for float literals is f64
-        let vertices: [f32; 9] = [
-            -0.5, -0.5, 0.0, // left
-            0.5, -0.5, 0.0, // right
-            0.0, 0.5, 0.0, // top
-        ];
-        let (mut VBO, mut VAO) = (0, 0);
-        gl::GenVertexArrays(1, &mut VAO);
-        gl::GenBuffers(1, &mut VBO);
-        // bind the Vertex Array Object first, then bind and set vertex buffer(s), and then configure vertex attributes(s).
-        gl::BindVertexArray(VAO);
-
-        gl::BindBuffer(gl::ARRAY_BUFFER, VBO);
-        gl::BufferData(
-            gl::ARRAY_BUFFER,
-            (vertices.len() * std::mem::size_of::<GLfloat>()) as GLsizeiptr,
-            &vertices[0] as *const f32 as *const c_void,
-            gl::STATIC_DRAW,
-        );
-
-        gl::VertexAttribPointer(
-            0,
-            3,
-            gl::FLOAT,
-            gl::FALSE,
-            3 * std::mem::size_of::<GLfloat>() as GLsizei,
-            std::ptr::null(),
-        );
-        gl::EnableVertexAttribArray(0);
-
-        // note that this is allowed, the call to gl::VertexAttribPointer registered VBO as the vertex attribute's bound vertex buffer object so afterwards we can safely unbind
-        gl::BindBuffer(gl::ARRAY_BUFFER, 0);
-
-        // You can unbind the VAO afterwards so other VAO calls won't accidentally modify this VAO, but this rarely happens. Modifying other
-        // VAOs requires a call to glBindVertexArray anyways so we generally don't unbind VAOs (nor VBOs) when it's not directly necessary.
-        gl::BindVertexArray(0);
-
-        // uncomment this call to draw in wireframe polygons.
-        // gl::PolygonMode(gl::FRONT_AND_BACK, gl::LINE);
-
-        (shader_program, VAO)
     }
 }
