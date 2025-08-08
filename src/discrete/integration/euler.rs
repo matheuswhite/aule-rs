@@ -67,7 +67,7 @@ impl Integrator for Euler {
         state_estimation: &impl StateEstimation,
     ) -> Array2<f32> {
         let dt_seconds = dt.as_secs_f32();
-        let estimation = state_estimation.estimate(1.0, old_value.clone());
+        let estimation = state_estimation.estimate(old_value.clone());
         old_value + estimation * dt_seconds
     }
 }

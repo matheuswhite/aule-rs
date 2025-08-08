@@ -17,14 +17,14 @@ pub mod runge_kutta;
 /// struct MyStateEstimation;
 ///
 /// impl StateEstimation for MyStateEstimation {
-///     fn estimate(&self, dt: f32, state: Array2<f32>) -> Array2<f32> {
+///     fn estimate(&self, state: Array2<f32>) -> Array2<f32> {
 ///         // Implement the state estimation logic here
-///         state * dt // Example: simple scaling by dt
+///         state.mapv(|x| x * 1.1) // Example: scale the state by 10%
 ///     }
 /// }
 /// ```
 pub trait StateEstimation {
-    fn estimate(&self, dt: f32, state: Array2<f32>) -> Array2<f32>;
+    fn estimate(&self, state: Array2<f32>) -> Array2<f32>;
 }
 
 /// Trait to solve EDOs (Ordinary Differential Equations) integrating them.
@@ -44,7 +44,7 @@ pub trait StateEstimation {
 ///         // Implement the integration logic here
 ///         let mut new_value = old_value.clone();
 ///         for k in 0..old_value.len() {
-///             new_value[[k, 0]] += state_estimation.estimate(1.0, old_value.clone())[[k, 0]] * dt.as_secs_f32();
+///             new_value[[k, 0]] += state_estimation.estimate(old_value.clone())[[k, 0]] * dt.as_secs_f32();
 ///         }
 ///         new_value
 ///     }

@@ -182,11 +182,10 @@ where
     ///     .with_initial_state(vec![0.0, 0.0], Some(0.0));
     /// let state = array![[0.0], [0.0]];
     /// let dt = 0.1;
-    /// let estimated_state = ss.estimate(dt, state);
+    /// let estimated_state = ss.estimate(state);
     /// ```
-    fn estimate(&self, dt: f32, state: Array2<f32>) -> Array2<f32> {
-        let input = (1.0 - dt) * self.last_input + dt * self.current_input;
-        let input_matrix = Array2::from_shape_vec((1, 1), vec![input]).unwrap();
+    fn estimate(&self, state: Array2<f32>) -> Array2<f32> {
+        let input_matrix = Array2::from_shape_vec((1, 1), vec![self.current_input]).unwrap();
         self.a.dot(&state) + self.b.dot(&input_matrix)
     }
 }

@@ -11,10 +11,10 @@ use std::time::Duration;
 /// The RK4 method is defined as follows:
 /// x[k] = x[k-1] + (k1 + 2*k2 + 2*k3 + k4) * dt / 6
 /// where:
-/// k1 = f(k, x[k-1])
-/// k2 = f(k + dt / 2, x[k-1] + k1 * dt / 2)
-/// k3 = f(k + dt / 2, x[k-1] + k2 * dt / 2)
-/// k4 = f(k + dt, x[k-1] + k3 * dt)
+/// k1 = f(x[k-1])
+/// k2 = f(x[k-1] + k1 * dt / 2)
+/// k3 = f(x[k-1] + k2 * dt / 2)
+/// k4 = f(x[k-1] + k3 * dt)
 ///
 /// # Example:
 /// ```
@@ -72,12 +72,10 @@ impl Integrator for RK4 {
         state_estimation: &impl StateEstimation,
     ) -> Array2<f32> {
         let dt_seconds = dt.as_secs_f32();
-        let k1 = state_estimation.estimate(0.0, old_value.clone());
-        let k2 =
-            state_estimation.estimate(0.5, old_value.clone() + k1.clone() * (dt_seconds / 2.0));
-        let k3 =
-            state_estimation.estimate(0.5, old_value.clone() + k2.clone() * (dt_seconds / 2.0));
-        let k4 = state_estimation.estimate(1.0, old_value.clone() + k3.clone() * dt_seconds);
+        let k1 = state_estimation.estimate(old_value.clone());
+        let k2 = state_estimation.estimate(old_value.clone() + k1.clone() * (dt_seconds / 2.0));
+        let k3 = state_estimation.estimate(old_value.clone() + k2.clone() * (dt_seconds / 2.0));
+        let k4 = state_estimation.estimate(old_value.clone() + k3.clone() * dt_seconds);
 
         old_value + (k1 + 2.0 * k2 + 2.0 * k3 + k4) * (dt_seconds / 6.0)
     }
