@@ -11,6 +11,7 @@ use std::ops::{Add, Div, Mul, Sub};
 /// # Examples
 /// ```
 /// use aule::prelude::*;
+/// use aule::s;
 ///
 /// let poly = 2.0 + s; // Creates a polynomial with 's' variable
 /// assert_eq!(poly.coeff(), &[1.0, 2.0]);
@@ -28,6 +29,7 @@ impl Add<s> for f32 {
     /// # Examples
     /// ```
     /// use aule::prelude::*;
+    /// use aule::s;
     ///
     /// let result = 5.0 + s;
     /// assert_eq!(result.coeff(), &[1.0, 5.0]);
@@ -45,6 +47,7 @@ impl Add<f32> for s {
     /// # Examples
     /// ```
     /// use aule::prelude::*;
+    /// use aule::s;
     ///
     /// let result = s + 5.0;
     /// assert_eq!(result.coeff(), &[1.0, 5.0]);
@@ -62,6 +65,7 @@ impl Sub<s> for f32 {
     /// # Examples
     /// ```
     /// use aule::prelude::*;
+    /// use aule::s;
     ///
     /// let result = 5.0 - s;
     /// assert_eq!(result.coeff(), &[-1.0, 5.0]);
@@ -79,6 +83,7 @@ impl Sub<f32> for s {
     /// # Examples
     /// ```
     /// use aule::prelude::*;
+    /// use aule::s;
     ///
     /// let result = s - 5.0;
     /// assert_eq!(result.coeff(), &[1.0, -5.0]);
@@ -96,6 +101,7 @@ impl Mul<s> for f32 {
     /// # Examples
     /// ```
     /// use aule::prelude::*;
+    /// use aule::s;
     ///
     /// let result = 2.0 * s;
     /// assert_eq!(result.coeff(), &[2.0, 0.0]);
@@ -113,6 +119,7 @@ impl Mul<f32> for s {
     /// # Examples
     /// ```
     /// use aule::prelude::*;
+    /// use aule::s;
     ///
     /// let result = s * 2.0;
     /// assert_eq!(result.coeff(), &[2.0, 0.0]);
@@ -130,6 +137,7 @@ impl Mul<s> for s {
     /// # Examples
     /// ```
     /// use aule::prelude::*;
+    /// use aule::s;
     ///
     /// let result = s * s;
     /// assert_eq!(result.coeff(), &[1.0, 0.0, 0.0]);
@@ -147,6 +155,7 @@ impl Div<s> for f32 {
     /// # Examples
     /// ```
     /// use aule::prelude::*;
+    /// use aule::s;
     ///
     /// let result = 3.0 / s;
     /// assert_eq!(result, Tf::new(&[3.0], &[1.0, 0.0]));

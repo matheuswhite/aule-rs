@@ -8,12 +8,13 @@ pub mod poly;
 mod signal;
 mod time;
 
+pub use crate::continuous::s_var::s;
+
 pub mod prelude {
     pub use crate::block::gain::Gain;
     pub use crate::block::pid::PID;
     pub use crate::block::{AsBlock, Block};
     pub use crate::continuous::Tf;
-    pub use crate::continuous::s_var::s;
     pub use crate::continuous::ss::SS;
     pub use crate::discrete::integration::Integrator;
     pub use crate::discrete::integration::StateEstimation;

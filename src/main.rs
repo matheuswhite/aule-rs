@@ -1,4 +1,5 @@
 use aule::prelude::*;
+use aule::s;
 use std::{f32::consts::PI, rc::Rc, sync::Mutex};
 
 struct Motor {

@@ -370,6 +370,7 @@ impl From<s> for Polynomial {
     /// ```
     /// use aule::continuous::Polynomial;
     /// use aule::prelude::*;
+    /// use aule::s;
     ///
     /// let p = Polynomial::from(s);
     /// assert_eq!(p.coeff(), &[1.0, 0.0]);
