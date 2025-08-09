@@ -18,7 +18,7 @@ use crate::{block::Block, error::ErrorMetric, monitor::Monitor};
 /// assert_eq!(signal.value, 1.0);
 /// assert_eq!(signal.dt, Duration::from_secs(1));
 /// ```
-#[derive(Debug, Clone, Copy, Default)]
+#[derive(Debug, Clone, Copy, Default, PartialEq)]
 pub struct Signal {
     pub value: f32,
     pub dt: Duration,

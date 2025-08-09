@@ -18,6 +18,7 @@ use crate::signal::Signal;
 /// let output_signal = pid.output(input_signal);
 /// assert_eq!(output_signal.value, 1.11);
 /// ```
+#[derive(Debug, Clone, PartialEq)]
 pub struct PID {
     kp: f32,
     ki: f32,

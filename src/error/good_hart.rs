@@ -3,6 +3,7 @@ use crate::{
     signal::Signal,
 };
 
+#[derive(Debug, Clone, PartialEq)]
 pub struct GoodHart {
     error: Vec<f32>,
     control_signal: Vec<f32>,

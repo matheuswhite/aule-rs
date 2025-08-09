@@ -3,6 +3,7 @@ use crate::{
     signal::Signal,
 };
 
+#[derive(Debug, Clone, PartialEq)]
 pub struct ITAE {
     acc: f32,
     n: usize,
