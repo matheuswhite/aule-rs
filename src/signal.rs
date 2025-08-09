@@ -42,6 +42,40 @@ impl From<Duration> for Signal {
     }
 }
 
+impl From<(f32, Duration)> for Signal {
+    /// Creates a `Signal` from a tuple of value and duration.
+    ///
+    /// # Examples
+    /// ```
+    /// use aule::prelude::*;
+    /// use std::time::Duration;
+    ///
+    /// let signal: Signal = (1.0, Duration::from_secs(1)).into();
+    /// assert_eq!(signal.value, 1.0);
+    /// assert_eq!(signal.dt, Duration::from_secs(1));
+    /// ```
+    fn from((value, dt): (f32, Duration)) -> Self {
+        Signal { value, dt }
+    }
+}
+
+impl From<(Duration, f32)> for Signal {
+    /// Creates a `Signal` from a tuple of duration and value.
+    ///
+    /// # Examples
+    /// ```
+    /// use aule::prelude::*;
+    /// use std::time::Duration;
+    ///
+    /// let signal: Signal = (Duration::from_secs(1), 1.0).into();
+    /// assert_eq!(signal.value, 1.0);
+    /// assert_eq!(signal.dt, Duration::from_secs(1));
+    /// ```
+    fn from((dt, value): (Duration, f32)) -> Self {
+        Signal { value, dt }
+    }
+}
+
 impl Mul<f32> for Signal {
     type Output = Self;
 
