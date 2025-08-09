@@ -103,6 +103,30 @@ impl PID {
                 .map_or("N/A".to_string(), |gh| gh.value().to_string())
         )
     }
+
+    pub fn clear_integral(&mut self) {
+        self.last_integral = 0.0;
+    }
+
+    pub fn integral(&self) -> f32 {
+        self.last_integral
+    }
+
+    pub fn error(&self) -> f32 {
+        self.last_input
+    }
+
+    pub fn kp_mut(&mut self) -> &mut f32 {
+        &mut self.kp
+    }
+
+    pub fn ki_mut(&mut self) -> &mut f32 {
+        &mut self.ki
+    }
+
+    pub fn kd_mut(&mut self) -> &mut f32 {
+        &mut self.kd
+    }
 }
 
 impl Block for PID {
