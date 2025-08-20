@@ -1,0 +1,84 @@
+use aule::prelude::*;
+use aule::s;
+
+pub struct RlCircuit {
+    last_output: Option<Signal>,
+    integrator: SS<RK4>,
+}
+
+impl RlCircuit {
+    pub fn new(r: f32, l: f32) -> Self {
+        RlCircuit {
+            last_output: None,
+            integrator: (1.0 / (l * s + r)).into(),
+        }
+    }
+}
+
+impl Block for RlCircuit {
+    fn output(&mut self, input: Signal) -> Signal {
+        let output = input * self.integrator.as_block();
+
+        self.last_output = Some(output);
+
+        output
+    }
+
+    fn last_output(&self) -> Option<Signal> {
+        self.last_output
+    }
+}
+
+impl AsBlock for RlCircuit {}
+
+fn main() {
+    println!("Cleaning up previous output files...");
+    let _ = std::fs::remove_dir_all("output");
+    let _ = std::fs::create_dir_all("output");
+
+    let plotter_ctx = PlotterContext::new();
+
+    println!("Running Open Loop RL Circuit Simulation...");
+    open_loop_rl_circuit();
+    println!("Running Closed Loop RL Circuit Simulation...");
+    closed_loop_rl_circuit();
+
+    println!("All simulations completed successfully!");
+    println!("Check the 'output' directory for results.");
+
+    keep_alive(plotter_ctx);
+}
+
+fn open_loop_rl_circuit() {
+    let time = Time::from((0.001, 0.2));
+    let mut rl_circuit = RlCircuit::new(5.0, 0.05);
+    let mut step = Step::new();
+    let mut writer = Writter::new("output/open_loop_rl_circuit.csv", ["output"]);
+    let mut chart = Chart::new("output/open_loop_rl_circuit.svg");
+
+    for dt in time {
+        let input = dt >> step.as_input();
+        let _ = input * rl_circuit.as_block() >> writer.as_monitor() >> chart.as_monitor();
+    }
+
+    chart.plot();
+}
+
+fn closed_loop_rl_circuit() {
+    let time = Time::from((0.001, 0.2));
+
+    let mut pid = PID::new(1.0, 0.0, 0.00);
+    let mut rl_circuit = RlCircuit::new(5.0, 0.05);
+    let mut step = Step::new();
+    let mut writer = Writter::new("output/closed_loop_rl_circuit.csv", ["output"]);
+    let mut chart = Chart::new("output/closed_loop_rl_circuit.svg");
+
+    for dt in time {
+        let input = dt >> step.as_input();
+        let _ = (input - rl_circuit.last_output()) * pid.as_block() * rl_circuit.as_block()
+            >> writer.as_monitor()
+            >> chart.as_monitor();
+    }
+
+    chart.plot();
+}

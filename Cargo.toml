@@ -13,6 +13,19 @@ glfw = { version = "0.59.0" }
 [lib]
 name = "aule"
 
-[[bin]]
-name = "aule"
-path = "src/main.rs"
+
+[[example]]
+name = "dc_motor"
+path = "examples/dc_motor.rs"
+
+[[example]]
+name = "motor"
+path = "examples/motor.rs"
+
+[[example]]
+name = "rl_circuit"
+path = "examples/rl_circuit.rs"
+
+[[example]]
+name = "third_order_system"
+path = "examples/third_order_system.rs"
