@@ -30,6 +30,7 @@ pub struct PID {
     ise: Option<ISE>,
     itae: Option<ITAE>,
     good_hart: Option<GoodHart>,
+    anti_windup: Option<(f32, f32)>,
 }
 
 impl PID {
@@ -63,6 +64,7 @@ impl PID {
             ise: None,
             itae: None,
             good_hart: None,
+            anti_windup: None,
         }
     }
 
@@ -83,6 +85,38 @@ impl PID {
 
     pub fn with_good_hart(mut self, alpha1: f32, alpha2: f32, alpha3: f32) -> Self {
         self.good_hart = Some(GoodHart::new(alpha1, alpha2, alpha3));
+        self
+    }
+
+    /// Enables anti-windup by clamping the output within the specified min and max bounds.
+    ///
+    /// # Parameters
+    /// - `min`: Minimum output value.
+    /// - `max`: Maximum output value.
+    /// # Returns
+    /// The modified `PID` instance with anti-windup enabled.
+    ///
+    /// # Example
+    /// ```
+    /// use aule::prelude::*;
+    /// let mut pid_anti_windup = PID::new(1.0, 0.5, 0.01).with_anti_windup(-50.0, 50.0);
+    /// let mut pid = PID::new(1.0, 0.5, 0.01);
+    /// for i in 0..100 {
+    ///     let input_signal = Signal { value: 10.0, dt: std::time::Duration::from_secs(1) };
+    ///     let output_signal = pid_anti_windup.output(input_signal);
+    ///     assert!(-50.0 <= output_signal.value && output_signal.value <= 50.0);
+    ///     assert!(pid_anti_windup.integral() <= 80.0, "Integral term should not grow excessively: {}", pid_anti_windup.integral());
+    ///     let _output_signal = pid.output(input_signal);
+    ///     assert!(pid.integral() >= pid_anti_windup.integral(), "Integral term should grow larger without anti-windup: {}", pid.integral());
+    /// }
+    /// ```
+    /// # Note
+    /// Anti-windup helps prevent the integral term from accumulating excessively when the controller
+    /// output is saturated. This can improve the performance of the PID controller in systems
+    /// where the actuator has limits. If you want only to limit output, without affecting the integral term,
+    /// consider using a separate output clamping mechanism.
+    pub fn with_anti_windup(mut self, min: f32, max: f32) -> Self {
+        self.anti_windup = Some((min, max));
         self
     }
 
@@ -184,6 +218,16 @@ impl Block for PID {
         let derivative = (input.value - self.last_input) / input.dt.as_secs_f32();
 
         let output = self.kp * proportional + self.ki * integral + self.kd * derivative;
+        let (output, integral) = if let Some((min, max)) = self.anti_windup {
+            if output < min || output > max {
+                (output.clamp(min, max), self.last_integral)
+            } else {
+                (output, integral)
+            }
+        } else {
+            (output, integral)
+        };
+
         let output = Signal {
             value: output,
             dt: input.dt,
