@@ -1,7 +1,12 @@
+#[cfg(feature = "alloc")]
+use crate::monitor::Monitor;
+use crate::{block::Block, error::ErrorMetric};
+#[cfg(feature = "alloc")]
+use alloc::boxed::Box;
+#[cfg(feature = "alloc")]
+use alloc::vec::Vec;
+use core::ops::{Mul, Shr, Sub};
 use core::time::Duration;
-use std::ops::{Mul, Shr, Sub};
-
-use crate::{block::Block, error::ErrorMetric, monitor::Monitor};
 
 /// The `Signal` struct represents a signal with a value and a time step.
 /// It is used to encapsulate the data that flows through blocks in a block-based system.
@@ -176,6 +181,7 @@ impl Sub<Option<Signal>> for Signal {
     }
 }
 
+#[cfg(feature = "alloc")]
 impl Mul<&mut Box<dyn Block>> for Signal {
     type Output = Signal;
 
@@ -252,6 +258,7 @@ impl Mul<&mut dyn Block> for Signal {
     }
 }
 
+#[cfg(feature = "alloc")]
 impl Shr<&mut dyn Monitor> for Signal {
     type Output = Signal;
 
@@ -279,7 +286,7 @@ impl Shr<&mut dyn Monitor> for Signal {
     /// assert_eq!(output_signal.dt, Duration::from_secs(1));
     /// ```
     fn shr(self, monitor: &mut dyn Monitor) -> Self::Output {
-        monitor.show(vec![self]);
+        monitor.show(Vec::from([self]));
         self
     }
 }
@@ -324,6 +331,7 @@ impl Shr<&mut dyn ErrorMetric<1>> for Signal {
     }
 }
 
+#[cfg(feature = "alloc")]
 impl Shr<&mut dyn Monitor> for (Signal, Signal) {
     type Output = (Signal, Signal);
 
@@ -354,7 +362,7 @@ impl Shr<&mut dyn Monitor> for (Signal, Signal) {
     /// assert_eq!(output_signals.1.dt, Duration::from_secs(1));
     /// ```
     fn shr(self, monitor: &mut dyn Monitor) -> Self::Output {
-        monitor.show(vec![self.0, self.1]);
+        monitor.show(Vec::from([self.0, self.1]));
         self
     }
 }
@@ -403,6 +411,7 @@ impl Shr<&mut dyn ErrorMetric<2>> for (Signal, Signal) {
     }
 }
 
+#[cfg(feature = "alloc")]
 impl Shr<&mut dyn Monitor> for (Signal, Signal, Signal) {
     type Output = (Signal, Signal, Signal);
 
@@ -436,11 +445,12 @@ impl Shr<&mut dyn Monitor> for (Signal, Signal, Signal) {
     /// assert_eq!(output_signals.2.dt, Duration::from_secs(1));
     /// ```
     fn shr(self, monitor: &mut dyn Monitor) -> Self::Output {
-        monitor.show(vec![self.0, self.1, self.2]);
+        monitor.show(Vec::from([self.0, self.1, self.2]));
         self
     }
 }
 
+#[cfg(feature = "alloc")]
 impl<'a> Shr<&mut dyn Monitor> for &'a [Signal] {
     type Output = &'a [Signal];
 
@@ -478,6 +488,7 @@ impl<'a> Shr<&mut dyn Monitor> for &'a [Signal] {
     }
 }
 
+#[cfg(feature = "alloc")]
 impl<const N: usize> Shr<&mut dyn Monitor> for [Signal; N] {
     type Output = [Signal; N];
 
@@ -515,6 +526,7 @@ impl<const N: usize> Shr<&mut dyn Monitor> for [Signal; N] {
     }
 }
 
+#[cfg(feature = "alloc")]
 impl Shr<&mut dyn Monitor> for Vec<Signal> {
     type Output = Vec<Signal>;
 

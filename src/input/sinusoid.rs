@@ -1,9 +1,8 @@
-use std::time::Duration;
-
 use crate::{
     input::{AsInput, Input},
     signal::Signal,
 };
+use core::time::Duration;
 
 pub struct Sinusoid {
     amplitude: f32,
@@ -60,7 +59,11 @@ impl Input for Sinusoid {
         self.sim_time += dt;
         let t = self.sim_time.as_secs_f32();
         let value =
-            self.amplitude * (2.0 * std::f32::consts::PI * self.frequency * t + self.phase).sin();
+            self.amplitude * (2.0 * core::f32::consts::PI * self.frequency * t + self.phase);
+        #[cfg(feature = "std")]
+        let value = value.sin();
+        #[cfg(not(feature = "std"))]
+        let value = libm::sin(value as f64) as f32;
         Signal { value, dt }
     }
 }

@@ -1,5 +1,10 @@
 use crate::monitor::{AsMonitor, Monitor};
 use crate::signal::Signal;
+use alloc::format;
+use alloc::string::String;
+use alloc::string::ToString;
+use alloc::vec::Vec;
+use std::println;
 
 pub struct Printer {
     title: String,

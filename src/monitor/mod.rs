@@ -1,4 +1,5 @@
 use crate::signal::Signal;
+use alloc::vec::Vec;
 
 pub mod chart;
 mod line;

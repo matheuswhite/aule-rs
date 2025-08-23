@@ -1,9 +1,8 @@
-use std::time::Duration;
-
 use crate::{
     input::{AsInput, Input},
     signal::Signal,
 };
+use core::time::Duration;
 
 pub struct Ramp {
     value: f32,

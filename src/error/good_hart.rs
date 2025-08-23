@@ -2,6 +2,7 @@ use crate::{
     error::{AsErrorMetric, ErrorMetric},
     signal::Signal,
 };
+use alloc::vec::Vec;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GoodHart {

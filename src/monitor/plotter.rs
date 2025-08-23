@@ -1,6 +1,7 @@
 use crate::monitor::line::Lines;
 use crate::monitor::{AsMonitor, Monitor};
 use crate::signal::Signal;
+use alloc::vec::Vec;
 use core::str;
 use glfw::{Action, Context, GlfwReceiver, Key};
 use std::thread::sleep;

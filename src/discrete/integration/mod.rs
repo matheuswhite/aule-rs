@@ -1,5 +1,5 @@
+use core::time::Duration;
 use ndarray::Array2;
-use std::time::Duration;
 
 pub mod euler;
 pub mod runge_kutta;

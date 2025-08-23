@@ -1,7 +1,15 @@
 use crate::block::{AsBlock, Block};
 use crate::error::ErrorMetric;
-use crate::prelude::{GoodHart, IAE, ISE, ITAE};
+#[cfg(feature = "alloc")]
+use crate::prelude::GoodHart;
+use crate::prelude::{IAE, ISE, ITAE};
 use crate::signal::Signal;
+#[cfg(feature = "alloc")]
+use alloc::format;
+#[cfg(feature = "alloc")]
+use alloc::string::String;
+#[cfg(feature = "alloc")]
+use alloc::string::ToString;
 
 /// A PID controller block that implements proportional, integral, and derivative control.
 /// It takes a `Signal` input and produces a `Signal` output based on the PID algorithm.
@@ -29,6 +37,7 @@ pub struct PID {
     iae: Option<IAE>,
     ise: Option<ISE>,
     itae: Option<ITAE>,
+    #[cfg(feature = "alloc")]
     good_hart: Option<GoodHart>,
     anti_windup: Option<(f32, f32)>,
 }
@@ -63,6 +72,7 @@ impl PID {
             iae: None,
             ise: None,
             itae: None,
+            #[cfg(feature = "alloc")]
             good_hart: None,
             anti_windup: None,
         }
@@ -83,6 +93,7 @@ impl PID {
         self
     }
 
+    #[cfg(feature = "alloc")]
     pub fn with_good_hart(mut self, alpha1: f32, alpha2: f32, alpha3: f32) -> Self {
         self.good_hart = Some(GoodHart::new(alpha1, alpha2, alpha3));
         self
@@ -120,6 +131,7 @@ impl PID {
         self
     }
 
+    #[cfg(feature = "alloc")]
     pub fn error_metrics(&self) -> String {
         format!(
             "\n  IAE: {}\n  ISE: {}\n  ITAE: {}\n  Good Hart: {}",
@@ -237,6 +249,7 @@ impl Block for PID {
         self.last_input = input.value;
         self.last_integral = integral;
 
+        #[cfg(feature = "alloc")]
         if let Some(good_hart) = &mut self.good_hart {
             good_hart.update([input, output]);
         }

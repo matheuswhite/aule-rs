@@ -1,8 +1,11 @@
-use std::{
+use alloc::format;
+use alloc::string::String;
+use alloc::vec;
+use alloc::vec::Vec;
+use core::{
     fmt::Display,
     ops::{Add, Mul, Neg, Sub},
 };
-
 use ndarray::Array2;
 
 /// A polynomial represented by its coefficients.
@@ -257,7 +260,7 @@ impl Polynomial {
         }
 
         let n = self.positive_degree();
-        let mut lines = vec![];
+        let mut lines = Vec::new();
 
         for i in 0..(n - 1) {
             let one_col = i + 1;

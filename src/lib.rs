@@ -1,25 +1,44 @@
+#![no_std]
+
+#[cfg(feature = "alloc")]
+extern crate alloc;
+#[cfg(feature = "std")]
+extern crate std;
+
 mod block;
+#[cfg(feature = "alloc")]
 pub mod continuous;
+#[cfg(feature = "alloc")]
 mod discrete;
 mod error;
 mod input;
+#[cfg(feature = "alloc")]
 mod monitor;
+#[cfg(feature = "alloc")]
 pub mod poly;
 mod signal;
 mod time;
 
+#[cfg(feature = "alloc")]
 pub use crate::continuous::s_var::s;
 
 pub mod prelude {
     pub use crate::block::gain::Gain;
     pub use crate::block::pid::PID;
     pub use crate::block::{AsBlock, Block};
+    #[cfg(feature = "alloc")]
     pub use crate::continuous::Tf;
+    #[cfg(feature = "alloc")]
     pub use crate::continuous::ss::SS;
+    #[cfg(feature = "alloc")]
     pub use crate::discrete::integration::Integrator;
+    #[cfg(feature = "alloc")]
     pub use crate::discrete::integration::StateEstimation;
+    #[cfg(feature = "alloc")]
     pub use crate::discrete::integration::euler::Euler;
+    #[cfg(feature = "alloc")]
     pub use crate::discrete::integration::runge_kutta::RK4;
+    #[cfg(feature = "alloc")]
     pub use crate::error::good_hart::GoodHart;
     pub use crate::error::iae::IAE;
     pub use crate::error::ise::ISE;
@@ -31,11 +50,37 @@ pub mod prelude {
     pub use crate::input::sinusoid::Sinusoid;
     pub use crate::input::step::Step;
     pub use crate::input::{AsInput, Input};
+    #[cfg(feature = "alloc")]
     pub use crate::monitor::chart::Chart;
+    #[cfg(feature = "alloc")]
     pub use crate::monitor::plotter::{Plotter, PlotterContext, RTPlotter, keep_alive};
+    #[cfg(feature = "alloc")]
     pub use crate::monitor::printer::Printer;
+    #[cfg(feature = "alloc")]
     pub use crate::monitor::writer::Writter;
+    #[cfg(feature = "alloc")]
     pub use crate::monitor::{AsMonitor, Monitor};
     pub use crate::signal::Signal;
-    pub use crate::time::{RTTime, Time};
+    #[cfg(feature = "std")]
+    pub use crate::time::RTTime;
+    pub use crate::time::Time;
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::prelude::*;
+    use core::time::Duration;
+
+    #[test]
+    fn test_no_std_support() {
+        let time = Time::from(0.1).with_max_time(Duration::from_secs(1));
+        let mut step = Step::new();
+        let mut pid = PID::new(1.0, 0.1, 0.01);
+
+        for dt in time {
+            let r = step.output(dt);
+            let y = pid.output(r);
+            let _ = (r, y);
+        }
+    }
 }

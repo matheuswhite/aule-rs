@@ -4,6 +4,8 @@ use crate::{
     prelude::Integrator,
     signal::Signal,
 };
+use alloc::vec;
+use alloc::vec::Vec;
 use ndarray::Array2;
 use std::{
     fmt::{Debug, Display},

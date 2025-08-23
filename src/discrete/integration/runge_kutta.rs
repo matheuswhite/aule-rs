@@ -1,6 +1,6 @@
 use crate::{discrete::integration::StateEstimation, prelude::Integrator};
+use core::time::Duration;
 use ndarray::Array2;
-use std::time::Duration;
 
 /// Runge-Kutta 4th order integration method for solving ordinary differential equations (ODEs).
 ///

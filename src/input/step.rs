@@ -1,5 +1,5 @@
 use crate::input::{AsInput, Input, Signal};
-use std::time::Duration;
+use core::time::Duration;
 
 /// A step input block that outputs a constant value after a specified duration.
 /// The value can be set to any f32 value, and it will output that value after 1 second of simulation time.

@@ -1,3 +1,7 @@
+use alloc::format;
+use alloc::string::String;
+use alloc::vec;
+use alloc::vec::Vec;
 use core::str;
 use gl::types::{GLchar, GLint};
 use std::ffi::CString;

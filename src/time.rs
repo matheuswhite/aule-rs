@@ -1,7 +1,8 @@
-use std::{
-    thread::sleep,
-    time::{Duration, Instant},
-};
+use core::time::Duration;
+#[cfg(feature = "std")]
+use std::thread::sleep;
+#[cfg(feature = "std")]
+use std::time::Instant;
 
 /// Holds the time step and the total time elapsed.
 ///
@@ -36,6 +37,7 @@ pub struct Time {
 /// assert_eq!(time.next(), Some(Duration::from_secs_f32(0.01)));
 /// assert_eq!(time.total_time(), Duration::from_secs_f32(0.02));
 /// ```
+#[cfg(feature = "std")]
 pub struct RTTime {
     dt: Duration,
     total_time: Duration,
@@ -145,6 +147,7 @@ impl Time {
     }
 }
 
+#[cfg(feature = "std")]
 impl RTTime {
     /// Creates a new `RTTime` instance with the specified time step.
     ///
@@ -286,6 +289,7 @@ impl From<f32> for Time {
     }
 }
 
+#[cfg(feature = "std")]
 impl From<f32> for RTTime {
     /// Creates a `RTTime` instance from a float representing seconds.
     ///
@@ -341,6 +345,7 @@ impl From<(f32, f32)> for Time {
     }
 }
 
+#[cfg(feature = "std")]
 impl From<(f32, f32)> for RTTime {
     /// Creates a `RTTime` instance from a tuple of two floats representing seconds.
     ///
@@ -403,6 +408,7 @@ impl Iterator for Time {
     }
 }
 
+#[cfg(feature = "std")]
 impl Iterator for RTTime {
     type Item = Duration;
 

@@ -1,5 +1,5 @@
 use crate::continuous::{Polynomial, Tf};
-use std::ops::{Add, Div, Mul, Sub};
+use core::ops::{Add, Div, Mul, Sub};
 
 /// Represents the continuous variable 's' in transfer functions and polynomials.
 /// This struct is used to facilitate operations involving the 's' variable in control systems.

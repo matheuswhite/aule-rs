@@ -1,6 +1,7 @@
-use std::fmt::Debug;
-
 use crate::{continuous::ss::SS, poly::Polynomial, prelude::Integrator};
+use alloc::vec;
+use alloc::vec::Vec;
+use core::fmt::Debug;
 
 /// Represents a transfer function in the continuous domain.
 /// It is defined by a numerator and denominator polynomial.

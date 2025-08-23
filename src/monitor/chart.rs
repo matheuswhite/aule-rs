@@ -1,9 +1,12 @@
-use std::time::Duration;
-
 use crate::monitor::{AsMonitor, Monitor};
 use crate::signal::Signal;
+use alloc::string::String;
+use alloc::string::ToString;
+use alloc::vec;
+use alloc::vec::Vec;
 use charming::ImageRenderer;
 use charming::{Chart as CharmingChart, component::Axis, element::AxisType, series::Line};
+use std::time::Duration;
 
 pub struct Chart {
     title: String,

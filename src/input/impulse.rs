@@ -1,9 +1,8 @@
-use std::time::Duration;
-
 use crate::{
     input::{AsInput, Input},
     signal::Signal,
 };
+use core::time::Duration;
 
 /// An impulse input block that outputs a value once and then resets to zero.
 /// The value can be set to any f32 value, and it will output that value once when requested.

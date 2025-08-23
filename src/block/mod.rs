@@ -1,5 +1,6 @@
 use crate::signal::Signal;
-use std::ops::Mul;
+#[cfg(feature = "alloc")]
+use core::ops::Mul;
 
 pub mod gain;
 pub mod pid;
@@ -76,7 +77,8 @@ pub trait AsBlock: Sized + Block + 'static {
     }
 }
 
-impl Mul<Signal> for &mut Box<dyn Block> {
+#[cfg(feature = "alloc")]
+impl Mul<Signal> for &mut alloc::boxed::Box<dyn Block> {
     type Output = Signal;
 
     /// Multiplies a mutable reference to a block with a signal, producing an output signal.

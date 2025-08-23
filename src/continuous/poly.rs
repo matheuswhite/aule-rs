@@ -1,5 +1,8 @@
 use crate::continuous::{Tf, s};
-use std::{
+use alloc::format;
+use alloc::string::String;
+use alloc::vec::Vec;
+use core::{
     fmt::Display,
     ops::{Add, Div, Mul, Neg, Sub},
 };

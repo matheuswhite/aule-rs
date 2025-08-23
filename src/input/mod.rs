@@ -1,6 +1,5 @@
-use std::{ops::Shr, time::Duration};
-
 use crate::signal::Signal;
+use core::{ops::Shr, time::Duration};
 
 pub mod impulse;
 pub mod ramp;
