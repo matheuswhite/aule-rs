@@ -4,6 +4,7 @@ use core::ops::Mul;
 
 pub mod gain;
 pub mod pid;
+pub mod saturation;
 
 /// The `Block` trait defines the interface for processing signals in a block-based system.
 /// It provides methods to output a processed signal and retrieve the last output signal.
