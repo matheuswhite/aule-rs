@@ -2,6 +2,7 @@ use crate::signal::Signal;
 #[cfg(feature = "alloc")]
 use core::ops::Mul;
 
+pub mod delay;
 pub mod gain;
 pub mod pid;
 pub mod saturation;
