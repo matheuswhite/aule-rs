@@ -1,4 +1,4 @@
-use crate::block::{AsBlock, Block};
+use crate::block::siso::{AsSISO, SISO};
 use crate::signal::Signal;
 
 /// Gain block that multiplies the input signal by a constant value.
@@ -42,7 +42,7 @@ impl Gain {
     }
 }
 
-impl Block for Gain {
+impl SISO for Gain {
     /// Processes the input signal by multiplying it with the gain value.
     ///
     /// # Parameters:
@@ -91,4 +91,4 @@ impl Block for Gain {
     }
 }
 
-impl AsBlock for Gain {}
+impl AsSISO for Gain {}

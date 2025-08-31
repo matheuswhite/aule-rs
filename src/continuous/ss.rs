@@ -1,5 +1,5 @@
 use crate::{
-    block::{AsBlock, Block},
+    block::siso::{AsSISO, SISO},
     discrete::integration::StateEstimation,
     prelude::Integrator,
     signal::Signal,
@@ -192,7 +192,7 @@ where
     }
 }
 
-impl<I> Block for SS<I>
+impl<I> SISO for SS<I>
 where
     I: Integrator + Debug,
 {
@@ -265,7 +265,7 @@ where
     }
 }
 
-impl<I> AsBlock for SS<I> where I: Integrator + Debug + 'static {}
+impl<I> AsSISO for SS<I> where I: Integrator + Debug + 'static {}
 
 impl<I> Display for SS<I>
 where

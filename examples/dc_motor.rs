@@ -36,8 +36,8 @@ fn test_rt_dc_motor(plotter_ctx: &Rc<Mutex<PlotterContext>>) {
 
     for dt in time {
         let signal = dt >> input.as_input();
-        let output = (signal - plant.last_output()) * pid.as_block() * plant.as_block()
-            >> writer.as_monitor();
+        let output =
+            (signal - plant.last_output()) * pid.as_siso() * plant.as_siso() >> writer.as_monitor();
 
         let _ = (signal, output) >> chart.as_monitor();
         let _ = output >> plotter.as_monitor();
@@ -65,8 +65,8 @@ fn test_dc_motor(plotter_ctx: &Rc<Mutex<PlotterContext>>) {
 
     for dt in time {
         let signal = dt >> input.as_input();
-        let output = (signal - plant.last_output()) * pid.as_block() * plant.as_block()
-            >> writer.as_monitor();
+        let output =
+            (signal - plant.last_output()) * pid.as_siso() * plant.as_siso() >> writer.as_monitor();
 
         let _ = (signal, output) >> chart.as_monitor();
         let _ = output >> plotter.as_monitor();

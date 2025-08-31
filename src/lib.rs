@@ -27,7 +27,7 @@ pub mod prelude {
     pub use crate::block::gain::Gain;
     pub use crate::block::pid::PID;
     pub use crate::block::saturation::Saturation;
-    pub use crate::block::{AsBlock, Block};
+    pub use crate::block::siso::{AsSISO, SISO};
     #[cfg(feature = "alloc")]
     pub use crate::continuous::Tf;
     #[cfg(feature = "alloc")]

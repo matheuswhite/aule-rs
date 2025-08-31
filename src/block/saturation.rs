@@ -1,4 +1,4 @@
-use crate::block::{AsBlock, Block};
+use crate::block::siso::{AsSISO, SISO};
 use crate::signal::Signal;
 
 /// A block that limits the output signal to a specified minimum and maximum value.
@@ -72,7 +72,7 @@ impl From<(f32, f32)> for Saturation {
     }
 }
 
-impl Block for Saturation {
+impl SISO for Saturation {
     /// Processes the input signal by clamping its value between the defined minimum and maximum limits.
     /// The time delta (`dt`) of the input signal is preserved in the output signal.
     /// The last output signal is stored and can be retrieved using the `last_output` method.
@@ -123,4 +123,4 @@ impl Block for Saturation {
     }
 }
 
-impl AsBlock for Saturation {}
+impl AsSISO for Saturation {}

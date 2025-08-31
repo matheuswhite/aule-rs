@@ -15,9 +15,9 @@ impl RlCircuit {
     }
 }
 
-impl Block for RlCircuit {
+impl SISO for RlCircuit {
     fn output(&mut self, input: Signal) -> Signal {
-        let output = input * self.integrator.as_block();
+        let output = input * self.integrator.as_siso();
 
         self.last_output = Some(output);
 
@@ -29,7 +29,7 @@ impl Block for RlCircuit {
     }
 }
 
-impl AsBlock for RlCircuit {}
+impl AsSISO for RlCircuit {}
 
 fn main() {
     println!("Cleaning up previous output files...");
@@ -58,7 +58,7 @@ fn open_loop_rl_circuit() {
 
     for dt in time {
         let input = dt >> step.as_input();
-        let _ = input * rl_circuit.as_block() >> writer.as_monitor() >> chart.as_monitor();
+        let _ = input * rl_circuit.as_siso() >> writer.as_monitor() >> chart.as_monitor();
     }
 
     chart.plot();
@@ -75,7 +75,7 @@ fn closed_loop_rl_circuit() {
 
     for dt in time {
         let input = dt >> step.as_input();
-        let _ = (input - rl_circuit.last_output()) * pid.as_block() * rl_circuit.as_block()
+        let _ = (input - rl_circuit.last_output()) * pid.as_siso() * rl_circuit.as_siso()
             >> writer.as_monitor()
             >> chart.as_monitor();
     }

@@ -21,9 +21,9 @@ fn main() {
             >> iae.as_error_metric()
             >> ise.as_error_metric()
             >> itae.as_error_metric();
-        let control_signal = error * pid.as_block();
+        let control_signal = error * pid.as_siso();
         good_hart.update([error, control_signal]);
-        let output = control_signal * plant.as_block() >> writer.as_monitor();
+        let output = control_signal * plant.as_siso() >> writer.as_monitor();
 
         let _ = (input, output) >> chart.as_monitor();
     }

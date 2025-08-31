@@ -23,10 +23,10 @@ impl Motor {
     }
 }
 
-impl Block for Motor {
+impl SISO for Motor {
     fn output(&mut self, input: Signal) -> Signal {
-        let eletrical = (input - self.last_output) * self.kv.as_block() * self.eletrical.as_block();
-        let mechanical = (eletrical * self.km.as_block() - self.tau_l) * self.mechanical.as_block();
+        let eletrical = (input - self.last_output) * self.kv.as_siso() * self.eletrical.as_siso();
+        let mechanical = (eletrical * self.km.as_siso() - self.tau_l) * self.mechanical.as_siso();
 
         self.last_output = Some(mechanical);
 
@@ -38,7 +38,7 @@ impl Block for Motor {
     }
 }
 
-impl AsBlock for Motor {}
+impl AsSISO for Motor {}
 
 fn main() {
     println!("Cleaning up previous output files...");
@@ -67,7 +67,7 @@ fn open_loop_motor() {
 
     for dt in time {
         let input = dt >> step.as_input();
-        let output = input * motor.as_block() >> writer.as_monitor();
+        let output = input * motor.as_siso() >> writer.as_monitor();
 
         let _ = (input, output) >> chart.as_monitor();
     }
@@ -86,8 +86,8 @@ fn closed_loop_motor() {
     for dt in time {
         let input = dt >> step.as_input();
         let error = input - motor.last_output().unwrap_or_default();
-        let control_signal = error * pid.as_block();
-        let output = control_signal * motor.as_block() >> writer.as_monitor();
+        let control_signal = error * pid.as_siso();
+        let output = control_signal * motor.as_siso() >> writer.as_monitor();
 
         let _ = (input, output) >> chart.as_monitor();
     }

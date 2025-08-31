@@ -1,4 +1,4 @@
-use crate::block::{AsBlock, Block};
+use crate::block::siso::{AsSISO, SISO};
 use crate::error::ErrorMetric;
 #[cfg(feature = "alloc")]
 use crate::prelude::GoodHart;
@@ -175,7 +175,7 @@ impl PID {
     }
 }
 
-impl Block for PID {
+impl SISO for PID {
     /// Computes the output of the PID controller based on the input signal.
     /// It applies the PID control algorithm using the proportional, integral, and derivative gains.
     ///
@@ -287,4 +287,4 @@ impl Block for PID {
     }
 }
 
-impl AsBlock for PID {}
+impl AsSISO for PID {}

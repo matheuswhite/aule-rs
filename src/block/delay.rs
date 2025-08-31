@@ -1,4 +1,4 @@
-use crate::block::{AsBlock, Block};
+use crate::block::siso::{AsSISO, SISO};
 use crate::signal::Signal;
 use alloc::vec;
 use alloc::vec::Vec;
@@ -105,7 +105,7 @@ impl Delay {
     }
 }
 
-impl Block for Delay {
+impl SISO for Delay {
     /// Processes the input signal and returns the delayed output signal.
     /// The output signal is determined based on the current time and the specified delay.
     /// If the current time is less than or equal to the delay, the initial signal is returned.
@@ -203,29 +203,12 @@ impl Block for Delay {
 }
 
 impl From<(Duration, Signal)> for InputBuffered {
-    /// Converts a tuple of (Duration, Signal) into an InputBuffered struct.
-    ///
-    /// # Arguments
-    /// * `instant` - The time instant associated with the signal.
-    /// * `signal` - The signal value.
-    /// # Returns
-    /// An instance of `InputBuffered` containing the provided instant and signal.
-    ///
-    /// # Examples
-    /// ```
-    /// use aule::prelude::*;
-    /// use core::time::Duration;
-    ///
-    /// let input_buffered: InputBuffered = (Duration::from_secs(1), Signal { dt: Duration::from_secs(1), value: 1.0 }).into();
-    /// assert_eq!(input_buffered.instant, Duration::from_secs(1));
-    /// assert_eq!(input_buffered.signal.value, 1.0);
-    /// ```
     fn from((instant, signal): (Duration, Signal)) -> Self {
         Self { instant, signal }
     }
 }
 
-impl AsBlock for Delay {}
+impl AsSISO for Delay {}
 
 #[cfg(test)]
 mod tests {

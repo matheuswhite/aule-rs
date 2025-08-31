@@ -1,6 +1,6 @@
 #[cfg(feature = "alloc")]
 use crate::monitor::Monitor;
-use crate::{block::Block, error::ErrorMetric};
+use crate::{block::siso::SISO, error::ErrorMetric};
 #[cfg(feature = "alloc")]
 use alloc::boxed::Box;
 #[cfg(feature = "alloc")]
@@ -182,7 +182,7 @@ impl Sub<Option<Signal>> for Signal {
 }
 
 #[cfg(feature = "alloc")]
-impl Mul<&mut Box<dyn Block>> for Signal {
+impl Mul<&mut Box<dyn SISO>> for Signal {
     type Output = Signal;
 
     /// Multiplies the signal with a mutable reference to a block, producing an output signal.
@@ -194,7 +194,7 @@ impl Mul<&mut Box<dyn Block>> for Signal {
     ///
     /// struct MyBlock;
     ///
-    /// impl Block for MyBlock {
+    /// impl SISO for MyBlock {
     ///     fn output(&mut self, input: Signal) -> Signal {
     ///         Signal {
     ///             value: input.value * 2.0, // Example processing
@@ -207,20 +207,20 @@ impl Mul<&mut Box<dyn Block>> for Signal {
     ///     }
     /// }
     ///
-    /// impl AsBlock for MyBlock {}
+    /// impl AsSISO for MyBlock {}
     ///
     /// let mut block = Box::new(MyBlock);
     /// let input_signal = Signal { value: 1.0, dt: Duration::from_secs(1) };
-    /// let output_signal = input_signal * block.as_block();
+    /// let output_signal = input_signal * block.as_siso();
     /// assert_eq!(output_signal.value, 2.0);
     /// assert_eq!(output_signal.dt, Duration::from_secs(1));
     /// ```
-    fn mul(self, block: &mut Box<dyn Block>) -> Self::Output {
+    fn mul(self, block: &mut Box<dyn SISO>) -> Self::Output {
         block.output(self)
     }
 }
 
-impl Mul<&mut dyn Block> for Signal {
+impl Mul<&mut dyn SISO> for Signal {
     type Output = Signal;
 
     /// Multiplies the signal with a mutable reference to a block, producing an output signal.
@@ -232,7 +232,7 @@ impl Mul<&mut dyn Block> for Signal {
     ///
     /// struct MyBlock;
     ///
-    /// impl Block for MyBlock {
+    /// impl SISO for MyBlock {
     ///     fn output(&mut self, input: Signal) -> Signal {
     ///         Signal {
     ///             value: input.value * 2.0, // Example processing
@@ -245,15 +245,15 @@ impl Mul<&mut dyn Block> for Signal {
     ///   }
     /// }
     ///
-    /// impl AsBlock for MyBlock {}
+    /// impl AsSISO for MyBlock {}
     ///
     /// let mut block = MyBlock;
     /// let input_signal = Signal { value: 1.0, dt: Duration::from_secs(1) };
-    /// let output_signal = input_signal * block.as_block();
+    /// let output_signal = input_signal * block.as_siso();
     /// assert_eq!(output_signal.value, 2.0);
     /// assert_eq!(output_signal.dt, Duration::from_secs(1));
     /// ```
-    fn mul(self, block: &mut dyn Block) -> Self::Output {
+    fn mul(self, block: &mut dyn SISO) -> Self::Output {
         block.output(self)
     }
 }
