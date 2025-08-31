@@ -25,6 +25,7 @@ pub use crate::continuous::s_var::s;
 pub mod prelude {
     pub use crate::block::delay::Delay;
     pub use crate::block::gain::Gain;
+    pub use crate::block::mimo::{AsMIMO, MIMO};
     pub use crate::block::pid::PID;
     pub use crate::block::saturation::Saturation;
     pub use crate::block::siso::{AsSISO, SISO};

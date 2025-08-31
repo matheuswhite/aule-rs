@@ -74,8 +74,7 @@ pub trait AsSISO: Sized + SISO + 'static {
     }
 }
 
-#[cfg(feature = "alloc")]
-impl Mul<Signal> for &mut alloc::boxed::Box<dyn SISO> {
+impl Mul<Signal> for &mut dyn SISO {
     type Output = Signal;
 
     /// Multiplies a mutable reference to a block with a signal, producing an output signal.
@@ -102,9 +101,9 @@ impl Mul<Signal> for &mut alloc::boxed::Box<dyn SISO> {
     ///
     /// impl AsSISO for MyBlock {}
     ///
-    /// let mut block: Box<dyn SISO> = Box::new(MyBlock);
+    /// let mut block = MyBlock;
     /// let input_signal = Signal { value: 1.0, dt: Duration::from_secs(1) };
-    /// let output_signal = &mut block * input_signal;
+    /// let output_signal = block.as_siso() * input_signal;
     /// assert_eq!(output_signal.value, 2.0);
     /// assert_eq!(output_signal.dt, Duration::from_secs(1));
     /// ```

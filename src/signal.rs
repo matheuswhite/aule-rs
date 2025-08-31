@@ -1,11 +1,10 @@
+use crate::block::mimo::MIMO;
 #[cfg(feature = "alloc")]
 use crate::monitor::Monitor;
 use crate::{block::siso::SISO, error::ErrorMetric};
 #[cfg(feature = "alloc")]
-use alloc::boxed::Box;
-#[cfg(feature = "alloc")]
 use alloc::vec::Vec;
-use core::ops::{Mul, Shr, Sub};
+use core::ops::{Add, Div, Mul, Neg, Shr, Sub};
 use core::time::Duration;
 
 /// The `Signal` struct represents a signal with a value and a time step.
@@ -81,24 +80,44 @@ impl From<(Duration, f32)> for Signal {
     }
 }
 
-impl Mul<f32> for Signal {
-    type Output = Self;
-
-    /// Multiplies the signal's value by a scalar.
+impl From<(f32, f32)> for Signal {
+    /// Creates a `Signal` from a tuple of value and delta time in seconds.
     ///
     /// # Examples
     /// ```
     /// use aule::prelude::*;
     /// use std::time::Duration;
     ///
-    /// let signal = Signal { value: 2.0, dt: Duration::from_secs(1) };
-    /// let result = signal * 3.0;
-    /// assert_eq!(result.value, 6.0);
-    /// assert_eq!(result.dt, Duration::from_secs(1));
+    /// let signal: Signal = (1.0, 1.0).into();
+    /// assert_eq!(signal.value, 1.0);
+    /// assert_eq!(signal.dt, Duration::from_secs_f32(1.0));
     /// ```
-    fn mul(self, rhs: f32) -> Self::Output {
+    fn from((value, dt): (f32, f32)) -> Self {
         Signal {
-            value: self.value * rhs,
+            value,
+            dt: Duration::from_secs_f32(dt),
+        }
+    }
+}
+
+impl Neg for Signal {
+    type Output = Self;
+
+    /// Negates the signal's value.
+    ///
+    /// # Examples
+    /// ```
+    /// use aule::prelude::*;
+    /// use std::time::Duration;
+    ///
+    /// let signal = Signal { value: 1.0, dt: Duration::from_secs(1) };
+    /// let negated_signal = -signal;
+    /// assert_eq!(negated_signal.value, -1.0);
+    /// assert_eq!(negated_signal.dt, Duration::from_secs(1));
+    /// ```
+    fn neg(self) -> Self::Output {
+        Signal {
+            value: -self.value,
             dt: self.dt,
         }
     }
@@ -123,7 +142,7 @@ impl Sub for Signal {
     fn sub(self, rhs: Self) -> Self::Output {
         Signal {
             value: self.value - rhs.value,
-            dt: self.dt,
+            dt: Duration::from_secs_f32((self.dt.as_secs_f32() + rhs.dt.as_secs_f32()) / 2.0),
         }
     }
 }
@@ -181,42 +200,174 @@ impl Sub<Option<Signal>> for Signal {
     }
 }
 
-#[cfg(feature = "alloc")]
-impl Mul<&mut Box<dyn SISO>> for Signal {
-    type Output = Signal;
+impl Add for Signal {
+    type Output = Self;
 
-    /// Multiplies the signal with a mutable reference to a block, producing an output signal.
+    /// Adds another signal to this signal.
     ///
     /// # Examples
     /// ```
     /// use aule::prelude::*;
     /// use std::time::Duration;
     ///
-    /// struct MyBlock;
-    ///
-    /// impl SISO for MyBlock {
-    ///     fn output(&mut self, input: Signal) -> Signal {
-    ///         Signal {
-    ///             value: input.value * 2.0, // Example processing
-    ///             dt: input.dt,
-    ///         }
-    ///     }
-    ///
-    ///     fn last_output(&self) -> Option<Signal> {
-    ///         None // Example implementation, could return the last processed signal
-    ///     }
-    /// }
-    ///
-    /// impl AsSISO for MyBlock {}
-    ///
-    /// let mut block = Box::new(MyBlock);
-    /// let input_signal = Signal { value: 1.0, dt: Duration::from_secs(1) };
-    /// let output_signal = input_signal * block.as_siso();
-    /// assert_eq!(output_signal.value, 2.0);
-    /// assert_eq!(output_signal.dt, Duration::from_secs(1));
+    /// let signal1 = Signal { value: 2.0, dt: Duration::from_secs(1) };
+    /// let signal2 = Signal { value: 3.0, dt: Duration::from_secs(1) };
+    /// let result = signal1 + signal2;
+    /// assert_eq!(result.value, 5.0);
+    /// assert_eq!(result.dt, Duration::from_secs(1));
     /// ```
-    fn mul(self, block: &mut Box<dyn SISO>) -> Self::Output {
-        block.output(self)
+    fn add(self, rhs: Self) -> Self::Output {
+        Signal {
+            value: self.value + rhs.value,
+            dt: Duration::from_secs_f32((self.dt.as_secs_f32() + rhs.dt.as_secs_f32()) / 2.0),
+        }
+    }
+}
+
+impl Add<f32> for Signal {
+    type Output = Self;
+
+    /// Adds a scalar to the signal's value.
+    ///
+    /// # Examples
+    /// ```
+    /// use aule::prelude::*;
+    /// use std::time::Duration;
+    ///
+    /// let signal = Signal { value: 2.0, dt: Duration::from_secs(1) };
+    /// let result = signal + 3.0;
+    /// assert_eq!(result.value, 5.0);
+    /// assert_eq!(result.dt, Duration::from_secs(1));
+    /// ```
+    fn add(self, rhs: f32) -> Self::Output {
+        Signal {
+            value: self.value + rhs,
+            dt: self.dt,
+        }
+    }
+}
+
+impl Add<Option<Signal>> for Signal {
+    type Output = Self;
+
+    /// Adds an optional signal to this signal.
+    /// If the optional signal is `None`, it returns the original signal.
+    ///
+    /// # Examples
+    /// ```
+    /// use aule::prelude::*;
+    /// use std::time::Duration;
+    ///
+    /// let signal1 = Signal { value: 2.0, dt: Duration::from_secs(1) };
+    /// let signal2 = Some(Signal { value: 3.0, dt: Duration::from_secs(1) });
+    /// let result = signal1 + signal2;
+    /// assert_eq!(result.value, 5.0);
+    /// assert_eq!(result.dt, Duration::from_secs(1));
+    ///
+    /// let signal3 = None;
+    /// let result_none = signal1 + signal3;
+    /// assert_eq!(result_none.value, 2.0);
+    /// assert_eq!(result_none.dt, Duration::from_secs(1));
+    /// ```
+    fn add(self, rhs: Option<Signal>) -> Self::Output {
+        match rhs {
+            Some(signal) => self + signal,
+            None => self,
+        }
+    }
+}
+
+impl Div for Signal {
+    type Output = Self;
+
+    /// Divides this signal by another signal.
+    ///
+    /// # Examples
+    /// ```
+    /// use aule::prelude::*;
+    /// use std::time::Duration;
+    ///
+    /// let signal1 = Signal { value: 6.0, dt: Duration::from_secs(1) };
+    /// let signal2 = Signal { value: 3.0, dt: Duration::from_secs(1) };
+    /// let result = signal1 / signal2;
+    /// assert_eq!(result.value, 2.0);
+    /// assert_eq!(result.dt, Duration::from_secs(1));
+    /// ```
+    fn div(self, rhs: Self) -> Self::Output {
+        Signal {
+            value: self.value / rhs.value,
+            dt: Duration::from_secs_f32((self.dt.as_secs_f32() + rhs.dt.as_secs_f32()) / 2.0),
+        }
+    }
+}
+
+impl Div<f32> for Signal {
+    type Output = Self;
+
+    /// Divides the signal's value by a scalar.
+    ///
+    /// # Examples
+    /// ```
+    /// use aule::prelude::*;
+    /// use std::time::Duration;
+    ///
+    /// let signal = Signal { value: 6.0, dt: Duration::from_secs(1) };
+    /// let result = signal / 3.0;
+    /// assert_eq!(result.value, 2.0);
+    /// assert_eq!(result.dt, Duration::from_secs(1));
+    /// ```
+    fn div(self, rhs: f32) -> Self::Output {
+        Signal {
+            value: self.value / rhs,
+            dt: self.dt,
+        }
+    }
+}
+
+impl Mul for Signal {
+    type Output = Self;
+
+    /// Multiplies two signals together.
+    ///
+    /// # Examples
+    /// ```
+    /// use aule::prelude::*;
+    /// use std::time::Duration;
+    ///
+    /// let signal1 = Signal { value: 2.0, dt: Duration::from_secs(1) };
+    /// let signal2 = Signal { value: 3.0, dt: Duration::from_secs(1) };
+    /// let result = signal1 * signal2;
+    /// assert_eq!(result.value, 6.0);
+    /// assert_eq!(result.dt, Duration::from_secs(1));
+    /// ```
+    fn mul(self, rhs: Self) -> Self::Output {
+        Signal {
+            value: self.value * rhs.value,
+            dt: Duration::from_secs_f32((self.dt.as_secs_f32() + rhs.dt.as_secs_f32()) / 2.0),
+        }
+    }
+}
+
+impl Mul<f32> for Signal {
+    type Output = Self;
+
+    /// Multiplies the signal's value by a scalar.
+    ///
+    /// # Examples
+    /// ```
+    /// use aule::prelude::*;
+    /// use std::time::Duration;
+    ///
+    /// let signal = Signal { value: 2.0, dt: Duration::from_secs(1) };
+    /// let result = signal * 3.0;
+    /// assert_eq!(result.value, 6.0);
+    /// assert_eq!(result.dt, Duration::from_secs(1));
+    /// ```
+    fn mul(self, rhs: f32) -> Self::Output {
+        Signal {
+            value: self.value * rhs,
+            dt: self.dt,
+        }
     }
 }
 
@@ -255,6 +406,265 @@ impl Mul<&mut dyn SISO> for Signal {
     /// ```
     fn mul(self, block: &mut dyn SISO) -> Self::Output {
         block.output(self)
+    }
+}
+
+impl<const I: usize, const O: usize> Mul<&mut dyn MIMO<I, O>> for [Signal; I] {
+    type Output = [Signal; O];
+
+    /// Multiplies an array of input signals with a mutable reference to a MIMO block, producing an array of output signals.
+    /// This allows for processing multiple input signals through the MIMO block.
+    ///
+    /// # Examples
+    /// ```
+    /// use aule::prelude::*;
+    /// use std::time::Duration;
+    ///
+    /// struct MyMIMOBlock;
+    ///
+    /// impl MIMO<2, 2> for MyMIMOBlock {
+    ///   fn output(&mut self, input: [Signal; 2]) -> [Signal; 2] {
+    ///     [Signal {
+    ///       value: input[0].value + 1.0, // Example processing for first output
+    ///       dt: input[0].dt,
+    ///     }, Signal {
+    ///       value: input[1].value * 2.0, // Example processing for second output
+    ///       dt: input[1].dt,
+    ///     }]
+    ///   }
+    ///
+    ///   fn last_output(&self) -> Option<[Signal; 2]> {
+    ///     None // Example implementation, could return the last processed signals
+    ///   }
+    /// }
+    ///
+    /// impl AsMIMO<2, 2> for MyMIMOBlock {}
+    ///
+    /// let mut block = MyMIMOBlock;
+    /// let input_signals = [Signal { value: 1.0, dt: Duration::from_secs(1) }, Signal { value: 2.0, dt: Duration::from_secs(1) }];
+    /// let output_signals = input_signals * block.as_mimo();
+    /// assert_eq!(output_signals[0].value, 2.0);
+    /// assert_eq!(output_signals[1].value, 4.0);
+    /// ```
+    fn mul(self, rhs: &mut dyn MIMO<I, O>) -> Self::Output {
+        rhs.output(self)
+    }
+}
+
+impl<const I: usize, const O: usize> Mul<&mut dyn MIMO<I, O>> for &[Signal] {
+    type Output = [Signal; O];
+
+    /// Multiplies a slice of input signals with a mutable reference to a MIMO block, producing an array of output signals.
+    /// This allows for processing multiple input signals through the MIMO block.
+    /// The slice must have a length equal to the number of inputs expected by the MIMO block.
+    ///
+    /// # Examples
+    /// ```
+    /// use aule::prelude::*;
+    /// use std::time::Duration;
+    ///
+    /// struct MyMIMOBlock;
+    ///
+    /// impl MIMO<2, 2> for MyMIMOBlock {
+    ///   fn output(&mut self, input: [Signal; 2]) -> [Signal; 2] {
+    ///     [Signal {
+    ///       value: input[0].value + 1.0, // Example processing for first output
+    ///       dt: input[0].dt,
+    ///     }, Signal {
+    ///       value: input[1].value * 2.0, // Example processing for second output
+    ///       dt: input[1].dt,
+    ///     }]
+    ///   }
+    ///
+    ///   fn last_output(&self) -> Option<[Signal; 2]> {
+    ///     None // Example implementation, could return the last processed signals
+    ///   }
+    /// }
+    ///
+    /// impl AsMIMO<2, 2> for MyMIMOBlock {}
+    ///
+    /// let mut block = MyMIMOBlock;
+    /// let input_signals = [Signal { value: 1.0, dt: Duration::from_secs(1) }, Signal { value: 2.0, dt: Duration::from_secs(1) }];
+    /// let output_signals = &input_signals[..] * block.as_mimo();
+    /// assert_eq!(output_signals[0].value, 2.0);
+    /// assert_eq!(output_signals[1].value, 4.0);
+    /// ```
+    fn mul(self, rhs: &mut dyn MIMO<I, O>) -> Self::Output {
+        let input: [Signal; I] = self.try_into().expect("Slice with incorrect length");
+        rhs.output(input)
+    }
+}
+
+impl<const O: usize> Mul<&mut dyn MIMO<1, O>> for Signal {
+    type Output = [Signal; O];
+
+    /// Multiplies a single input signal with a mutable reference to a MIMO block that accepts one input, producing an array of output signals.
+    /// This allows for processing a single input signal through the MIMO block.
+    ///
+    /// # Examples
+    /// ```
+    /// use aule::prelude::*;
+    /// use std::time::Duration;
+    ///
+    /// struct MyMIMOBlock;
+    ///
+    /// impl MIMO<1, 2> for MyMIMOBlock {
+    ///   fn output(&mut self, input: [Signal; 1]) -> [Signal; 2] {
+    ///     [Signal {
+    ///       value: input[0].value + 1.0, // Example processing for first output
+    ///       dt: input[0].dt,
+    ///     }, Signal {
+    ///       value: input[0].value * 2.0, // Example processing for second output
+    ///       dt: input[0].dt,
+    ///     }]
+    ///   }
+    ///
+    ///   fn last_output(&self) -> Option<[Signal; 2]> {
+    ///     None // Example implementation, could return the last processed signals
+    ///   }
+    /// }
+    ///
+    /// impl AsMIMO<1, 2> for MyMIMOBlock {}
+    ///
+    /// let mut block = MyMIMOBlock;
+    /// let input_signal = Signal { value: 1.0, dt: Duration::from_secs(1) };
+    /// let output_signals = input_signal * block.as_mimo();
+    /// assert_eq!(output_signals[0].value, 2.0);
+    /// assert_eq!(output_signals[1].value, 2.0);
+    /// ```
+    fn mul(self, rhs: &mut dyn MIMO<1, O>) -> Self::Output {
+        rhs.output([self])
+    }
+}
+
+impl<const O: usize> Mul<&mut dyn MIMO<2, O>> for (Signal, Signal) {
+    type Output = [Signal; O];
+
+    /// Multiplies a tuple of two input signals with a mutable reference to a MIMO block that accepts two inputs, producing an array of output signals.
+    /// This allows for processing two input signals through the MIMO block.
+    /// The tuple must contain exactly two signals.
+    ///
+    /// # Examples
+    /// ```
+    /// use aule::prelude::*;
+    /// use std::time::Duration;
+    ///
+    /// struct MyMIMOBlock;
+    ///
+    /// impl MIMO<2, 2> for MyMIMOBlock {
+    ///   fn output(&mut self, input: [Signal; 2]) -> [Signal; 2] {
+    ///     [Signal {
+    ///       value: input[0].value + 1.0, // Example processing for first output
+    ///       dt: input[0].dt,
+    ///     }, Signal {
+    ///       value: input[1].value * 2.0, // Example processing for second output
+    ///       dt: input[1].dt,
+    ///     }]
+    ///   }
+    ///
+    ///   fn last_output(&self) -> Option<[Signal; 2]> {
+    ///     None // Example implementation, could return the last processed signals
+    ///   }
+    /// }
+    ///
+    /// impl AsMIMO<2, 2> for MyMIMOBlock {}
+    ///
+    /// let mut block = MyMIMOBlock;
+    /// let input_signals = (Signal { value: 1.0, dt: Duration::from_secs(1) }, Signal { value: 2.0, dt: Duration::from_secs(1) });
+    /// let output_signals = input_signals * block.as_mimo();
+    /// assert_eq!(output_signals[0].value, 2.0);
+    /// assert_eq!(output_signals[1].value, 4.0);
+    /// ```
+    fn mul(self, rhs: &mut dyn MIMO<2, O>) -> Self::Output {
+        rhs.output([self.0, self.1])
+    }
+}
+
+impl<const O: usize> Mul<&mut dyn MIMO<3, O>> for (Signal, Signal, Signal) {
+    type Output = [Signal; O];
+
+    /// Multiplies a tuple of three input signals with a mutable reference to a MIMO block that accepts three inputs, producing an array of output signals.
+    /// This allows for processing three input signals through the MIMO block.
+    /// The tuple must contain exactly three signals.
+    ///
+    /// # Examples
+    /// ```
+    /// use aule::prelude::*;
+    /// use std::time::Duration;
+    ///
+    /// struct MyMIMOBlock;
+    ///
+    /// impl MIMO<3, 2> for MyMIMOBlock {
+    ///   fn output(&mut self, input: [Signal; 3]) -> [Signal; 2] {
+    ///     [Signal {
+    ///       value: input[0].value + 1.0, // Example processing for first output
+    ///       dt: input[0].dt,
+    ///     }, Signal {
+    ///       value: input[1].value * 2.0 + input[2].value, // Example processing for second output
+    ///       dt: input[1].dt,
+    ///     }]
+    ///   }
+    ///
+    ///   fn last_output(&self) -> Option<[Signal; 2]> {
+    ///     None // Example implementation, could return the last processed signals
+    ///   }
+    /// }
+    ///
+    /// impl AsMIMO<3, 2> for MyMIMOBlock {}
+    ///
+    /// let mut block = MyMIMOBlock;
+    /// let input_signals = (Signal { value: 1.0, dt: Duration::from_secs(1) }, Signal { value: 2.0, dt: Duration::from_secs(1) }, Signal { value: 3.0, dt: Duration::from_secs(1) });
+    /// let output_signals = input_signals * block.as_mimo();
+    /// assert_eq!(output_signals[0].value, 2.0);
+    /// assert_eq!(output_signals[1].value, 7.0);
+    /// ```
+    fn mul(self, rhs: &mut dyn MIMO<3, O>) -> Self::Output {
+        rhs.output([self.0, self.1, self.2])
+    }
+}
+
+#[cfg(feature = "alloc")]
+impl<const I: usize, const O: usize> Mul<&mut dyn MIMO<I, O>> for Vec<Signal> {
+    type Output = [Signal; O];
+
+    /// Multiplies a vector of input signals with a mutable reference to a MIMO block, producing an array of output signals.
+    /// This allows for processing multiple input signals through the MIMO block.
+    /// The vector must have a length equal to the number of inputs expected by the MIMO block.
+    ///
+    /// # Examples
+    /// ```
+    /// use aule::prelude::*;
+    /// use std::time::Duration;
+    ///
+    /// struct MyMIMOBlock;
+    ///
+    /// impl MIMO<2, 2> for MyMIMOBlock {
+    ///   fn output(&mut self, input: [Signal; 2]) -> [Signal; 2] {
+    ///     [Signal {
+    ///       value: input[0].value + 1.0, // Example processing for first output
+    ///       dt: input[0].dt,
+    ///     }, Signal {
+    ///       value: input[1].value * 2.0, // Example processing for second output
+    ///       dt: input[1].dt,
+    ///     }]
+    ///   }
+    ///
+    ///   fn last_output(&self) -> Option<[Signal; 2]> {
+    ///     None // Example implementation, could return the last processed signals
+    ///   }
+    /// }
+    ///
+    /// impl AsMIMO<2, 2> for MyMIMOBlock {}
+    ///
+    /// let mut block = MyMIMOBlock;
+    /// let input_signals = Vec::from([Signal { value: 1.0, dt: Duration::from_secs(1) }, Signal { value: 2.0, dt: Duration::from_secs(1) }]);
+    /// let output_signals = input_signals * block.as_mimo();
+    /// assert_eq!(output_signals[0].value, 2.0);
+    /// assert_eq!(output_signals[1].value, 4.0);
+    /// ```
+    fn mul(self, rhs: &mut dyn MIMO<I, O>) -> Self::Output {
+        let input: [Signal; I] = self.try_into().expect("Vec with incorrect length");
+        rhs.output(input)
     }
 }
 
