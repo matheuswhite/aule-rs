@@ -19,12 +19,12 @@ use ndarray::Array2;
 ///
 /// let old_value = Array2::from_shape_vec((3, 1), vec![1.0, 2.0, 3.0]).unwrap();
 /// let dt = Duration::from_secs(1);
-/// let state_estimation: SS<Euler> = SS::new(
+/// let state_estimation = SS::new(
 ///     Array2::from_shape_vec((3, 3), vec![0.0, 1.0, 0.0, 0.0, 0.0, 1.0, -2.0, -3.0, 0.0]).unwrap(),
 ///     vec![0.0, 0.0, 1.0],
 ///     vec![1.0, 0.0, 0.0],
 ///     0.0,
-/// );
+/// ).with_integrator(Euler);
 /// let new_value = Euler::integrate(old_value, dt, &state_estimation);
 /// assert_eq!(new_value, Array2::from_shape_vec((3, 1), vec![3.0, 5.0, -5.0]).unwrap());
 /// ```
@@ -52,12 +52,12 @@ impl Integrator for Euler {
     ///
     /// let old_value = Array2::from_shape_vec((3, 1), vec![1.0, 2.0, 3.0]).unwrap();
     /// let dt = Duration::from_secs(1);
-    /// let state_estimation: SS<Euler> = SS::new(
+    /// let state_estimation = SS::new(
     ///     Array2::from_shape_vec((3, 3), vec![0.0, 1.0, 0.0, 0.0, 0.0, 1.0, -2.0, -3.0, 0.0]).unwrap(),
     ///     vec![0.0, 0.0, 1.0],
     ///     vec![1.0, 0.0, 0.0],
     ///     0.0,
-    /// );
+    /// ).with_integrator(Euler);
     /// let new_value = Euler::integrate(old_value, dt, &state_estimation);
     /// assert_eq!(new_value, Array2::from_shape_vec((3, 1), vec![3.0, 5.0, -5.0]).unwrap());
     /// ```

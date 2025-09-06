@@ -24,12 +24,12 @@ use ndarray::Array2;
 ///
 /// let old_value = Array2::from_shape_vec((3, 1), vec![1.0, 2.0, 3.0]).unwrap();
 /// let dt = Duration::from_secs(1);
-/// let state_estimation: SS<RK4> = SS::new(
+/// let state_estimation = SS::new(
 ///     Array2::from_shape_vec((3, 3), vec![0.0, 1.0, 0.0, 0.0, 0.0, 1.0, -2.0, -3.0, 0.0]).unwrap(),
 ///     vec![0.0, 0.0, 1.0],
 ///     vec![1.0, 0.0, 0.0],
 ///     0.0,
-/// );
+/// ).with_integrator(RK4);
 /// let new_value = RK4::integrate(old_value, dt, &state_estimation);
 /// assert_eq!(new_value, Array2::from_shape_vec((3, 1), vec![2.625, -0.41666675, -6.208334]).unwrap());
 /// ```
@@ -57,12 +57,12 @@ impl Integrator for RK4 {
     ///
     /// let old_value = Array2::from_shape_vec((3, 1), vec![1.0, 2.0, 3.0]).unwrap();
     /// let dt = Duration::from_secs(1);
-    /// let state_estimation: SS<RK4> = SS::new(
+    /// let state_estimation = SS::new(
     ///     Array2::from_shape_vec((3, 3), vec![0.0, 1.0, 0.0, 0.0, 0.0, 1.0, -2.0, -3.0, 0.0]).unwrap(),
     ///     vec![0.0, 0.0, 1.0],
     ///     vec![1.0, 0.0, 0.0],
     ///     0.0,
-    /// );
+    /// ).with_integrator(RK4);
     /// let new_value = RK4::integrate(old_value, dt, &state_estimation);
     /// assert_eq!(new_value, Array2::from_shape_vec((3, 1), vec![2.625, -0.41666675, -6.208334]).unwrap());
     /// ```

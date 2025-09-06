@@ -409,8 +409,8 @@ impl Mul<&mut dyn SISO> for Signal {
     }
 }
 
-impl<const I: usize, const O: usize> Mul<&mut dyn MIMO<I, O>> for [Signal; I] {
-    type Output = [Signal; O];
+impl<const I: usize> Mul<&mut dyn MIMO> for [Signal; I] {
+    type Output = Vec<Signal>;
 
     /// Multiplies an array of input signals with a mutable reference to a MIMO block, producing an array of output signals.
     /// This allows for processing multiple input signals through the MIMO block.
@@ -422,23 +422,27 @@ impl<const I: usize, const O: usize> Mul<&mut dyn MIMO<I, O>> for [Signal; I] {
     ///
     /// struct MyMIMOBlock;
     ///
-    /// impl MIMO<2, 2> for MyMIMOBlock {
-    ///   fn output(&mut self, input: [Signal; 2]) -> [Signal; 2] {
+    /// impl MIMO for MyMIMOBlock {
+    ///   fn output(&mut self, input: Vec<Signal>) -> Vec<Signal> {
     ///     [Signal {
     ///       value: input[0].value + 1.0, // Example processing for first output
     ///       dt: input[0].dt,
     ///     }, Signal {
     ///       value: input[1].value * 2.0, // Example processing for second output
     ///       dt: input[1].dt,
-    ///     }]
+    ///     }].to_vec()
     ///   }
     ///
-    ///   fn last_output(&self) -> Option<[Signal; 2]> {
+    ///   fn last_output(&self) -> Option<Vec<Signal>> {
     ///     None // Example implementation, could return the last processed signals
+    ///   }
+    ///
+    ///   fn dimensions(&self) -> (usize, usize) {
+    ///       (2, 2) // Example dimensions: 2 inputs, 2 outputs
     ///   }
     /// }
     ///
-    /// impl AsMIMO<2, 2> for MyMIMOBlock {}
+    /// impl AsMIMO for MyMIMOBlock {}
     ///
     /// let mut block = MyMIMOBlock;
     /// let input_signals = [Signal { value: 1.0, dt: Duration::from_secs(1) }, Signal { value: 2.0, dt: Duration::from_secs(1) }];
@@ -446,13 +450,13 @@ impl<const I: usize, const O: usize> Mul<&mut dyn MIMO<I, O>> for [Signal; I] {
     /// assert_eq!(output_signals[0].value, 2.0);
     /// assert_eq!(output_signals[1].value, 4.0);
     /// ```
-    fn mul(self, rhs: &mut dyn MIMO<I, O>) -> Self::Output {
-        rhs.output(self)
+    fn mul(self, rhs: &mut dyn MIMO) -> Self::Output {
+        rhs.output(self.to_vec())
     }
 }
 
-impl<const I: usize, const O: usize> Mul<&mut dyn MIMO<I, O>> for &[Signal] {
-    type Output = [Signal; O];
+impl Mul<&mut dyn MIMO> for &[Signal] {
+    type Output = Vec<Signal>;
 
     /// Multiplies a slice of input signals with a mutable reference to a MIMO block, producing an array of output signals.
     /// This allows for processing multiple input signals through the MIMO block.
@@ -465,23 +469,27 @@ impl<const I: usize, const O: usize> Mul<&mut dyn MIMO<I, O>> for &[Signal] {
     ///
     /// struct MyMIMOBlock;
     ///
-    /// impl MIMO<2, 2> for MyMIMOBlock {
-    ///   fn output(&mut self, input: [Signal; 2]) -> [Signal; 2] {
+    /// impl MIMO for MyMIMOBlock {
+    ///   fn output(&mut self, input: Vec<Signal>) -> Vec<Signal> {
     ///     [Signal {
     ///       value: input[0].value + 1.0, // Example processing for first output
     ///       dt: input[0].dt,
     ///     }, Signal {
     ///       value: input[1].value * 2.0, // Example processing for second output
     ///       dt: input[1].dt,
-    ///     }]
+    ///     }].to_vec()
     ///   }
     ///
-    ///   fn last_output(&self) -> Option<[Signal; 2]> {
+    ///   fn last_output(&self) -> Option<Vec<Signal>> {
     ///     None // Example implementation, could return the last processed signals
+    ///   }
+    ///
+    ///   fn dimensions(&self) -> (usize, usize) {
+    ///       (2, 2) // Example dimensions: 2 inputs, 2 outputs
     ///   }
     /// }
     ///
-    /// impl AsMIMO<2, 2> for MyMIMOBlock {}
+    /// impl AsMIMO for MyMIMOBlock {}
     ///
     /// let mut block = MyMIMOBlock;
     /// let input_signals = [Signal { value: 1.0, dt: Duration::from_secs(1) }, Signal { value: 2.0, dt: Duration::from_secs(1) }];
@@ -489,14 +497,13 @@ impl<const I: usize, const O: usize> Mul<&mut dyn MIMO<I, O>> for &[Signal] {
     /// assert_eq!(output_signals[0].value, 2.0);
     /// assert_eq!(output_signals[1].value, 4.0);
     /// ```
-    fn mul(self, rhs: &mut dyn MIMO<I, O>) -> Self::Output {
-        let input: [Signal; I] = self.try_into().expect("Slice with incorrect length");
-        rhs.output(input)
+    fn mul(self, rhs: &mut dyn MIMO) -> Self::Output {
+        rhs.output(self.to_vec())
     }
 }
 
-impl<const O: usize> Mul<&mut dyn MIMO<1, O>> for Signal {
-    type Output = [Signal; O];
+impl Mul<&mut dyn MIMO> for Signal {
+    type Output = Vec<Signal>;
 
     /// Multiplies a single input signal with a mutable reference to a MIMO block that accepts one input, producing an array of output signals.
     /// This allows for processing a single input signal through the MIMO block.
@@ -508,23 +515,27 @@ impl<const O: usize> Mul<&mut dyn MIMO<1, O>> for Signal {
     ///
     /// struct MyMIMOBlock;
     ///
-    /// impl MIMO<1, 2> for MyMIMOBlock {
-    ///   fn output(&mut self, input: [Signal; 1]) -> [Signal; 2] {
+    /// impl MIMO for MyMIMOBlock {
+    ///   fn output(&mut self, input: Vec<Signal>) -> Vec<Signal> {
     ///     [Signal {
     ///       value: input[0].value + 1.0, // Example processing for first output
     ///       dt: input[0].dt,
     ///     }, Signal {
     ///       value: input[0].value * 2.0, // Example processing for second output
     ///       dt: input[0].dt,
-    ///     }]
+    ///     }].to_vec()
     ///   }
     ///
-    ///   fn last_output(&self) -> Option<[Signal; 2]> {
+    ///   fn last_output(&self) -> Option<Vec<Signal>> {
     ///     None // Example implementation, could return the last processed signals
+    ///   }
+    ///
+    ///   fn dimensions(&self) -> (usize, usize) {
+    ///       (1, 2) // Example dimensions: 1 input, 2 outputs
     ///   }
     /// }
     ///
-    /// impl AsMIMO<1, 2> for MyMIMOBlock {}
+    /// impl AsMIMO for MyMIMOBlock {}
     ///
     /// let mut block = MyMIMOBlock;
     /// let input_signal = Signal { value: 1.0, dt: Duration::from_secs(1) };
@@ -532,13 +543,13 @@ impl<const O: usize> Mul<&mut dyn MIMO<1, O>> for Signal {
     /// assert_eq!(output_signals[0].value, 2.0);
     /// assert_eq!(output_signals[1].value, 2.0);
     /// ```
-    fn mul(self, rhs: &mut dyn MIMO<1, O>) -> Self::Output {
-        rhs.output([self])
+    fn mul(self, rhs: &mut dyn MIMO) -> Self::Output {
+        rhs.output([self].to_vec())
     }
 }
 
-impl<const O: usize> Mul<&mut dyn MIMO<2, O>> for (Signal, Signal) {
-    type Output = [Signal; O];
+impl Mul<&mut dyn MIMO> for (Signal, Signal) {
+    type Output = Vec<Signal>;
 
     /// Multiplies a tuple of two input signals with a mutable reference to a MIMO block that accepts two inputs, producing an array of output signals.
     /// This allows for processing two input signals through the MIMO block.
@@ -551,23 +562,27 @@ impl<const O: usize> Mul<&mut dyn MIMO<2, O>> for (Signal, Signal) {
     ///
     /// struct MyMIMOBlock;
     ///
-    /// impl MIMO<2, 2> for MyMIMOBlock {
-    ///   fn output(&mut self, input: [Signal; 2]) -> [Signal; 2] {
+    /// impl MIMO for MyMIMOBlock {
+    ///   fn output(&mut self, input: Vec<Signal>) -> Vec<Signal> {
     ///     [Signal {
     ///       value: input[0].value + 1.0, // Example processing for first output
     ///       dt: input[0].dt,
     ///     }, Signal {
     ///       value: input[1].value * 2.0, // Example processing for second output
     ///       dt: input[1].dt,
-    ///     }]
+    ///     }].to_vec()
     ///   }
     ///
-    ///   fn last_output(&self) -> Option<[Signal; 2]> {
+    ///   fn last_output(&self) -> Option<Vec<Signal>> {
     ///     None // Example implementation, could return the last processed signals
+    ///   }
+    ///
+    ///   fn dimensions(&self) -> (usize, usize) {
+    ///       (2, 2) // Example dimensions: 2 inputs, 2 outputs
     ///   }
     /// }
     ///
-    /// impl AsMIMO<2, 2> for MyMIMOBlock {}
+    /// impl AsMIMO for MyMIMOBlock {}
     ///
     /// let mut block = MyMIMOBlock;
     /// let input_signals = (Signal { value: 1.0, dt: Duration::from_secs(1) }, Signal { value: 2.0, dt: Duration::from_secs(1) });
@@ -575,13 +590,13 @@ impl<const O: usize> Mul<&mut dyn MIMO<2, O>> for (Signal, Signal) {
     /// assert_eq!(output_signals[0].value, 2.0);
     /// assert_eq!(output_signals[1].value, 4.0);
     /// ```
-    fn mul(self, rhs: &mut dyn MIMO<2, O>) -> Self::Output {
-        rhs.output([self.0, self.1])
+    fn mul(self, rhs: &mut dyn MIMO) -> Self::Output {
+        rhs.output([self.0, self.1].to_vec())
     }
 }
 
-impl<const O: usize> Mul<&mut dyn MIMO<3, O>> for (Signal, Signal, Signal) {
-    type Output = [Signal; O];
+impl Mul<&mut dyn MIMO> for (Signal, Signal, Signal) {
+    type Output = Vec<Signal>;
 
     /// Multiplies a tuple of three input signals with a mutable reference to a MIMO block that accepts three inputs, producing an array of output signals.
     /// This allows for processing three input signals through the MIMO block.
@@ -594,23 +609,27 @@ impl<const O: usize> Mul<&mut dyn MIMO<3, O>> for (Signal, Signal, Signal) {
     ///
     /// struct MyMIMOBlock;
     ///
-    /// impl MIMO<3, 2> for MyMIMOBlock {
-    ///   fn output(&mut self, input: [Signal; 3]) -> [Signal; 2] {
+    /// impl MIMO for MyMIMOBlock {
+    ///   fn output(&mut self, input: Vec<Signal>) -> Vec<Signal> {
     ///     [Signal {
     ///       value: input[0].value + 1.0, // Example processing for first output
     ///       dt: input[0].dt,
     ///     }, Signal {
     ///       value: input[1].value * 2.0 + input[2].value, // Example processing for second output
     ///       dt: input[1].dt,
-    ///     }]
+    ///     }].to_vec()
     ///   }
     ///
-    ///   fn last_output(&self) -> Option<[Signal; 2]> {
+    ///   fn last_output(&self) -> Option<Vec<Signal>> {
     ///     None // Example implementation, could return the last processed signals
+    ///   }
+    ///
+    ///   fn dimensions(&self) -> (usize, usize) {
+    ///       (3, 2) // Example dimensions: 3 inputs, 2
     ///   }
     /// }
     ///
-    /// impl AsMIMO<3, 2> for MyMIMOBlock {}
+    /// impl AsMIMO for MyMIMOBlock {}
     ///
     /// let mut block = MyMIMOBlock;
     /// let input_signals = (Signal { value: 1.0, dt: Duration::from_secs(1) }, Signal { value: 2.0, dt: Duration::from_secs(1) }, Signal { value: 3.0, dt: Duration::from_secs(1) });
@@ -618,14 +637,14 @@ impl<const O: usize> Mul<&mut dyn MIMO<3, O>> for (Signal, Signal, Signal) {
     /// assert_eq!(output_signals[0].value, 2.0);
     /// assert_eq!(output_signals[1].value, 7.0);
     /// ```
-    fn mul(self, rhs: &mut dyn MIMO<3, O>) -> Self::Output {
-        rhs.output([self.0, self.1, self.2])
+    fn mul(self, rhs: &mut dyn MIMO) -> Self::Output {
+        rhs.output([self.0, self.1, self.2].to_vec())
     }
 }
 
 #[cfg(feature = "alloc")]
-impl<const I: usize, const O: usize> Mul<&mut dyn MIMO<I, O>> for Vec<Signal> {
-    type Output = [Signal; O];
+impl Mul<&mut dyn MIMO> for Vec<Signal> {
+    type Output = Vec<Signal>;
 
     /// Multiplies a vector of input signals with a mutable reference to a MIMO block, producing an array of output signals.
     /// This allows for processing multiple input signals through the MIMO block.
@@ -638,23 +657,27 @@ impl<const I: usize, const O: usize> Mul<&mut dyn MIMO<I, O>> for Vec<Signal> {
     ///
     /// struct MyMIMOBlock;
     ///
-    /// impl MIMO<2, 2> for MyMIMOBlock {
-    ///   fn output(&mut self, input: [Signal; 2]) -> [Signal; 2] {
+    /// impl MIMO for MyMIMOBlock {
+    ///   fn output(&mut self, input: Vec<Signal>) -> Vec<Signal> {
     ///     [Signal {
     ///       value: input[0].value + 1.0, // Example processing for first output
     ///       dt: input[0].dt,
     ///     }, Signal {
     ///       value: input[1].value * 2.0, // Example processing for second output
     ///       dt: input[1].dt,
-    ///     }]
+    ///     }].to_vec()
     ///   }
     ///
-    ///   fn last_output(&self) -> Option<[Signal; 2]> {
+    ///   fn last_output(&self) -> Option<Vec<Signal>> {
     ///     None // Example implementation, could return the last processed signals
+    ///   }
+    ///
+    ///   fn dimensions(&self) -> (usize, usize) {
+    ///       (2, 2) // Example dimensions: 2 inputs, 2 outputs
     ///   }
     /// }
     ///
-    /// impl AsMIMO<2, 2> for MyMIMOBlock {}
+    /// impl AsMIMO for MyMIMOBlock {}
     ///
     /// let mut block = MyMIMOBlock;
     /// let input_signals = Vec::from([Signal { value: 1.0, dt: Duration::from_secs(1) }, Signal { value: 2.0, dt: Duration::from_secs(1) }]);
@@ -662,9 +685,8 @@ impl<const I: usize, const O: usize> Mul<&mut dyn MIMO<I, O>> for Vec<Signal> {
     /// assert_eq!(output_signals[0].value, 2.0);
     /// assert_eq!(output_signals[1].value, 4.0);
     /// ```
-    fn mul(self, rhs: &mut dyn MIMO<I, O>) -> Self::Output {
-        let input: [Signal; I] = self.try_into().expect("Vec with incorrect length");
-        rhs.output(input)
+    fn mul(self, rhs: &mut dyn MIMO) -> Self::Output {
+        rhs.output(self)
     }
 }
 

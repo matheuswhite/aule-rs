@@ -29,8 +29,9 @@ use std::{
 /// let b = vec![0.0, 1.0];
 /// let c = vec![3.0, 0.0];
 /// let d = 0.0;
-/// let mut ss: SS<Euler> = SS::new(a, b, c, d)
-///     .with_initial_state(vec![0.0, 0.0], Some(0.0));
+/// let mut ss = SS::new(a, b, c, d)
+///     .with_initial_state(vec![0.0, 0.0])
+///     .with_integrator(Euler);
 /// let input = Signal { value: 1.0, dt: Duration::from_secs(1) };
 /// let output = ss.output(input);
 /// assert_eq!(output.value, 0.0);
@@ -45,7 +46,6 @@ where
     c: Array2<f32>,
     d: Array2<f32>,
     state: Array2<f32>,
-    last_input: f32,
     current_input: f32,
     last_output: Option<Signal>,
     _marker: PhantomData<I>,
@@ -78,7 +78,7 @@ where
     /// let b = vec![0.0, 1.0];
     /// let c = vec![1.0, 0.0];
     /// let d = 0.0;
-    /// let ss: SS<Euler> = SS::new(a, b, c, d);
+    /// let ss = SS::new(a, b, c, d).with_integrator(Euler);
     /// ```
     pub fn new(a: Array2<f32>, b: Vec<f32>, c: Vec<f32>, d: f32) -> Self {
         let an = a.shape()[0];
@@ -103,7 +103,6 @@ where
             d: Array2::from_shape_vec((1, 1), vec![d]).unwrap(),
             state: Array2::zeros((an, 1)),
             last_output: None,
-            last_input: 0.0,
             current_input: 0.0,
             _marker: PhantomData,
         }
@@ -126,18 +125,15 @@ where
     /// use aule::prelude::*;
     /// use ndarray::array;
     ///
-    /// let mut ss: SS<Euler> = SS::new(
+    /// let mut ss = SS::new(
     ///     array![[0.0, 1.0], [-2.0, -3.0]],
     ///     vec![0.0, 1.0],
     ///     vec![1.0, 0.0],
     ///     0.0,
-    /// ).with_initial_state(vec![0.0, 0.0], Some(0.0));
+    /// ).with_initial_state(vec![0.0, 0.0])
+    ///  .with_integrator(Euler);
     /// ```
-    pub fn with_initial_state(
-        mut self,
-        initial_state: Vec<f32>,
-        initial_input: Option<f32>,
-    ) -> Self {
+    pub fn with_initial_state(mut self, initial_state: Vec<f32>) -> Self {
         let an = self.a.shape()[0];
         let xn = initial_state.len();
 
@@ -147,7 +143,32 @@ where
         );
 
         self.state = Array2::from_shape_vec((xn, 1), initial_state).unwrap();
-        self.last_input = initial_input.unwrap_or(0.0);
+        self
+    }
+
+    /// Sets the integrator for the state-space model.
+    ///
+    /// This method is a no-op and exists for API consistency.
+    ///
+    /// # Parameters
+    /// - `_integrator`: The integrator to be used (not stored).
+    ///
+    /// # Returns
+    /// A mutable reference to `self` for method chaining.
+    ///
+    /// # Example
+    /// ```
+    /// use aule::prelude::*;
+    /// use ndarray::array;
+    ///
+    /// let ss = SS::new(
+    ///     array![[0.0, 1.0], [-2.0, -3.0]],
+    ///     vec![0.0, 1.0],
+    ///     vec![1.0, 0.0],
+    ///     0.0,
+    /// ).with_integrator(Euler);
+    /// ```
+    pub fn with_integrator(self, _integrator: I) -> Self {
         self
     }
 }
@@ -180,8 +201,9 @@ where
     /// let b = vec![0.0, 1.0];
     /// let c = vec![1.0, 0.0];
     /// let d = 0.0;
-    /// let mut ss: SS<Euler> = SS::new(a, b, c, d)
-    ///     .with_initial_state(vec![0.0, 0.0], Some(0.0));
+    /// let mut ss = SS::new(a, b, c, d)
+    ///     .with_initial_state(vec![0.0, 0.0])
+    ///     .with_integrator(Euler);
     /// let state = array![[0.0], [0.0]];
     /// let dt = 0.1;
     /// let estimated_state = ss.estimate(state);
@@ -214,15 +236,15 @@ where
     /// let b = vec![0.0, 1.0];
     /// let c = vec![1.0, 0.0];
     /// let d = 0.0;
-    /// let mut ss: SS<Euler> = SS::new(a, b, c, d)
-    ///     .with_initial_state(vec![0.0, 0.0], Some(0.0));
+    /// let mut ss = SS::new(a, b, c, d)
+    ///     .with_initial_state(vec![0.0, 0.0])
+    ///     .with_integrator(Euler);
     /// let input = Signal { value: 1.0, dt: Duration::from_secs(1) };
     /// let output = ss.output(input);
     /// assert_eq!(output.value, 0.0);
     /// ```
     fn output(&mut self, input: Signal) -> Signal {
         self.current_input = input.value;
-        // TODO: Is this correct? Should I put the result into the self.state? Or should I need to do some shift?
         self.state = I::integrate(self.state.clone(), input.dt, self);
 
         let input_matrix = Array2::from_shape_vec((1, 1), vec![input.value]).unwrap();
@@ -232,7 +254,6 @@ where
             dt: input.dt,
         };
         self.last_output = Some(output);
-        self.last_input = input.value;
 
         output
     }
@@ -252,8 +273,9 @@ where
     /// let b = vec![0.0, 1.0];
     /// let c = vec![1.0, 0.0];
     /// let d = 0.0;
-    /// let mut ss: SS<Euler> = SS::new(a, b, c, d)
-    ///     .with_initial_state(vec![0.0, 0.0], Some(0.0));
+    /// let mut ss = SS::new(a, b, c, d)
+    ///     .with_initial_state(vec![0.0, 0.0])
+    ///     .with_integrator(Euler);
     /// let input = Signal { value: 1.0, dt: Duration::from_secs(1) };
     /// let _ = ss.output(input);
     /// let last_output = ss.last_output();
