@@ -45,43 +45,43 @@ fn main() {
     let _ = std::fs::remove_dir_all("output");
     let _ = std::fs::create_dir_all("output");
 
-    let plotter_ctx = PlotterContext::new();
-
     println!("Running Open Loop Motor Simulation...");
-    open_loop_motor();
+    let plotter1 = open_loop_motor();
     println!("Running Closed Loop Motor Simulation...");
-    closed_loop_motor();
+    let plotter2 = closed_loop_motor();
 
     println!("All simulations completed successfully!");
     println!("Check the 'output' directory for results.");
 
-    keep_alive(plotter_ctx);
+    (plotter1, plotter2).join_all();
 }
 
-fn open_loop_motor() {
+fn open_loop_motor() -> Plotter {
     let time = Time::from((0.001, 0.2));
     let mut motor = Motor::new(1.0, 1.0, 0.1, 0.01, 1.0, 0.01, 0.01);
     let mut step = Step::new();
     let mut writer = Writter::new("output/open_loop_motor.csv", ["output"]);
-    let mut chart = Chart::new("output/open_loop_motor.svg");
+    let mut plotter = Plotter::new();
 
     for dt in time {
         let input = dt >> step.as_input();
         let output = input * motor.as_siso() >> writer.as_monitor();
 
-        let _ = (input, output) >> chart.as_monitor();
+        let _ = output >> plotter.as_monitor();
     }
 
-    chart.plot();
+    plotter.display();
+
+    plotter
 }
 
-fn closed_loop_motor() {
+fn closed_loop_motor() -> Plotter {
     let time = Time::from((0.001, 0.2));
     let mut motor = Motor::new(1.0, 1.0, 0.1, 0.01, 1.0, 0.01, 0.01);
     let mut step = Step::new();
     let mut pid = PID::new(10.0, 0.1, 0.01);
     let mut writer = Writter::new("output/closed_loop_motor.csv", ["output"]);
-    let mut chart = Chart::new("output/closed_loop_motor.svg");
+    let mut plotter = Plotter::new();
 
     for dt in time {
         let input = dt >> step.as_input();
@@ -89,8 +89,10 @@ fn closed_loop_motor() {
         let control_signal = error * pid.as_siso();
         let output = control_signal * motor.as_siso() >> writer.as_monitor();
 
-        let _ = (input, output) >> chart.as_monitor();
+        let _ = output >> plotter.as_monitor();
     }
 
-    chart.plot();
+    plotter.display();
+
+    plotter
 }

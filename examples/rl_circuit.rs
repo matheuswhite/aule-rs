@@ -36,8 +36,6 @@ fn main() {
     let _ = std::fs::remove_dir_all("output");
     let _ = std::fs::create_dir_all("output");
 
-    let plotter_ctx = PlotterContext::new();
-
     println!("Running Open Loop RL Circuit Simulation...");
     open_loop_rl_circuit();
     println!("Running Closed Loop RL Circuit Simulation...");
@@ -45,8 +43,6 @@ fn main() {
 
     println!("All simulations completed successfully!");
     println!("Check the 'output' directory for results.");
-
-    keep_alive(plotter_ctx);
 }
 
 fn open_loop_rl_circuit() {
@@ -54,14 +50,11 @@ fn open_loop_rl_circuit() {
     let mut rl_circuit = RlCircuit::new(5.0, 0.05);
     let mut step = Step::new();
     let mut writer = Writter::new("output/open_loop_rl_circuit.csv", ["output"]);
-    let mut chart = Chart::new("output/open_loop_rl_circuit.svg");
 
     for dt in time {
         let input = dt >> step.as_input();
-        let _ = input * rl_circuit.as_siso() >> writer.as_monitor() >> chart.as_monitor();
+        let _ = input * rl_circuit.as_siso() >> writer.as_monitor();
     }
-
-    chart.plot();
 }
 
 fn closed_loop_rl_circuit() {
@@ -71,14 +64,10 @@ fn closed_loop_rl_circuit() {
     let mut rl_circuit = RlCircuit::new(5.0, 0.05);
     let mut step = Step::new();
     let mut writer = Writter::new("output/closed_loop_rl_circuit.csv", ["output"]);
-    let mut chart = Chart::new("output/closed_loop_rl_circuit.svg");
 
     for dt in time {
         let input = dt >> step.as_input();
         let _ = (input - rl_circuit.last_output()) * pid.as_siso() * rl_circuit.as_siso()
-            >> writer.as_monitor()
-            >> chart.as_monitor();
+            >> writer.as_monitor();
     }
-
-    chart.plot();
 }

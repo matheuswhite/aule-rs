@@ -54,10 +54,8 @@ pub mod prelude {
     pub use crate::input::sinusoid::Sinusoid;
     pub use crate::input::step::Step;
     pub use crate::input::{AsInput, Input};
-    #[cfg(feature = "alloc")]
-    pub use crate::monitor::chart::Chart;
-    #[cfg(feature = "alloc")]
-    pub use crate::monitor::plotter::{Plotter, PlotterContext, RTPlotter, keep_alive};
+    #[cfg(feature = "std")]
+    pub use crate::monitor::plotter::{JoinAll, Joinable, Plotter, RTPlotter};
     #[cfg(feature = "alloc")]
     pub use crate::monitor::printer::Printer;
     #[cfg(feature = "alloc")]

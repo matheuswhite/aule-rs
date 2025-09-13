@@ -1,262 +1,194 @@
-use crate::monitor::line::Lines;
 use crate::monitor::{AsMonitor, Monitor};
 use crate::signal::Signal;
 use alloc::vec::Vec;
-use core::str;
-use glfw::{Action, Context, GlfwReceiver, Key};
-use std::thread::sleep;
+use std::boxed::Box;
+use std::format;
+use std::io::Write;
+use std::process::{Child, Command, Stdio};
 use std::time::{Duration, Instant};
-use std::{collections::HashMap, rc::Rc, sync::Mutex};
 
-struct WindowContext {
-    window: glfw::PWindow,
-    events: GlfwReceiver<(f64, glfw::WindowEvent)>,
+pub struct Plotter {
+    sim_time: Duration,
+    data: Vec<Vec<Signal>>,
+    child: Option<Child>,
 }
 
-pub struct PlotterContext {
-    glfw: glfw::Glfw,
-    windows: HashMap<u64, WindowContext>,
-    counter: u64,
+pub struct RTPlotter {
+    sim_time: Duration,
+    last_update: Instant,
+    child: Option<Child>,
 }
 
-impl PlotterContext {
-    pub fn new() -> Rc<Mutex<Self>> {
-        let mut glfw = glfw::init(glfw::fail_on_errors).unwrap();
-        glfw.window_hint(glfw::WindowHint::ContextVersion(3, 3));
-        glfw.window_hint(glfw::WindowHint::OpenGlProfile(
-            glfw::OpenGlProfileHint::Core,
-        ));
-        #[cfg(target_os = "macos")]
-        glfw.window_hint(glfw::WindowHint::OpenGlForwardCompat(true));
+pub trait Joinable {
+    fn join(&mut self);
+}
 
-        Rc::new(Mutex::new(Self {
-            glfw,
-            windows: HashMap::new(),
-            counter: 0,
-        }))
-    }
-
-    pub fn new_window(&mut self, title: &str, width: u32, height: u32) -> u64 {
-        let id = self.counter;
-        self.counter += 1;
-
-        let (mut window, events) = self
-            .glfw
-            .create_window(width, height, title, glfw::WindowMode::Windowed)
-            .expect("Failed to create GLFW window");
-
-        window.set_key_polling(true);
-        window.set_framebuffer_size_polling(true);
-
-        gl::load_with(|symbol| window.get_proc_address(symbol) as *const _);
-
-        self.windows.insert(id, WindowContext { window, events });
-
-        id
-    }
-
-    pub fn run<F>(&mut self, id: u64, mut draw_fn: F)
-    where
-        F: FnMut(),
-    {
-        let Some(WindowContext { window, events }) = self.windows.get_mut(&id) else {
-            return;
-        };
-
-        if window.should_close() {
-            return;
+impl Plotter {
+    pub fn new() -> Self {
+        Self {
+            sim_time: Duration::from_secs(0),
+            data: Vec::new(),
+            child: None,
         }
-
-        window.make_current();
-
-        Self::process_events(window, events);
-
-        draw_fn();
-
-        window.swap_buffers();
-        self.glfw.poll_events();
     }
 
-    pub fn run_without_draw(&mut self, id: u64) {
-        let Some(WindowContext { window, events }) = self.windows.get_mut(&id) else {
-            return;
-        };
+    pub fn display(&mut self) {
+        self.child = Some(
+            Command::new("rtgraph")
+                .stdin(Stdio::piped())
+                .spawn()
+                .unwrap(),
+        );
 
-        if window.should_close() {
-            return;
-        }
+        for signals in &self.data {
+            let first_signal = &signals[0];
+            let time = first_signal.dt.as_secs_f32();
+            let value = first_signal.value;
 
-        window.make_current();
-        Self::process_events(window, events);
-
-        self.glfw.poll_events();
-    }
-
-    fn process_events(window: &mut glfw::Window, events: &GlfwReceiver<(f64, glfw::WindowEvent)>) {
-        for (_, event) in glfw::flush_messages(events) {
-            match event {
-                glfw::WindowEvent::FramebufferSize(width, height) => unsafe {
-                    gl::Viewport(0, 0, width, height)
-                },
-                glfw::WindowEvent::Key(Key::Escape, _, Action::Press, _) => {
-                    window.set_should_close(true)
-                }
-                _ => {}
+            if let Some(child) = &self.child {
+                child
+                    .stdin
+                    .as_ref()
+                    .unwrap()
+                    .write_all(format!("{},{}\n", time, value).as_bytes())
+                    .unwrap();
             }
         }
     }
 }
 
-pub fn keep_alive(plotter_context: Rc<Mutex<PlotterContext>>) {
-    loop {
-        let mut guard = plotter_context.lock().unwrap();
-        if guard.windows.is_empty() {
-            break;
-        }
-
-        guard
-            .windows
-            .retain(|_, window_context| !window_context.window.should_close());
-
-        for id in guard.windows.keys().cloned().collect::<Vec<_>>() {
-            guard.run_without_draw(id);
-        }
-
-        sleep(Duration::from_millis(16)); // Roughly 60 FPS
-    }
-}
-
-pub struct Plotter {
-    context: Rc<Mutex<PlotterContext>>,
-    lines: Lines,
-    id: u64,
-    sim_time: f32,
-    max: (f32, f32),
-    min: (f32, f32),
-}
-
-pub struct RTPlotter {
-    context: Rc<Mutex<PlotterContext>>,
-    lines: Lines,
-    id: u64,
-    sim_time: f32,
-    max: (f32, f32),
-    min: (f32, f32),
-    last_update: Instant,
-}
-
-impl Plotter {
-    pub fn new(
-        title: &str,
-        x_limits: (f32, f32),
-        y_limits: (f32, f32),
-        context: &Rc<Mutex<PlotterContext>>,
-    ) -> Self {
-        let id = {
-            let mut guard = context.lock().unwrap();
-            guard.new_window(title, 400, 300)
-        };
-
-        Self {
-            context: context.clone(),
-            id,
-            lines: Lines::new(),
-            sim_time: 0.0,
-            max: (x_limits.1, y_limits.1),
-            min: (x_limits.0, y_limits.0),
-        }
-    }
-
-    fn add_point(&mut self, x: f32, y: f32) {
-        let x = (x - self.min.0) / (self.max.0 - self.min.0) * 2.0 - 1.0; // Normalize to [-1, 1]
-        let y = (y - self.min.1) / (self.max.1 - self.min.1) * 2.0 - 1.0; // Normalize to [-1, 1]
-        let vertices = self.lines.vertices();
-
-        let (last_x, last_y) = if vertices.len() >= 2 {
-            (vertices[vertices.len() - 2], vertices[vertices.len() - 1])
-        } else {
-            (x, y)
-        };
-
-        self.lines.add_line(last_x, last_y, x, y);
-    }
-
-    pub fn display(&mut self) {
-        let mut guard = self.context.lock().unwrap();
-        guard.run(self.id, || unsafe {
-            gl::ClearColor(0.2, 0.3, 0.3, 1.0);
-            gl::Clear(gl::COLOR_BUFFER_BIT);
-
-            self.lines.draw([1.0, 0.0, 0.0]);
-        });
-    }
-}
-
 impl RTPlotter {
-    pub fn new(
-        title: &str,
-        x_limits: (f32, f32),
-        y_limits: (f32, f32),
-        context: &Rc<Mutex<PlotterContext>>,
-    ) -> Self {
-        let id = {
-            let mut guard = context.lock().unwrap();
-            guard.new_window(title, 400, 300)
-        };
-
+    pub fn new() -> Self {
         Self {
+            sim_time: Duration::from_secs(0),
             last_update: Instant::now(),
-            context: context.clone(),
-            id,
-            lines: Lines::new(),
-            sim_time: 0.0,
-            max: (x_limits.1, y_limits.1),
-            min: (x_limits.0, y_limits.0),
+            child: None,
         }
-    }
-
-    fn add_point(&mut self, x: f32, y: f32) {
-        let x = (x - self.min.0) / (self.max.0 - self.min.0) * 2.0 - 1.0; // Normalize to [-1, 1]
-        let y = (y - self.min.1) / (self.max.1 - self.min.1) * 2.0 - 1.0; // Normalize to [-1, 1]
-        let vertices = self.lines.vertices();
-
-        let (last_x, last_y) = if vertices.len() >= 2 {
-            (vertices[vertices.len() - 2], vertices[vertices.len() - 1])
-        } else {
-            (x, y)
-        };
-
-        self.lines.add_line(last_x, last_y, x, y);
     }
 }
 
 impl Monitor for Plotter {
     fn show(&mut self, input: Vec<Signal>) {
-        self.sim_time += input[0].dt.as_secs_f32();
-        self.add_point(self.sim_time, input[0].value);
+        self.sim_time += input[0].dt;
+        self.data.push(
+            input
+                .into_iter()
+                .map(|s| Signal {
+                    value: s.value,
+                    dt: self.sim_time.into(),
+                })
+                .collect(),
+        );
     }
 }
 
 impl Monitor for RTPlotter {
     fn show(&mut self, input: Vec<Signal>) {
-        self.sim_time += input[0].dt.as_secs_f32();
-        self.add_point(self.sim_time, input[0].value);
+        self.sim_time += input[0].dt;
+        let first_signal = &input[0];
 
         if Instant::now().duration_since(self.last_update) < Duration::from_millis(17) {
             return;
         }
         self.last_update = Instant::now();
 
-        let mut guard = self.context.lock().unwrap();
-        guard.run(self.id, || unsafe {
-            gl::ClearColor(0.2, 0.3, 0.3, 1.0);
-            gl::Clear(gl::COLOR_BUFFER_BIT);
+        if self.child.is_none() {
+            let command = Command::new("rtgraph")
+                .stdin(Stdio::piped())
+                .spawn()
+                .expect("Failed to start rtgraph process");
+            self.child = Some(command);
+        }
 
-            self.lines.draw([1.0, 0.0, 0.0]);
-        });
+        self.child
+            .as_ref()
+            .unwrap()
+            .stdin
+            .as_ref()
+            .unwrap()
+            .write_all(
+                format!("{},{}\n", self.sim_time.as_secs_f32(), first_signal.value).as_bytes(),
+            )
+            .unwrap();
+    }
+}
+
+impl Drop for Plotter {
+    fn drop(&mut self) {
+        if let Some(child) = &mut self.child {
+            child.kill().unwrap();
+        }
+    }
+}
+
+impl Drop for RTPlotter {
+    fn drop(&mut self) {
+        if let Some(child) = &mut self.child {
+            child.kill().unwrap();
+        }
+    }
+}
+
+impl Joinable for Plotter {
+    fn join(&mut self) {
+        if let Some(child) = &mut self.child {
+            let _ = child.wait();
+        }
+    }
+}
+
+impl Joinable for RTPlotter {
+    fn join(&mut self) {
+        if let Some(child) = &mut self.child {
+            let _ = child.wait();
+        }
     }
 }
 
 impl AsMonitor for Plotter {}
 
 impl AsMonitor for RTPlotter {}
+
+pub trait JoinAll {
+    fn join_all(&mut self);
+}
+
+impl JoinAll for [Box<dyn Joinable>] {
+    fn join_all(&mut self) {
+        for plotter in self {
+            plotter.join();
+        }
+    }
+}
+
+impl JoinAll for Vec<Box<dyn Joinable>> {
+    fn join_all(&mut self) {
+        for plotter in self {
+            plotter.join();
+        }
+    }
+}
+
+impl<T, S> JoinAll for (T, S)
+where
+    T: Joinable,
+    S: Joinable,
+{
+    fn join_all(&mut self) {
+        self.0.join();
+        self.1.join();
+    }
+}
+
+impl<T, S, R> JoinAll for (T, S, R)
+where
+    T: Joinable,
+    S: Joinable,
+    R: Joinable,
+{
+    fn join_all(&mut self) {
+        self.0.join();
+        self.1.join();
+        self.2.join();
+    }
+}
