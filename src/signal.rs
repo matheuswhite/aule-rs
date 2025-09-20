@@ -1,6 +1,6 @@
 use crate::block::mimo::MIMO;
 #[cfg(feature = "alloc")]
-use crate::monitor::Monitor;
+use crate::output::Output;
 use crate::{block::siso::SISO, error::ErrorMetric};
 #[cfg(feature = "alloc")]
 use alloc::vec::Vec;
@@ -691,7 +691,7 @@ impl Mul<&mut dyn MIMO> for Vec<Signal> {
 }
 
 #[cfg(feature = "alloc")]
-impl Shr<&mut dyn Monitor> for Signal {
+impl Shr<&mut dyn Output> for Signal {
     type Output = Signal;
 
     /// Puts the signal to a monitor, allowing it to display or log the signal.
@@ -701,23 +701,23 @@ impl Shr<&mut dyn Monitor> for Signal {
     /// use aule::prelude::*;
     /// use std::time::Duration;
     ///
-    /// struct MyMonitor;
+    /// struct MyOutput;
     ///
-    /// impl Monitor for MyMonitor {
+    /// impl Output for MyOutput {
     ///     fn show(&mut self, inputs: Vec<Signal>) {
-    ///         println!("Monitoring signal: value = {}, dt = {:?}", inputs[0].value, inputs[0].dt);
+    ///         println!("Outputing signal: value = {}, dt = {:?}", inputs[0].value, inputs[0].dt);
     ///     }
     /// }
     ///
-    /// impl AsMonitor for MyMonitor {}
+    /// impl AsOutput for MyOutput {}
     ///
-    /// let mut monitor = MyMonitor;
+    /// let mut monitor = MyOutput;
     /// let input_signal = Signal { value: 1.0, dt: Duration::from_secs(1) };
     /// let output_signal = input_signal >> monitor.as_monitor();
     /// assert_eq!(output_signal.value, 1.0);
     /// assert_eq!(output_signal.dt, Duration::from_secs(1));
     /// ```
-    fn shr(self, monitor: &mut dyn Monitor) -> Self::Output {
+    fn shr(self, monitor: &mut dyn Output) -> Self::Output {
         monitor.show(Vec::from([self]));
         self
     }
@@ -764,7 +764,7 @@ impl Shr<&mut dyn ErrorMetric<1>> for Signal {
 }
 
 #[cfg(feature = "alloc")]
-impl Shr<&mut dyn Monitor> for (Signal, Signal) {
+impl Shr<&mut dyn Output> for (Signal, Signal) {
     type Output = (Signal, Signal);
 
     /// Puts a tuple of two signals to a monitor, allowing it to display or log the signals.
@@ -774,17 +774,17 @@ impl Shr<&mut dyn Monitor> for (Signal, Signal) {
     /// use aule::prelude::*;
     /// use std::time::Duration;
     ///
-    /// struct MyMonitor;
+    /// struct MyOutput;
     ///
-    /// impl Monitor for MyMonitor {
+    /// impl Output for MyOutput {
     ///     fn show(&mut self, inputs: Vec<Signal>) {
-    ///         println!("Monitoring signal: value = {}, dt = {:?}", inputs[0].value, inputs[0].dt);
+    ///         println!("Outputing signal: value = {}, dt = {:?}", inputs[0].value, inputs[0].dt);
     ///     }
     /// }
     ///
-    /// impl AsMonitor for MyMonitor {}
+    /// impl AsOutput for MyOutput {}
     ///
-    /// let mut monitor = MyMonitor;
+    /// let mut monitor = MyOutput;
     /// let input_signal1 = Signal { value: 1.0, dt: Duration::from_secs(1) };
     /// let input_signal2 = Signal { value: 2.0, dt: Duration::from_secs(1) };
     /// let output_signals = (input_signal1, input_signal2) >> monitor.as_monitor();
@@ -793,7 +793,7 @@ impl Shr<&mut dyn Monitor> for (Signal, Signal) {
     /// assert_eq!(output_signals.1.value, 2.0);
     /// assert_eq!(output_signals.1.dt, Duration::from_secs(1));
     /// ```
-    fn shr(self, monitor: &mut dyn Monitor) -> Self::Output {
+    fn shr(self, monitor: &mut dyn Output) -> Self::Output {
         monitor.show(Vec::from([self.0, self.1]));
         self
     }
@@ -844,7 +844,7 @@ impl Shr<&mut dyn ErrorMetric<2>> for (Signal, Signal) {
 }
 
 #[cfg(feature = "alloc")]
-impl Shr<&mut dyn Monitor> for (Signal, Signal, Signal) {
+impl Shr<&mut dyn Output> for (Signal, Signal, Signal) {
     type Output = (Signal, Signal, Signal);
 
     /// Puts a tuple of three signals to a monitor, allowing it to display or log the signals.
@@ -854,17 +854,17 @@ impl Shr<&mut dyn Monitor> for (Signal, Signal, Signal) {
     /// use aule::prelude::*;
     /// use std::time::Duration;
     ///
-    /// struct MyMonitor;
+    /// struct MyOutput;
     ///
-    /// impl Monitor for MyMonitor {
+    /// impl Output for MyOutput {
     ///     fn show(&mut self, inputs: Vec<Signal>) {
-    ///         println!("Monitoring signal: value = {}, dt = {:?}", inputs[0].value, inputs[0].dt);
+    ///         println!("Outputing signal: value = {}, dt = {:?}", inputs[0].value, inputs[0].dt);
     ///     }
     /// }
     ///
-    /// impl AsMonitor for MyMonitor {}
+    /// impl AsOutput for MyOutput {}
     ///
-    /// let mut monitor = MyMonitor;
+    /// let mut monitor = MyOutput;
     /// let input_signal1 = Signal { value: 1.0, dt: Duration::from_secs(1) };
     /// let input_signal2 = Signal { value: 2.0, dt: Duration::from_secs(1) };
     /// let input_signal3 = Signal { value: 3.0, dt: Duration::from_secs(1) };
@@ -876,14 +876,14 @@ impl Shr<&mut dyn Monitor> for (Signal, Signal, Signal) {
     /// assert_eq!(output_signals.2.value, 3.0);
     /// assert_eq!(output_signals.2.dt, Duration::from_secs(1));
     /// ```
-    fn shr(self, monitor: &mut dyn Monitor) -> Self::Output {
+    fn shr(self, monitor: &mut dyn Output) -> Self::Output {
         monitor.show(Vec::from([self.0, self.1, self.2]));
         self
     }
 }
 
 #[cfg(feature = "alloc")]
-impl<'a> Shr<&mut dyn Monitor> for &'a [Signal] {
+impl<'a> Shr<&mut dyn Output> for &'a [Signal] {
     type Output = &'a [Signal];
 
     /// Puts a slice of signals to a monitor, allowing it to display or log the signals.
@@ -893,17 +893,17 @@ impl<'a> Shr<&mut dyn Monitor> for &'a [Signal] {
     /// use aule::prelude::*;
     /// use std::time::Duration;
     ///
-    /// struct MyMonitor;
+    /// struct MyOutput;
     ///
-    /// impl Monitor for MyMonitor {
+    /// impl Output for MyOutput {
     ///     fn show(&mut self, inputs: Vec<Signal>) {
-    ///         println!("Monitoring signal: value = {}, dt = {:?}", inputs[0].value, inputs[0].dt);
+    ///         println!("Outputing signal: value = {}, dt = {:?}", inputs[0].value, inputs[0].dt);
     ///     }
     /// }
     ///
-    /// impl AsMonitor for MyMonitor {}
+    /// impl AsOutput for MyOutput {}
     ///
-    /// let mut monitor = MyMonitor;
+    /// let mut monitor = MyOutput;
     /// let input_signals = [
     ///     Signal { value: 1.0, dt: Duration::from_secs(1) },
     ///     Signal { value: 2.0, dt: Duration::from_secs(1) },
@@ -914,14 +914,14 @@ impl<'a> Shr<&mut dyn Monitor> for &'a [Signal] {
     /// assert_eq!(output_signals[1].value, 2.0);
     /// assert_eq!(output_signals[1].dt, Duration::from_secs(1));
     /// ```
-    fn shr(self, monitor: &mut dyn Monitor) -> Self::Output {
+    fn shr(self, monitor: &mut dyn Output) -> Self::Output {
         monitor.show(self.to_vec());
         self
     }
 }
 
 #[cfg(feature = "alloc")]
-impl<const N: usize> Shr<&mut dyn Monitor> for [Signal; N] {
+impl<const N: usize> Shr<&mut dyn Output> for [Signal; N] {
     type Output = [Signal; N];
 
     /// Puts an array of signals to a monitor, allowing it to display or log the signals.
@@ -931,17 +931,17 @@ impl<const N: usize> Shr<&mut dyn Monitor> for [Signal; N] {
     /// use aule::prelude::*;
     /// use std::time::Duration;
     ///
-    /// struct MyMonitor;
+    /// struct MyOutput;
     ///
-    /// impl Monitor for MyMonitor {
+    /// impl Output for MyOutput {
     ///     fn show(&mut self, inputs: Vec<Signal>) {
-    ///         println!("Monitoring signal: value = {}, dt = {:?}", inputs[0].value, inputs[0].dt);
+    ///         println!("Outputing signal: value = {}, dt = {:?}", inputs[0].value, inputs[0].dt);
     ///     }
     /// }
     ///
-    /// impl AsMonitor for MyMonitor {}
+    /// impl AsOutput for MyOutput {}
     ///
-    /// let mut monitor = MyMonitor;
+    /// let mut monitor = MyOutput;
     /// let input_signals = [
     ///     Signal { value: 1.0, dt: Duration::from_secs(1) },
     ///     Signal { value: 2.0, dt: Duration::from_secs(1) },
@@ -952,14 +952,14 @@ impl<const N: usize> Shr<&mut dyn Monitor> for [Signal; N] {
     /// assert_eq!(output_signals[1].value, 2.0);
     /// assert_eq!(output_signals[1].dt, Duration::from_secs(1));
     /// ```
-    fn shr(self, monitor: &mut dyn Monitor) -> Self::Output {
+    fn shr(self, monitor: &mut dyn Output) -> Self::Output {
         monitor.show(self.to_vec());
         self
     }
 }
 
 #[cfg(feature = "alloc")]
-impl Shr<&mut dyn Monitor> for Vec<Signal> {
+impl Shr<&mut dyn Output> for Vec<Signal> {
     type Output = Vec<Signal>;
 
     /// Puts a vector of signals to a monitor, allowing it to display or log the signals.
@@ -969,17 +969,17 @@ impl Shr<&mut dyn Monitor> for Vec<Signal> {
     /// use aule::prelude::*;
     /// use std::time::Duration;
     ///
-    /// struct MyMonitor;
+    /// struct MyOutput;
     ///
-    /// impl Monitor for MyMonitor {
+    /// impl Output for MyOutput {
     ///     fn show(&mut self, inputs: Vec<Signal>) {
-    ///         println!("Monitoring signal: value = {}, dt = {:?}", inputs[0].value, inputs[0].dt);
+    ///         println!("Outputing signal: value = {}, dt = {:?}", inputs[0].value, inputs[0].dt);
     ///     }
     /// }
     ///
-    /// impl AsMonitor for MyMonitor {}
+    /// impl AsOutput for MyOutput {}
     ///
-    /// let mut monitor = MyMonitor;
+    /// let mut monitor = MyOutput;
     /// let input_signals = vec![
     ///     Signal { value: 1.0, dt: Duration::from_secs(1) },
     ///     Signal { value: 2.0, dt: Duration::from_secs(1) },
@@ -990,7 +990,7 @@ impl Shr<&mut dyn Monitor> for Vec<Signal> {
     /// assert_eq!(output_signals[1].value, 2.0);
     /// assert_eq!(output_signals[1].dt, Duration::from_secs(1));
     /// ```
-    fn shr(self, monitor: &mut dyn Monitor) -> Self::Output {
+    fn shr(self, monitor: &mut dyn Output) -> Self::Output {
         monitor.show(self.clone());
         self
     }

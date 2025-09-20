@@ -1,4 +1,4 @@
-use crate::monitor::{AsMonitor, Monitor};
+use crate::output::{AsOutput, Output};
 use crate::signal::Signal;
 use alloc::vec::Vec;
 use std::boxed::Box;
@@ -82,7 +82,7 @@ impl RTPlotter {
     }
 }
 
-impl Monitor for Plotter {
+impl Output for Plotter {
     fn show(&mut self, input: Vec<Signal>) {
         self.sim_time += input[0].dt;
         self.data.push(
@@ -97,7 +97,7 @@ impl Monitor for Plotter {
     }
 }
 
-impl Monitor for RTPlotter {
+impl Output for RTPlotter {
     fn show(&mut self, input: Vec<Signal>) {
         self.sim_time += input[0].dt;
 
@@ -169,9 +169,9 @@ impl Joinable for RTPlotter {
     }
 }
 
-impl AsMonitor for Plotter {}
+impl AsOutput for Plotter {}
 
-impl AsMonitor for RTPlotter {}
+impl AsOutput for RTPlotter {}
 
 pub trait JoinAll {
     fn join_all(&mut self);

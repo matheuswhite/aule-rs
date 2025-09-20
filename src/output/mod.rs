@@ -5,7 +5,7 @@ pub mod plotter;
 pub mod printer;
 pub mod writer;
 
-/// The `Monitor` trait defines the interface for monitoring signals in a block-based system.
+/// The `Output` trait defines the interface for monitoring signals in a block-based system.
 /// It provides a method to display or log the input signal.
 ///
 /// # Examples
@@ -13,24 +13,24 @@ pub mod writer;
 /// use aule::prelude::*;
 /// use std::time::Duration;
 ///
-/// struct MyMonitor;
+/// struct MyOutput;
 ///
-/// impl Monitor for MyMonitor {
+/// impl Output for MyOutput {
 ///     fn show(&mut self, inputs: Vec<Signal>) {
 ///         // Display or log the input signal
-///         println!("Monitoring signal: value = {}, dt = {:?}", inputs[0].value, inputs[0].dt);
+///         println!("Outputing signal: value = {}, dt = {:?}", inputs[0].value, inputs[0].dt);
 ///     }
 /// }
 ///
-/// let mut monitor = MyMonitor;
+/// let mut monitor = MyOutput;
 /// let input_signal = Signal { value: 1.0, dt: Duration::from_secs(1) };
 /// monitor.show(vec![input_signal]);
 /// ```
-pub trait Monitor {
+pub trait Output {
     fn show(&mut self, inputs: Vec<Signal>);
 }
 
-/// The `AsMonitor` trait provides a way to treat any type that implements the `Monitor` trait as a dynamic monitor.
+/// The `AsOutput` trait provides a way to treat any type that implements the `Output` trait as a dynamic monitor.
 /// It allows for dynamic dispatch of the `show` method.
 /// This is useful for scenarios where you want to work with monitors without knowing their concrete types at compile time.
 ///
@@ -39,23 +39,23 @@ pub trait Monitor {
 /// use aule::prelude::*;
 /// use std::time::Duration;
 ///
-/// struct MyMonitor;
+/// struct MyOutput;
 ///
-/// impl Monitor for MyMonitor {
+/// impl Output for MyOutput {
 ///     fn show(&mut self, inputs: Vec<Signal>) {
-///         println!("Monitoring signal: value = {}, dt = {:?}", inputs[0].value, inputs[0].dt);
+///         println!("Outputing signal: value = {}, dt = {:?}", inputs[0].value, inputs[0].dt);
 ///     }
 /// }
 ///
-/// impl AsMonitor for MyMonitor {}
+/// impl AsOutput for MyOutput {}
 ///
-/// let mut monitor = MyMonitor;
-/// let mut monitor: &mut dyn Monitor = monitor.as_monitor();
+/// let mut monitor = MyOutput;
+/// let mut monitor: &mut dyn Output = monitor.as_monitor();
 /// let input_signal = Signal { value: 1.0, dt: Duration::from_secs(1) };
 /// monitor.show(vec![input_signal]);
 /// ```
-pub trait AsMonitor: Sized + Monitor + 'static {
-    fn as_monitor(&mut self) -> &mut dyn Monitor {
+pub trait AsOutput: Sized + Output + 'static {
+    fn as_monitor(&mut self) -> &mut dyn Output {
         self
     }
 }

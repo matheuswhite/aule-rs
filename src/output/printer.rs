@@ -1,4 +1,4 @@
-use crate::monitor::{AsMonitor, Monitor};
+use crate::output::{AsOutput, Output};
 use crate::signal::Signal;
 use alloc::format;
 use alloc::string::String;
@@ -20,7 +20,7 @@ impl Printer {
     }
 }
 
-impl Monitor for Printer {
+impl Output for Printer {
     fn show(&mut self, inputs: Vec<Signal>) {
         let values = inputs
             .iter()
@@ -32,4 +32,4 @@ impl Monitor for Printer {
     }
 }
 
-impl AsMonitor for Printer {}
+impl AsOutput for Printer {}

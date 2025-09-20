@@ -1,4 +1,4 @@
-use crate::monitor::{AsMonitor, Monitor};
+use crate::output::{AsOutput, Output};
 use crate::signal::Signal;
 use alloc::format;
 use alloc::string::String;
@@ -45,7 +45,7 @@ impl Writter {
     }
 }
 
-impl Monitor for Writter {
+impl Output for Writter {
     fn show(&mut self, inputs: Vec<Signal>) {
         self.sim_time += inputs[0].dt;
 
@@ -55,4 +55,4 @@ impl Monitor for Writter {
     }
 }
 
-impl AsMonitor for Writter {}
+impl AsOutput for Writter {}

@@ -13,7 +13,7 @@ mod discrete;
 mod error;
 mod input;
 #[cfg(feature = "alloc")]
-mod monitor;
+mod output;
 #[cfg(feature = "alloc")]
 pub mod poly;
 mod signal;
@@ -55,13 +55,13 @@ pub mod prelude {
     pub use crate::input::step::Step;
     pub use crate::input::{AsInput, Input};
     #[cfg(feature = "std")]
-    pub use crate::monitor::plotter::{JoinAll, Joinable, Plotter, RTPlotter};
+    pub use crate::output::plotter::{JoinAll, Joinable, Plotter, RTPlotter};
     #[cfg(feature = "alloc")]
-    pub use crate::monitor::printer::Printer;
+    pub use crate::output::printer::Printer;
     #[cfg(feature = "alloc")]
-    pub use crate::monitor::writer::Writter;
+    pub use crate::output::writer::Writter;
     #[cfg(feature = "alloc")]
-    pub use crate::monitor::{AsMonitor, Monitor};
+    pub use crate::output::{AsOutput, Output};
     pub use crate::signal::Signal;
     #[cfg(feature = "std")]
     pub use crate::time::RTTime;
