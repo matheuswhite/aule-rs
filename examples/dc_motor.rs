@@ -27,14 +27,14 @@ fn test_rt_dc_motor() -> RTPlotter {
     let mut pid = PID::new(10.0, 1.0, 0.1);
     let mut plant: SS<RK4> = ((k * s) / (s * s + a * k * s)).into();
     let mut writer = Writter::new("output/dc_motor.csv", ["output"]);
-    let mut plotter = RTPlotter::new();
+    let mut plotter = RTPlotter::new(1.0, 1.0);
 
     for dt in time {
         let signal = dt >> input.as_input();
         let output =
             (signal - plant.last_output()) * pid.as_siso() * plant.as_siso() >> writer.as_monitor();
 
-        let _ = output >> plotter.as_monitor();
+        let _ = (signal, output) >> plotter.as_monitor();
     }
 
     plotter
@@ -53,14 +53,14 @@ fn test_dc_motor() -> Plotter {
         .with_good_hart(0.3, 0.3, 0.4);
     let mut plant: SS<RK4> = ((k * s) / (s * s + a * k * s)).into();
     let mut writer = Writter::new("output/dc_motor.csv", ["output"]);
-    let mut plotter = Plotter::new();
+    let mut plotter = Plotter::new(1.0, 1.0);
 
     for dt in time {
         let signal = dt >> input.as_input();
         let output =
             (signal - plant.last_output()) * pid.as_siso() * plant.as_siso() >> writer.as_monitor();
 
-        let _ = output >> plotter.as_monitor();
+        let _ = (signal, output) >> plotter.as_monitor();
     }
 
     println!("PID error metrics: {}", pid.error_metrics());

@@ -5,18 +5,21 @@ use std::boxed::Box;
 use std::format;
 use std::io::Write;
 use std::process::{Child, Command, Stdio};
+use std::string::ToString;
 use std::time::{Duration, Instant};
 
 pub struct Plotter {
     sim_time: Duration,
     data: Vec<Vec<Signal>>,
     child: Option<Child>,
+    grid: (f32, f32),
 }
 
 pub struct RTPlotter {
     sim_time: Duration,
     last_update: Instant,
     child: Option<Child>,
+    grid: (f32, f32),
 }
 
 pub trait Joinable {
@@ -24,11 +27,12 @@ pub trait Joinable {
 }
 
 impl Plotter {
-    pub fn new() -> Self {
+    pub fn new(x_grid: f32, y_grid: f32) -> Self {
         Self {
             sim_time: Duration::from_secs(0),
             data: Vec::new(),
             child: None,
+            grid: (x_grid, y_grid),
         }
     }
 
@@ -36,21 +40,31 @@ impl Plotter {
         self.child = Some(
             Command::new("rtgraph")
                 .stdin(Stdio::piped())
+                .args([self.grid.0.to_string(), self.grid.1.to_string()])
                 .spawn()
                 .unwrap(),
         );
 
         for signals in &self.data {
-            let first_signal = &signals[0];
-            let time = first_signal.dt.as_secs_f32();
-            let value = first_signal.value;
+            let time = &signals[0].dt.as_secs_f32();
 
             if let Some(child) = &self.child {
                 child
                     .stdin
                     .as_ref()
                     .unwrap()
-                    .write_all(format!("{},{}\n", time, value).as_bytes())
+                    .write_all(
+                        format!(
+                            "{},{}\n",
+                            time,
+                            signals
+                                .iter()
+                                .map(|s| s.value.to_string())
+                                .collect::<Vec<_>>()
+                                .join(",")
+                        )
+                        .as_bytes(),
+                    )
                     .unwrap();
             }
         }
@@ -58,11 +72,12 @@ impl Plotter {
 }
 
 impl RTPlotter {
-    pub fn new() -> Self {
+    pub fn new(x_grid: f32, y_grid: f32) -> Self {
         Self {
             sim_time: Duration::from_secs(0),
             last_update: Instant::now(),
             child: None,
+            grid: (x_grid, y_grid),
         }
     }
 }
@@ -85,7 +100,6 @@ impl Monitor for Plotter {
 impl Monitor for RTPlotter {
     fn show(&mut self, input: Vec<Signal>) {
         self.sim_time += input[0].dt;
-        let first_signal = &input[0];
 
         if Instant::now().duration_since(self.last_update) < Duration::from_millis(17) {
             return;
@@ -95,6 +109,7 @@ impl Monitor for RTPlotter {
         if self.child.is_none() {
             let command = Command::new("rtgraph")
                 .stdin(Stdio::piped())
+                .args([self.grid.0.to_string(), self.grid.1.to_string()])
                 .spawn()
                 .expect("Failed to start rtgraph process");
             self.child = Some(command);
@@ -107,7 +122,16 @@ impl Monitor for RTPlotter {
             .as_ref()
             .unwrap()
             .write_all(
-                format!("{},{}\n", self.sim_time.as_secs_f32(), first_signal.value).as_bytes(),
+                format!(
+                    "{},{}\n",
+                    self.sim_time.as_secs_f32(),
+                    input
+                        .into_iter()
+                        .map(|s| s.value.to_string())
+                        .collect::<Vec<_>>()
+                        .join(",")
+                )
+                .as_bytes(),
             )
             .unwrap();
     }
