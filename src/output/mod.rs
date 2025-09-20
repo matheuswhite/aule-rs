@@ -1,5 +1,4 @@
 use crate::signal::Signal;
-use alloc::vec::Vec;
 
 pub mod plotter;
 pub mod printer;
@@ -16,7 +15,7 @@ pub mod writer;
 /// struct MyOutput;
 ///
 /// impl Output for MyOutput {
-///     fn show(&mut self, inputs: Vec<Signal>) {
+///     fn show(&mut self, inputs: &[Signal]) {
 ///         // Display or log the input signal
 ///         println!("Outputing signal: value = {}, dt = {:?}", inputs[0].value, inputs[0].dt);
 ///     }
@@ -24,10 +23,10 @@ pub mod writer;
 ///
 /// let mut monitor = MyOutput;
 /// let input_signal = Signal { value: 1.0, dt: Duration::from_secs(1) };
-/// monitor.show(vec![input_signal]);
+/// monitor.show(&[input_signal]);
 /// ```
 pub trait Output {
-    fn show(&mut self, inputs: Vec<Signal>);
+    fn show(&mut self, inputs: &[Signal]);
 }
 
 /// The `AsOutput` trait provides a way to treat any type that implements the `Output` trait as a dynamic monitor.
@@ -42,7 +41,7 @@ pub trait Output {
 /// struct MyOutput;
 ///
 /// impl Output for MyOutput {
-///     fn show(&mut self, inputs: Vec<Signal>) {
+///     fn show(&mut self, inputs: &[Signal]) {
 ///         println!("Outputing signal: value = {}, dt = {:?}", inputs[0].value, inputs[0].dt);
 ///     }
 /// }
@@ -52,7 +51,7 @@ pub trait Output {
 /// let mut monitor = MyOutput;
 /// let mut monitor: &mut dyn Output = monitor.as_monitor();
 /// let input_signal = Signal { value: 1.0, dt: Duration::from_secs(1) };
-/// monitor.show(vec![input_signal]);
+/// monitor.show(&[input_signal]);
 /// ```
 pub trait AsOutput: Sized + Output + 'static {
     fn as_monitor(&mut self) -> &mut dyn Output {

@@ -83,7 +83,7 @@ impl RTPlotter {
 }
 
 impl Output for Plotter {
-    fn show(&mut self, input: Vec<Signal>) {
+    fn show(&mut self, input: &[Signal]) {
         self.sim_time += input[0].dt;
         self.data.push(
             input
@@ -98,7 +98,7 @@ impl Output for Plotter {
 }
 
 impl Output for RTPlotter {
-    fn show(&mut self, input: Vec<Signal>) {
+    fn show(&mut self, input: &[Signal]) {
         self.sim_time += input[0].dt;
 
         if Instant::now().duration_since(self.last_update) < Duration::from_millis(17) {

@@ -21,7 +21,7 @@ impl Printer {
 }
 
 impl Output for Printer {
-    fn show(&mut self, inputs: Vec<Signal>) {
+    fn show(&mut self, inputs: &[Signal]) {
         let values = inputs
             .iter()
             .zip(self.units.iter())

@@ -60,7 +60,6 @@ pub mod prelude {
     pub use crate::output::printer::Printer;
     #[cfg(feature = "alloc")]
     pub use crate::output::writer::Writter;
-    #[cfg(feature = "alloc")]
     pub use crate::output::{AsOutput, Output};
     pub use crate::signal::Signal;
     #[cfg(feature = "std")]

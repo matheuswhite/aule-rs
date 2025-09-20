@@ -46,7 +46,7 @@ impl Writter {
 }
 
 impl Output for Writter {
-    fn show(&mut self, inputs: Vec<Signal>) {
+    fn show(&mut self, inputs: &[Signal]) {
         self.sim_time += inputs[0].dt;
 
         let values: Vec<String> = inputs.iter().map(|v| v.value.to_string()).collect();

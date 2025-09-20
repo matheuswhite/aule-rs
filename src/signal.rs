@@ -704,7 +704,7 @@ impl Shr<&mut dyn Output> for Signal {
     /// struct MyOutput;
     ///
     /// impl Output for MyOutput {
-    ///     fn show(&mut self, inputs: Vec<Signal>) {
+    ///     fn show(&mut self, inputs: &[Signal]) {
     ///         println!("Outputing signal: value = {}, dt = {:?}", inputs[0].value, inputs[0].dt);
     ///     }
     /// }
@@ -718,7 +718,7 @@ impl Shr<&mut dyn Output> for Signal {
     /// assert_eq!(output_signal.dt, Duration::from_secs(1));
     /// ```
     fn shr(self, monitor: &mut dyn Output) -> Self::Output {
-        monitor.show(Vec::from([self]));
+        monitor.show(&[self]);
         self
     }
 }
@@ -777,7 +777,7 @@ impl Shr<&mut dyn Output> for (Signal, Signal) {
     /// struct MyOutput;
     ///
     /// impl Output for MyOutput {
-    ///     fn show(&mut self, inputs: Vec<Signal>) {
+    ///     fn show(&mut self, inputs: &[Signal]) {
     ///         println!("Outputing signal: value = {}, dt = {:?}", inputs[0].value, inputs[0].dt);
     ///     }
     /// }
@@ -794,7 +794,7 @@ impl Shr<&mut dyn Output> for (Signal, Signal) {
     /// assert_eq!(output_signals.1.dt, Duration::from_secs(1));
     /// ```
     fn shr(self, monitor: &mut dyn Output) -> Self::Output {
-        monitor.show(Vec::from([self.0, self.1]));
+        monitor.show(&[self.0, self.1]);
         self
     }
 }
@@ -857,7 +857,7 @@ impl Shr<&mut dyn Output> for (Signal, Signal, Signal) {
     /// struct MyOutput;
     ///
     /// impl Output for MyOutput {
-    ///     fn show(&mut self, inputs: Vec<Signal>) {
+    ///     fn show(&mut self, inputs: &[Signal]) {
     ///         println!("Outputing signal: value = {}, dt = {:?}", inputs[0].value, inputs[0].dt);
     ///     }
     /// }
@@ -877,7 +877,7 @@ impl Shr<&mut dyn Output> for (Signal, Signal, Signal) {
     /// assert_eq!(output_signals.2.dt, Duration::from_secs(1));
     /// ```
     fn shr(self, monitor: &mut dyn Output) -> Self::Output {
-        monitor.show(Vec::from([self.0, self.1, self.2]));
+        monitor.show(&[self.0, self.1, self.2]);
         self
     }
 }
@@ -896,7 +896,7 @@ impl<'a> Shr<&mut dyn Output> for &'a [Signal] {
     /// struct MyOutput;
     ///
     /// impl Output for MyOutput {
-    ///     fn show(&mut self, inputs: Vec<Signal>) {
+    ///     fn show(&mut self, inputs: &[Signal]) {
     ///         println!("Outputing signal: value = {}, dt = {:?}", inputs[0].value, inputs[0].dt);
     ///     }
     /// }
@@ -915,7 +915,7 @@ impl<'a> Shr<&mut dyn Output> for &'a [Signal] {
     /// assert_eq!(output_signals[1].dt, Duration::from_secs(1));
     /// ```
     fn shr(self, monitor: &mut dyn Output) -> Self::Output {
-        monitor.show(self.to_vec());
+        monitor.show(self);
         self
     }
 }
@@ -934,7 +934,7 @@ impl<const N: usize> Shr<&mut dyn Output> for [Signal; N] {
     /// struct MyOutput;
     ///
     /// impl Output for MyOutput {
-    ///     fn show(&mut self, inputs: Vec<Signal>) {
+    ///     fn show(&mut self, inputs: &[Signal]) {
     ///         println!("Outputing signal: value = {}, dt = {:?}", inputs[0].value, inputs[0].dt);
     ///     }
     /// }
@@ -953,7 +953,7 @@ impl<const N: usize> Shr<&mut dyn Output> for [Signal; N] {
     /// assert_eq!(output_signals[1].dt, Duration::from_secs(1));
     /// ```
     fn shr(self, monitor: &mut dyn Output) -> Self::Output {
-        monitor.show(self.to_vec());
+        monitor.show(&self);
         self
     }
 }
@@ -972,7 +972,7 @@ impl Shr<&mut dyn Output> for Vec<Signal> {
     /// struct MyOutput;
     ///
     /// impl Output for MyOutput {
-    ///     fn show(&mut self, inputs: Vec<Signal>) {
+    ///     fn show(&mut self, inputs: &[Signal]) {
     ///         println!("Outputing signal: value = {}, dt = {:?}", inputs[0].value, inputs[0].dt);
     ///     }
     /// }
@@ -991,7 +991,7 @@ impl Shr<&mut dyn Output> for Vec<Signal> {
     /// assert_eq!(output_signals[1].dt, Duration::from_secs(1));
     /// ```
     fn shr(self, monitor: &mut dyn Output) -> Self::Output {
-        monitor.show(self.clone());
+        monitor.show(&self);
         self
     }
 }
