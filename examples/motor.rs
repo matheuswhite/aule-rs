@@ -61,7 +61,7 @@ fn open_loop_motor() -> Plotter {
     let mut motor = Motor::new(1.0, 1.0, 0.1, 0.01, 1.0, 0.01, 0.01);
     let mut step = Step::new();
     let mut writer = Writter::new("output/open_loop_motor.csv", ["output"]);
-    let mut plotter = Plotter::new(0.05, 0.5);
+    let mut plotter = Plotter::new("Open loop Motor".to_string(), 0.05, 0.5);
 
     for dt in time {
         let input = dt >> step.as_input();
@@ -71,6 +71,10 @@ fn open_loop_motor() -> Plotter {
     }
 
     plotter.display();
+    let res = plotter
+        .save("output/open_loop_motor.png")
+        .expect("Failed to save plot");
+    print!("{}", res);
 
     plotter
 }
@@ -81,7 +85,7 @@ fn closed_loop_motor() -> Plotter {
     let mut step = Step::new();
     let mut pid = PID::new(10.0, 0.1, 0.01);
     let mut writer = Writter::new("output/closed_loop_motor.csv", ["output"]);
-    let mut plotter = Plotter::new(0.05, 0.5);
+    let mut plotter = Plotter::new("Closed Loop Motor".to_string(), 0.05, 0.5);
 
     for dt in time {
         let input = dt >> step.as_input();
@@ -93,6 +97,10 @@ fn closed_loop_motor() -> Plotter {
     }
 
     plotter.display();
+    let res = plotter
+        .save("output/closed_loop_motor.png")
+        .expect("Failed to save plot");
+    print!("{}", res);
 
     plotter
 }

@@ -27,7 +27,7 @@ fn test_rt_dc_motor() -> RTPlotter {
     let mut pid = PID::new(10.0, 1.0, 0.1);
     let mut plant: SS<RK4> = ((k * s) / (s * s + a * k * s)).into();
     let mut writer = Writter::new("output/dc_motor.csv", ["output"]);
-    let mut plotter = RTPlotter::new(1.0, 1.0);
+    let mut plotter = RTPlotter::new("Real Time DC Motor".to_string(), 1.0, 1.0);
 
     for dt in time {
         let signal = dt >> input.as_input();
@@ -36,6 +36,11 @@ fn test_rt_dc_motor() -> RTPlotter {
 
         let _ = (signal, output) >> plotter.as_monitor();
     }
+
+    let res = plotter
+        .save("output/rt_dc_motor.png")
+        .expect("Failed to save plot");
+    print!("{}", res);
 
     plotter
 }
@@ -53,7 +58,7 @@ fn test_dc_motor() -> Plotter {
         .with_good_hart(0.3, 0.3, 0.4);
     let mut plant: SS<RK4> = ((k * s) / (s * s + a * k * s)).into();
     let mut writer = Writter::new("output/dc_motor.csv", ["output"]);
-    let mut plotter = Plotter::new(1.0, 1.0);
+    let mut plotter = Plotter::new("DC Motor".to_string(), 1.0, 1.0);
 
     for dt in time {
         let signal = dt >> input.as_input();
@@ -65,6 +70,10 @@ fn test_dc_motor() -> Plotter {
 
     println!("PID error metrics: {}", pid.error_metrics());
     plotter.display();
+    let res = plotter
+        .save("output/dc_motor.png")
+        .expect("Failed to save plot");
+    print!("{}", res);
 
     plotter
 }

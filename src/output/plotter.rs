@@ -3,8 +3,9 @@ use crate::signal::Signal;
 use alloc::vec::Vec;
 use std::boxed::Box;
 use std::format;
-use std::io::Write;
+use std::io::{Read, Write};
 use std::process::{Child, Command, Stdio};
+use std::string::String;
 use std::string::ToString;
 use std::time::{Duration, Instant};
 
@@ -13,6 +14,7 @@ pub struct Plotter {
     data: Vec<Vec<Signal>>,
     child: Option<Child>,
     grid: (f32, f32),
+    title: String,
 }
 
 pub struct RTPlotter {
@@ -20,19 +22,25 @@ pub struct RTPlotter {
     last_update: Instant,
     child: Option<Child>,
     grid: (f32, f32),
+    title: String,
 }
 
 pub trait Joinable {
     fn join(&mut self);
 }
 
+pub trait Savable {
+    fn save(&mut self, path: &str) -> Result<String, String>;
+}
+
 impl Plotter {
-    pub fn new(x_grid: f32, y_grid: f32) -> Self {
+    pub fn new(title: String, x_grid: f32, y_grid: f32) -> Self {
         Self {
             sim_time: Duration::from_secs(0),
             data: Vec::new(),
             child: None,
             grid: (x_grid, y_grid),
+            title,
         }
     }
 
@@ -40,7 +48,14 @@ impl Plotter {
         self.child = Some(
             Command::new("rtgraph")
                 .stdin(Stdio::piped())
-                .args([self.grid.0.to_string(), self.grid.1.to_string()])
+                .stdout(Stdio::piped())
+                .stderr(Stdio::piped())
+                .arg("-xs")
+                .arg(self.grid.0.to_string())
+                .arg("-ys")
+                .arg(self.grid.1.to_string())
+                .arg("-t")
+                .arg(&self.title)
                 .spawn()
                 .unwrap(),
         );
@@ -72,12 +87,13 @@ impl Plotter {
 }
 
 impl RTPlotter {
-    pub fn new(x_grid: f32, y_grid: f32) -> Self {
+    pub fn new(title: String, x_grid: f32, y_grid: f32) -> Self {
         Self {
             sim_time: Duration::from_secs(0),
             last_update: Instant::now(),
             child: None,
             grid: (x_grid, y_grid),
+            title,
         }
     }
 }
@@ -109,7 +125,14 @@ impl Output for RTPlotter {
         if self.child.is_none() {
             let command = Command::new("rtgraph")
                 .stdin(Stdio::piped())
-                .args([self.grid.0.to_string(), self.grid.1.to_string()])
+                .stdout(Stdio::piped())
+                .stderr(Stdio::piped())
+                .arg("-xs")
+                .arg(self.grid.0.to_string())
+                .arg("-ys")
+                .arg(self.grid.1.to_string())
+                .arg("-t")
+                .arg(&self.title)
                 .spawn()
                 .expect("Failed to start rtgraph process");
             self.child = Some(command);
@@ -166,6 +189,56 @@ impl Joinable for RTPlotter {
         if let Some(child) = &mut self.child {
             let _ = child.wait();
         }
+    }
+}
+
+impl Savable for Plotter {
+    fn save(&mut self, path: &str) -> Result<String, String> {
+        let Some(child) = self.child.as_mut() else {
+            return Err("Plotter process is not running.".to_string());
+        };
+
+        child
+            .stdin
+            .as_ref()
+            .unwrap()
+            .write_all(format!("!save,{}\n", path).as_bytes())
+            .unwrap();
+
+        let mut error = String::new();
+        let _ = child.stderr.as_mut().unwrap().read_to_string(&mut error);
+        if !error.is_empty() {
+            return Err(error);
+        }
+
+        let mut output = String::new();
+        let _ = child.stdout.as_mut().unwrap().read_to_string(&mut output);
+        Ok(output)
+    }
+}
+
+impl Savable for RTPlotter {
+    fn save(&mut self, path: &str) -> Result<String, String> {
+        let Some(child) = self.child.as_mut() else {
+            return Err("Plotter process is not running.".to_string());
+        };
+
+        child
+            .stdin
+            .as_ref()
+            .unwrap()
+            .write_all(format!("!save,{}\n", path).as_bytes())
+            .unwrap();
+
+        let mut error = String::new();
+        let _ = child.stderr.as_mut().unwrap().read_to_string(&mut error);
+        if !error.is_empty() {
+            return Err(error);
+        }
+
+        let mut output = String::new();
+        let _ = child.stdout.as_mut().unwrap().read_to_string(&mut output);
+        Ok(output)
     }
 }
 

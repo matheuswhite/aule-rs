@@ -55,7 +55,7 @@ pub mod prelude {
     pub use crate::input::step::Step;
     pub use crate::input::{AsInput, Input};
     #[cfg(feature = "std")]
-    pub use crate::output::plotter::{JoinAll, Joinable, Plotter, RTPlotter};
+    pub use crate::output::plotter::{JoinAll, Joinable, Plotter, RTPlotter, Savable};
     #[cfg(feature = "alloc")]
     pub use crate::output::printer::Printer;
     #[cfg(feature = "alloc")]

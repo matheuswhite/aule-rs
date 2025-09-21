@@ -11,7 +11,7 @@ fn main() {
     let mut ise = ISE::new();
     let mut itae = ITAE::new();
     let mut good_hart = GoodHart::new(0.3, 0.3, 0.4);
-    let mut plotter = Plotter::new(1.0, 0.25);
+    let mut plotter = Plotter::new("Third Order System".to_string(), 1.0, 0.25);
 
     for dt in time {
         let input = dt >> step.as_input();
@@ -21,9 +21,9 @@ fn main() {
             >> itae.as_error_metric();
         let control_signal = error * pid.as_siso();
         good_hart.update([error, control_signal]);
-        let output = control_signal * plant.as_siso() >> writer.as_monitor();
+        let output = control_signal * plant.as_siso();
 
-        let _ = (input, output) >> plotter.as_monitor();
+        let _ = (input, output) >> plotter.as_monitor() >> writer.as_monitor();
     }
 
     println!("IAE Value: {}", iae.value());
@@ -32,6 +32,10 @@ fn main() {
     println!("GoodHart Value: {}", good_hart.value());
 
     plotter.display();
+    let res = plotter
+        .save("output/third_order_system.png")
+        .expect("Failed to save plot");
+    print!("{}", res);
 
     plotter.join();
 }
