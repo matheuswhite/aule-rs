@@ -713,7 +713,7 @@ impl Shr<&mut dyn Output> for Signal {
     ///
     /// let mut monitor = MyOutput;
     /// let input_signal = Signal { value: 1.0, dt: Duration::from_secs(1) };
-    /// let output_signal = input_signal >> monitor.as_monitor();
+    /// let output_signal = input_signal >> monitor.as_output();
     /// assert_eq!(output_signal.value, 1.0);
     /// assert_eq!(output_signal.dt, Duration::from_secs(1));
     /// ```
@@ -787,7 +787,7 @@ impl Shr<&mut dyn Output> for (Signal, Signal) {
     /// let mut monitor = MyOutput;
     /// let input_signal1 = Signal { value: 1.0, dt: Duration::from_secs(1) };
     /// let input_signal2 = Signal { value: 2.0, dt: Duration::from_secs(1) };
-    /// let output_signals = (input_signal1, input_signal2) >> monitor.as_monitor();
+    /// let output_signals = (input_signal1, input_signal2) >> monitor.as_output();
     /// assert_eq!(output_signals.0.value, 1.0);
     /// assert_eq!(output_signals.0.dt, Duration::from_secs(1));
     /// assert_eq!(output_signals.1.value, 2.0);
@@ -868,7 +868,7 @@ impl Shr<&mut dyn Output> for (Signal, Signal, Signal) {
     /// let input_signal1 = Signal { value: 1.0, dt: Duration::from_secs(1) };
     /// let input_signal2 = Signal { value: 2.0, dt: Duration::from_secs(1) };
     /// let input_signal3 = Signal { value: 3.0, dt: Duration::from_secs(1) };
-    /// let output_signals = (input_signal1, input_signal2, input_signal3) >> monitor.as_monitor();
+    /// let output_signals = (input_signal1, input_signal2, input_signal3) >> monitor.as_output();
     /// assert_eq!(output_signals.0.value, 1.0);
     /// assert_eq!(output_signals.0.dt, Duration::from_secs(1));
     /// assert_eq!(output_signals.1.value, 2.0);
@@ -908,7 +908,7 @@ impl<'a> Shr<&mut dyn Output> for &'a [Signal] {
     ///     Signal { value: 1.0, dt: Duration::from_secs(1) },
     ///     Signal { value: 2.0, dt: Duration::from_secs(1) },
     /// ];
-    /// let output_signals = input_signals >> monitor.as_monitor();
+    /// let output_signals = input_signals >> monitor.as_output();
     /// assert_eq!(output_signals[0].value, 1.0);
     /// assert_eq!(output_signals[0].dt, Duration::from_secs(1));
     /// assert_eq!(output_signals[1].value, 2.0);
@@ -946,7 +946,7 @@ impl<const N: usize> Shr<&mut dyn Output> for [Signal; N] {
     ///     Signal { value: 1.0, dt: Duration::from_secs(1) },
     ///     Signal { value: 2.0, dt: Duration::from_secs(1) },
     /// ];
-    /// let output_signals = input_signals >> monitor.as_monitor();
+    /// let output_signals = input_signals >> monitor.as_output();
     /// assert_eq!(output_signals[0].value, 1.0);
     /// assert_eq!(output_signals[0].dt, Duration::from_secs(1));
     /// assert_eq!(output_signals[1].value, 2.0);
@@ -984,7 +984,7 @@ impl Shr<&mut dyn Output> for Vec<Signal> {
     ///     Signal { value: 1.0, dt: Duration::from_secs(1) },
     ///     Signal { value: 2.0, dt: Duration::from_secs(1) },
     /// ];
-    /// let output_signals = input_signals >> monitor.as_monitor();
+    /// let output_signals = input_signals >> monitor.as_output();
     /// assert_eq!(output_signals[0].value, 1.0);
     /// assert_eq!(output_signals[0].dt, Duration::from_secs(1));
     /// assert_eq!(output_signals[1].value, 2.0);

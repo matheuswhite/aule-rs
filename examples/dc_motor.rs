@@ -32,9 +32,9 @@ fn test_rt_dc_motor() -> RTPlotter {
     for dt in time {
         let signal = dt >> input.as_input();
         let output =
-            (signal - plant.last_output()) * pid.as_siso() * plant.as_siso() >> writer.as_monitor();
+            (signal - plant.last_output()) * pid.as_siso() * plant.as_siso() >> writer.as_output();
 
-        let _ = (signal, output) >> plotter.as_monitor();
+        let _ = (signal, output) >> plotter.as_output();
     }
 
     let res = plotter
@@ -63,9 +63,9 @@ fn test_dc_motor() -> Plotter {
     for dt in time {
         let signal = dt >> input.as_input();
         let output =
-            (signal - plant.last_output()) * pid.as_siso() * plant.as_siso() >> writer.as_monitor();
+            (signal - plant.last_output()) * pid.as_siso() * plant.as_siso() >> writer.as_output();
 
-        let _ = (signal, output) >> plotter.as_monitor();
+        let _ = (signal, output) >> plotter.as_output();
     }
 
     println!("PID error metrics: {}", pid.error_metrics());

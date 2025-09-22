@@ -49,12 +49,12 @@ pub trait Output {
 /// impl AsOutput for MyOutput {}
 ///
 /// let mut monitor = MyOutput;
-/// let mut monitor: &mut dyn Output = monitor.as_monitor();
+/// let mut monitor: &mut dyn Output = monitor.as_output();
 /// let input_signal = Signal { value: 1.0, dt: Duration::from_secs(1) };
 /// monitor.show(&[input_signal]);
 /// ```
 pub trait AsOutput: Sized + Output + 'static {
-    fn as_monitor(&mut self) -> &mut dyn Output {
+    fn as_output(&mut self) -> &mut dyn Output {
         self
     }
 }

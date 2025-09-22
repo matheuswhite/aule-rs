@@ -23,7 +23,7 @@ fn main() {
         good_hart.update([error, control_signal]);
         let output = control_signal * plant.as_siso();
 
-        let _ = (input, output) >> plotter.as_monitor() >> writer.as_monitor();
+        let _ = (input, output) >> plotter.as_output() >> writer.as_output();
     }
 
     println!("IAE Value: {}", iae.value());
@@ -39,3 +39,32 @@ fn main() {
 
     plotter.join();
 }
+
+/*
+|Time| ---> |Input| ---> |Feedback| ---> |PID| ---> |Plant| ----> |Plotter|
+                          ^                          |
+                          |--------------------------|
+
+Time
+|
+v
+Input
+|
+v
+Feedback
+|
+v
+PID
+|
+v
+Plant ------> Feedback (LO)
+|
+v
+Plotter
+
+
+Disturbance
+|
+v
+Plant
+*/

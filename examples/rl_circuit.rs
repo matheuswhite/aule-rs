@@ -53,7 +53,7 @@ fn open_loop_rl_circuit() {
 
     for dt in time {
         let input = dt >> step.as_input();
-        let _ = input * rl_circuit.as_siso() >> writer.as_monitor();
+        let _ = input * rl_circuit.as_siso() >> writer.as_output();
     }
 }
 
@@ -68,6 +68,6 @@ fn closed_loop_rl_circuit() {
     for dt in time {
         let input = dt >> step.as_input();
         let _ = (input - rl_circuit.last_output()) * pid.as_siso() * rl_circuit.as_siso()
-            >> writer.as_monitor();
+            >> writer.as_output();
     }
 }

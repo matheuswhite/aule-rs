@@ -65,9 +65,9 @@ fn open_loop_motor() -> Plotter {
 
     for dt in time {
         let input = dt >> step.as_input();
-        let output = input * motor.as_siso() >> writer.as_monitor();
+        let output = input * motor.as_siso() >> writer.as_output();
 
-        let _ = output >> plotter.as_monitor();
+        let _ = output >> plotter.as_output();
     }
 
     plotter.display();
@@ -91,9 +91,9 @@ fn closed_loop_motor() -> Plotter {
         let input = dt >> step.as_input();
         let error = input - motor.last_output().unwrap_or_default();
         let control_signal = error * pid.as_siso();
-        let output = control_signal * motor.as_siso() >> writer.as_monitor();
+        let output = control_signal * motor.as_siso() >> writer.as_output();
 
-        let _ = output >> plotter.as_monitor();
+        let _ = output >> plotter.as_output();
     }
 
     plotter.display();
