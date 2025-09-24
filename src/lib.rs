@@ -5,7 +5,7 @@ extern crate alloc;
 #[cfg(feature = "std")]
 extern crate std;
 
-mod block;
+pub mod block;
 #[cfg(feature = "alloc")]
 pub mod continuous;
 #[cfg(feature = "alloc")]

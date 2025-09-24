@@ -19,7 +19,7 @@ struct InputBuffered {
 /// use aule::prelude::*;
 /// use core::time::Duration;
 ///
-/// let mut delay = Delay::new(Duration::from_secs(2), Signal::from((Duration::from_secs(1), 0.0)));
+/// let mut delay = Delay::new(Duration::from_secs(2));
 /// let input_signal = Signal { dt: Duration::from_secs(1), value: 1.0 };
 /// let mut output_signals = Vec::new();
 /// for _ in 0..3 {
@@ -44,11 +44,9 @@ pub struct Delay {
 
 impl Delay {
     /// Creates a new `Delay` block with the specified delay duration and initial signal.
-    /// The `initial_signal` is used as the output signal until the delay period has elapsed.
     ///
     /// # Arguments
     /// * `delay` - The duration of the delay to be introduced.
-    /// * `initial_signal` - The signal to output before the delay period has elapsed.
     /// # Returns
     /// A new instance of the `Delay` block.
     ///
@@ -60,9 +58,9 @@ impl Delay {
     /// use aule::prelude::*;
     /// use core::time::Duration;
     ///
-    /// let delay = Delay::new(Duration::from_secs(2), Signal::from((Duration::from_secs(1), 0.0)));
+    /// let delay = Delay::new(Duration::from_secs(2));
     /// ```
-    pub fn new(delay: Duration, initial_signal: Signal) -> Self {
+    pub fn new(delay: Duration) -> Self {
         assert!(
             delay > Duration::ZERO,
             "Delay duration must be greater than zero"
@@ -71,37 +69,44 @@ impl Delay {
         Delay {
             delay,
             current_time: Duration::ZERO,
-            initial_signal,
-            input_buffer: vec![(delay, initial_signal).into()],
+            initial_signal: Signal::default(),
+            input_buffer: vec![(delay, Signal::default()).into()],
             last_output: None,
         }
     }
 
-    fn drop_invalid_signals(&mut self, current_time: Duration) {
-        if self.input_buffer.len() < 2 {
-            return;
-        }
-
-        let mut _i0 = self.input_buffer[0].instant;
-        let mut i1 = self.input_buffer[1].instant;
-
-        while i1 < current_time {
-            self.input_buffer.remove(0);
-
-            if self.input_buffer.len() < 2 {
-                return;
-            }
-
-            _i0 = self.input_buffer[0].instant;
-            i1 = self.input_buffer[1].instant;
-        }
+    /// Sets the initial signal for the `Delay` block.
+    /// The initial signal is used as the output signal until the delay duration has passed.
+    ///
+    /// # Arguments
+    /// * `initial_signal` - The initial signal to be used.
+    /// # Returns
+    /// The `Delay` block with the updated initial signal.
+    ///
+    /// # Examples
+    /// ```
+    /// use aule::prelude::*;
+    /// use core::time::Duration;
+    ///
+    /// let mut delay = Delay::new(Duration::from_secs(2));
+    /// delay = delay.with_initial_signal(Signal { dt: Duration::from_secs(1), value: 0.0 });
+    /// ```
+    pub fn with_initial_signal(mut self, initial_signal: Signal) -> Self {
+        self.initial_signal = initial_signal;
+        self.input_buffer[0].signal = initial_signal;
+        self
     }
 
-    fn find_input_signal(&self, time: Duration) -> Option<&InputBuffered> {
-        self.input_buffer
-            .iter()
-            .position(|InputBuffered { instant, .. }| *instant == time)
-            .map(|pos| &self.input_buffer[pos])
+    fn drop_invalid_inputs(&mut self) {
+        while self.input_buffer.len() >= 2 {
+            let second = self.input_buffer[1];
+
+            if self.current_time < second.instant {
+                break;
+            }
+
+            self.input_buffer.remove(0);
+        }
     }
 }
 
@@ -123,7 +128,7 @@ impl SISO for Delay {
     /// use aule::prelude::*;
     /// use core::time::Duration;
     ///
-    /// let mut delay = Delay::new(Duration::from_secs(2), Signal::from((Duration::from_secs(1), 0.0)));
+    /// let mut delay = Delay::new(Duration::from_secs(2));
     /// let input_signal = Signal { dt: Duration::from_secs(1), value: 1.0 };
     /// let output1 = delay.output(input_signal);
     /// let output2 = delay.output(input_signal);
@@ -133,50 +138,54 @@ impl SISO for Delay {
     /// assert_eq!(output3.value, 1.0); // First input delayed by 2s
     /// ```
     fn output(&mut self, input: Signal) -> Signal {
+        /* # Update values */
         self.current_time += input.dt;
 
-        self.input_buffer.push((self.current_time, input).into());
+        let input_buffered_delayed = (self.current_time + self.delay, input).into();
+        let input_buffered = (self.current_time, input).into();
+        self.input_buffer.push(input_buffered_delayed);
 
-        let ref_time = if self.current_time > self.delay {
-            self.current_time - self.delay
-        } else {
-            Duration::ZERO
-        };
-
-        let output = if self.current_time <= self.delay {
-            self.initial_signal
-        } else {
-            self.drop_invalid_signals(ref_time);
-
-            match self.input_buffer.len() {
-                0 => unreachable!("input buffer should always have at least one element"),
-                1 => return self.input_buffer[0].signal,
-                _ => {
-                    if let Some(input) = self.find_input_signal(ref_time) {
-                        input.signal
-                    } else {
-                        let (input0, input1) = (self.input_buffer[0], self.input_buffer[1]);
-
-                        let gamma = (ref_time - input0.instant).as_secs_f32()
-                            / (input1.instant - input0.instant).as_secs_f32();
-                        assert!(
-                            (0.0 <= gamma) && (gamma <= 1.0),
-                            "gamma must be in [0, 1], got {}",
-                            gamma
-                        );
-
-                        Signal {
-                            dt: input.dt,
-                            value: (1.0 - gamma) * input0.signal.value
-                                + gamma * input1.signal.value,
-                        }
-                    }
-                }
+        /* # Current time before delay */
+        if self.current_time < self.delay {
+            if self.initial_signal.dt == Duration::ZERO {
+                self.initial_signal.dt = input.dt;
             }
+
+            self.last_output = Some(self.initial_signal);
+            return self.initial_signal;
+        }
+
+        /* # Current time after delay */
+        self.drop_invalid_inputs();
+
+        let mut first_input = self.input_buffer[0];
+        let mut second_input = self.input_buffer.get(1).copied().unwrap_or(input_buffered);
+
+        if self.current_time < first_input.instant {
+            second_input = first_input;
+            first_input = input_buffered;
+        }
+
+        let gama = if first_input.instant != second_input.instant {
+            (self.current_time - first_input.instant).as_secs_f32()
+                / (second_input.instant - first_input.instant).as_secs_f32()
+        } else {
+            0.0
         };
+        assert!(
+            (0.0 <= gama) && (gama <= 1.0),
+            "gama must be in [0, 1], got {}",
+            gama
+        );
 
+        let output_dt = (first_input.signal.dt + second_input.signal.dt).as_secs_f32() / 2.0;
+        let output_value =
+            (1.0 - gama) * first_input.signal.value + gama * second_input.signal.value;
+        let output = Signal {
+            dt: Duration::from_secs_f32(output_dt),
+            value: output_value,
+        };
         self.last_output = Some(output);
-
         output
     }
 
@@ -191,7 +200,7 @@ impl SISO for Delay {
     /// use aule::prelude::*;
     /// use core::time::Duration;
     ///
-    /// let mut delay = Delay::new(Duration::from_secs(2), Signal::from((Duration::from_secs(1), 0.0)));
+    /// let mut delay = Delay::new(Duration::from_secs(2));
     /// assert_eq!(delay.last_output(), None);
     /// let input_signal = Signal { dt: Duration::from_secs(1), value: 1.0 };
     /// let _ = delay.output(input_signal);
@@ -218,10 +227,8 @@ mod tests {
 
     #[test]
     fn test_delay_happy_way() {
-        let mut delay = Delay::new(
-            Duration::from_secs(2),
-            Signal::from((Duration::from_secs(1), 0.0)),
-        );
+        let mut delay = Delay::new(Duration::from_secs(2))
+            .with_initial_signal(Signal::from((Duration::from_secs(1), 0.0)));
         let input_signal = Signal {
             dt: Duration::from_secs(1),
             value: 1.0,
@@ -243,18 +250,14 @@ mod tests {
     #[test]
     #[should_panic(expected = "Delay duration must be greater than zero")]
     fn test_delay_zero_duration() {
-        Delay::new(
-            Duration::from_secs(0),
-            Signal::from((Duration::from_secs(1), 0.0)),
-        );
+        Delay::new(Duration::from_secs(0))
+            .with_initial_signal(Signal::from((Duration::from_secs(1), 0.0)));
     }
 
     #[test]
     fn test_delay_half_dt() {
-        let mut delay = Delay::new(
-            Duration::from_secs(2),
-            Signal::from((Duration::from_secs(1), 0.0)),
-        );
+        let mut delay = Delay::new(Duration::from_secs(2))
+            .with_initial_signal(Signal::from((Duration::from_secs(1), 0.0)));
         let mut input_signals = Vec::new();
         for i in 0..3 {
             input_signals.push(Signal {
@@ -296,10 +299,8 @@ mod tests {
 
     #[test]
     fn test_delay_large_dt() {
-        let mut delay = Delay::new(
-            Duration::from_secs(2),
-            Signal::from((Duration::from_secs(1), 0.0)),
-        );
+        let mut delay = Delay::new(Duration::from_secs(2))
+            .with_initial_signal(Signal::from((Duration::from_secs(1), 0.0)));
         let large_input_signal = Signal {
             dt: Duration::from_secs(5),
             value: 1.0,
@@ -320,8 +321,8 @@ mod tests {
             output_signals.push(delay.output(half_input_signal));
         }
         // Output signals will be:
-        // 1st input (t=5s): output = 0.33 (interpolated between 0.0 and 1.0)
-        // 2nd input (t=6s): output = 0.66 (interpolated between 0.0 and 1.0)
+        // 1st input (t=5s): output = 0.6 (interpolated between 0.0 and 1.0)
+        // 2nd input (t=6s): output = 0.8 (interpolated between 0.0 and 1.0)
         // 3rd input (t=7s): output = 1.0 (first input delayed by 2s)
         // 4th input (t=7.5s): output = 1.0 (interpolated between 1.0 and 1.0)
         // 5th input (t=8s): output = 1.0 (second input delayed by 2s)
@@ -329,16 +330,8 @@ mod tests {
         // 7th input (t=9s): output = 1.0 (third input delayed by 2s)
         // 8th input (t=9.5s): output = 2.0 (forth input delayed by 2s)
         // 9th input (t=10s): output = 3.0 (fifth input delayed by 2s)
-        assert!(
-            (output_signals[0].value - 0.33).abs() < 0.01,
-            "{}",
-            output_signals[0].value
-        );
-        assert!(
-            (output_signals[1].value - 0.66).abs() < 0.01,
-            "{}",
-            output_signals[1].value
-        );
+        assert_eq!(output_signals[0].value, 0.6);
+        assert_eq!(output_signals[1].value, 0.8);
         assert_eq!(output_signals[2].value, 1.0);
         assert_eq!(output_signals[3].value, 1.0);
         assert_eq!(output_signals[4].value, 1.0);
@@ -350,10 +343,8 @@ mod tests {
 
     #[test]
     fn test_delay_large_dt_in_middle() {
-        let mut delay = Delay::new(
-            Duration::from_secs(2),
-            Signal::from((Duration::from_secs(1), 0.0)),
-        );
+        let mut delay = Delay::new(Duration::from_secs(2))
+            .with_initial_signal(Signal::from((Duration::from_secs(1), 0.0)));
         let large_input_signal = |v: i32| Signal {
             dt: Duration::from_secs(5),
             value: v as f32,
