@@ -10,30 +10,6 @@ struct InputBuffered {
     signal: Signal,
 }
 
-/// A block that introduces a time delay to the input signal.
-/// The output signal is a delayed version of the input signal, with linear interpolation
-/// between input samples to ensure smooth transitions.
-///
-/// # Examples:
-/// ```
-/// use aule::prelude::*;
-/// use core::time::Duration;
-///
-/// let mut delay = Delay::new(Duration::from_secs(2));
-/// let input_signal = Signal { dt: Duration::from_secs(1), value: 1.0 };
-/// let mut output_signals = Vec::new();
-/// for _ in 0..3 {
-///     let output = delay.output(input_signal);
-///     output_signals.push(output);
-/// }
-/// // Output signals will be:
-/// // 1st input (t=1s): output = 0.0 (initial signal)
-/// // 2nd input (t=2s): output = 0.0 (initial signal)
-/// // 3rd input (t=3s): output = 1.0 (first input delayed by 2s)
-/// assert_eq!(output_signals[0].value, 0.0);
-/// assert_eq!(output_signals[1].value, 0.0);
-/// assert_eq!(output_signals[2].value, 1.0);
-/// ```
 pub struct Delay {
     delay: Duration,
     current_time: Duration,
@@ -43,23 +19,6 @@ pub struct Delay {
 }
 
 impl Delay {
-    /// Creates a new `Delay` block with the specified delay duration and initial signal.
-    ///
-    /// # Arguments
-    /// * `delay` - The duration of the delay to be introduced.
-    /// # Returns
-    /// A new instance of the `Delay` block.
-    ///
-    /// # Panics
-    /// This function will panic if the `delay` is zero.
-    ///
-    /// # Examples
-    /// ```
-    /// use aule::prelude::*;
-    /// use core::time::Duration;
-    ///
-    /// let delay = Delay::new(Duration::from_secs(2));
-    /// ```
     pub fn new(delay: Duration) -> Self {
         assert!(
             delay > Duration::ZERO,
@@ -75,22 +34,6 @@ impl Delay {
         }
     }
 
-    /// Sets the initial signal for the `Delay` block.
-    /// The initial signal is used as the output signal until the delay duration has passed.
-    ///
-    /// # Arguments
-    /// * `initial_signal` - The initial signal to be used.
-    /// # Returns
-    /// The `Delay` block with the updated initial signal.
-    ///
-    /// # Examples
-    /// ```
-    /// use aule::prelude::*;
-    /// use core::time::Duration;
-    ///
-    /// let mut delay = Delay::new(Duration::from_secs(2));
-    /// delay = delay.with_initial_signal(Signal { dt: Duration::from_secs(1), value: 0.0 });
-    /// ```
     pub fn with_initial_signal(mut self, initial_signal: Signal) -> Self {
         self.initial_signal = initial_signal;
         self.input_buffer[0].signal = initial_signal;
@@ -111,32 +54,6 @@ impl Delay {
 }
 
 impl SISO for Delay {
-    /// Processes the input signal and returns the delayed output signal.
-    /// The output signal is determined based on the current time and the specified delay.
-    /// If the current time is less than or equal to the delay, the initial signal is returned.
-    /// Otherwise, the output is computed using linear interpolation between the two nearest
-    /// input signals in the buffer.
-    /// The input signal is also added to the buffer with its corresponding future instant.
-    ///
-    /// # Arguments
-    /// * `input` - The input signal to be processed.
-    /// # Returns
-    /// The output signal after applying the delay.
-    ///
-    /// # Examples
-    /// ```
-    /// use aule::prelude::*;
-    /// use core::time::Duration;
-    ///
-    /// let mut delay = Delay::new(Duration::from_secs(2));
-    /// let input_signal = Signal { dt: Duration::from_secs(1), value: 1.0 };
-    /// let output1 = delay.output(input_signal);
-    /// let output2 = delay.output(input_signal);
-    /// let output3 = delay.output(input_signal);
-    /// assert_eq!(output1.value, 0.0); // Initial signal
-    /// assert_eq!(output2.value, 0.0); // Still initial signal
-    /// assert_eq!(output3.value, 1.0); // First input delayed by 2s
-    /// ```
     fn output(&mut self, input: Signal) -> Signal {
         /* # Update values */
         self.current_time += input.dt;
@@ -189,23 +106,6 @@ impl SISO for Delay {
         output
     }
 
-    /// Returns the last output signal produced by the block, if any.
-    /// If no output has been produced yet, it returns `None`.
-    ///
-    /// # Returns
-    /// An `Option<Signal>` containing the last output signal or `None` if no output has been produced.
-    ///
-    /// # Examples
-    /// ```
-    /// use aule::prelude::*;
-    /// use core::time::Duration;
-    ///
-    /// let mut delay = Delay::new(Duration::from_secs(2));
-    /// assert_eq!(delay.last_output(), None);
-    /// let input_signal = Signal { dt: Duration::from_secs(1), value: 1.0 };
-    /// let _ = delay.output(input_signal);
-    /// assert_eq!(delay.last_output().unwrap().value, 0.0); // Initial signal
-    /// ```
     fn last_output(&self) -> Option<Signal> {
         self.last_output
     }

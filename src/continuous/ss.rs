@@ -12,30 +12,6 @@ use std::{
     marker::PhantomData,
 };
 
-/// State-Space representation of a linear time-invariant system.
-/// This struct implements the state-space model with matrices `A`, `B`, `C`, and `D`.
-/// It uses an integrator to compute the state evolution over time.
-///
-/// # Type Parameters
-/// - `I`: The integrator type used for state evolution. It must implement the `Integrator` trait.
-///
-/// # Example
-/// ```
-/// use aule::prelude::*;
-/// use std::time::Duration;
-/// use ndarray::array;
-///
-/// let a = array![[0.0, 1.0], [-5.0, -4.0]];
-/// let b = vec![0.0, 1.0];
-/// let c = vec![3.0, 0.0];
-/// let d = 0.0;
-/// let mut ss = SS::new(a, b, c, d)
-///     .with_initial_state(vec![0.0, 0.0])
-///     .with_integrator(Euler);
-/// let input = Signal { value: 1.0, dt: Duration::from_secs(1) };
-/// let output = ss.output(input);
-/// assert_eq!(output.value, 0.0);
-/// ```
 #[derive(Debug, Clone)]
 pub struct SS<I>
 where
@@ -55,31 +31,6 @@ impl<I> SS<I>
 where
     I: Integrator + Debug,
 {
-    /// Creates a new state-space representation with the given matrices.
-    ///
-    /// # Parameters
-    /// - `a`: The state matrix (n x n).
-    /// - `b`: The input matrix (n x 1).
-    /// - `c`: The output matrix (1 x n).
-    /// - `d`: The feedthrough matrix (1 x 1).
-    ///
-    /// # Returns
-    /// A new `SS` instance initialized with the provided matrices.
-    ///
-    /// # Panics
-    /// Panics if the dimensions of the matrices do not match the expected sizes.
-    ///
-    /// # Example
-    /// ```
-    /// use aule::prelude::*;
-    /// use ndarray::array;
-    ///
-    /// let a = array![[0.0, 1.0], [-2.0, -3.0]];
-    /// let b = vec![0.0, 1.0];
-    /// let c = vec![1.0, 0.0];
-    /// let d = 0.0;
-    /// let ss = SS::new(a, b, c, d).with_integrator(Euler);
-    /// ```
     pub fn new(a: Array2<f32>, b: Vec<f32>, c: Vec<f32>, d: f32) -> Self {
         let an = a.shape()[0];
         let am = a.shape()[1];
@@ -108,31 +59,6 @@ where
         }
     }
 
-    /// Sets the initial state and inputs for the state-space model.
-    ///
-    /// # Parameters
-    /// - `initial_state`: A vector representing the initial state of the system.
-    /// - `initial_inputs`: A vector representing the initial inputs to the system.
-    ///
-    /// # Returns
-    /// A mutable reference to `self` for method chaining.
-    ///
-    /// # Panics
-    /// Panics if the length of `initial_state` does not match the number of rows in matrix `A`.
-    ///
-    /// # Example
-    /// ```
-    /// use aule::prelude::*;
-    /// use ndarray::array;
-    ///
-    /// let mut ss = SS::new(
-    ///     array![[0.0, 1.0], [-2.0, -3.0]],
-    ///     vec![0.0, 1.0],
-    ///     vec![1.0, 0.0],
-    ///     0.0,
-    /// ).with_initial_state(vec![0.0, 0.0])
-    ///  .with_integrator(Euler);
-    /// ```
     pub fn with_initial_state(mut self, initial_state: Vec<f32>) -> Self {
         let an = self.a.shape()[0];
         let xn = initial_state.len();
@@ -146,28 +72,6 @@ where
         self
     }
 
-    /// Sets the integrator for the state-space model.
-    ///
-    /// This method is a no-op and exists for API consistency.
-    ///
-    /// # Parameters
-    /// - `_integrator`: The integrator to be used (not stored).
-    ///
-    /// # Returns
-    /// A mutable reference to `self` for method chaining.
-    ///
-    /// # Example
-    /// ```
-    /// use aule::prelude::*;
-    /// use ndarray::array;
-    ///
-    /// let ss = SS::new(
-    ///     array![[0.0, 1.0], [-2.0, -3.0]],
-    ///     vec![0.0, 1.0],
-    ///     vec![1.0, 0.0],
-    ///     0.0,
-    /// ).with_integrator(Euler);
-    /// ```
     pub fn with_integrator(self, _integrator: I) -> Self {
         self
     }
@@ -177,37 +81,6 @@ impl<I> StateEstimation for SS<I>
 where
     I: Integrator + Debug,
 {
-    /// Estimates the new state of the system based on the current state and a time step.
-    ///
-    /// This method implements the state-space equation:
-    /// x' = A * x + B * u
-    /// where x is the state vector, u is the input, A is the state matrix, and B is the input matrix.
-    /// The input is interpolated between the last and current input based on the time step `dt`.
-    ///
-    /// # Arguments
-    /// * `dt` - The time step for which to estimate the state.
-    /// * `state` - The current state of the system.
-    ///
-    /// # Returns
-    /// An `Array2<f32>` representing the estimated state of the system.
-    ///
-    /// # Example
-    /// ```
-    /// use aule::prelude::*;
-    /// use ndarray::array;
-    /// use std::time::Duration;
-    ///
-    /// let a = array![[0.0, 1.0], [-2.0, -3.0]];
-    /// let b = vec![0.0, 1.0];
-    /// let c = vec![1.0, 0.0];
-    /// let d = 0.0;
-    /// let mut ss = SS::new(a, b, c, d)
-    ///     .with_initial_state(vec![0.0, 0.0])
-    ///     .with_integrator(Euler);
-    /// let state = array![[0.0], [0.0]];
-    /// let dt = 0.1;
-    /// let estimated_state = ss.estimate(state);
-    /// ```
     fn estimate(&self, state: Array2<f32>) -> Array2<f32> {
         let input_matrix = Array2::from_shape_vec((1, 1), vec![self.current_input]).unwrap();
         self.a.dot(&state) + self.b.dot(&input_matrix)
@@ -218,31 +91,6 @@ impl<I> SISO for SS<I>
 where
     I: Integrator + Debug,
 {
-    /// Processes the input signal and computes the output based on the state-space model.
-    ///
-    /// # Parameters
-    /// - `input`: The input signal containing the value and the time step.
-    ///
-    /// # Returns
-    /// The output signal computed from the state-space model.
-    ///
-    /// # Example
-    /// ```
-    /// use aule::prelude::*;
-    /// use std::time::Duration;
-    /// use ndarray::array;
-    ///
-    /// let a = array![[0.0, 1.0], [-2.0, -3.0]];
-    /// let b = vec![0.0, 1.0];
-    /// let c = vec![1.0, 0.0];
-    /// let d = 0.0;
-    /// let mut ss = SS::new(a, b, c, d)
-    ///     .with_initial_state(vec![0.0, 0.0])
-    ///     .with_integrator(Euler);
-    /// let input = Signal { value: 1.0, dt: Duration::from_secs(1) };
-    /// let output = ss.output(input);
-    /// assert_eq!(output.value, 0.0);
-    /// ```
     fn output(&mut self, input: Signal) -> Signal {
         self.current_input = input.value;
         self.state = I::integrate(self.state.clone(), input.dt, self);
@@ -258,30 +106,6 @@ where
         output
     }
 
-    /// Returns the last output signal computed by the state-space model.
-    ///
-    /// # Returns
-    /// An `Option<Signal>` containing the last output signal, or `None` if no output has been computed yet.
-    ///
-    /// # Example
-    /// ```
-    /// use aule::prelude::*;
-    /// use std::time::Duration;
-    /// use ndarray::array;
-    ///
-    /// let a = array![[0.0, 1.0], [-2.0, -3.0]];
-    /// let b = vec![0.0, 1.0];
-    /// let c = vec![1.0, 0.0];
-    /// let d = 0.0;
-    /// let mut ss = SS::new(a, b, c, d)
-    ///     .with_initial_state(vec![0.0, 0.0])
-    ///     .with_integrator(Euler);
-    /// let input = Signal { value: 1.0, dt: Duration::from_secs(1) };
-    /// let _ = ss.output(input);
-    /// let last_output = ss.last_output();
-    /// assert!(last_output.is_some());
-    /// assert_eq!(last_output.unwrap().value, 0.0);
-    /// ```
     fn last_output(&self) -> Option<Signal> {
         self.last_output
     }
