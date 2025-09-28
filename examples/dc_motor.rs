@@ -1,6 +1,6 @@
 use aule::prelude::*;
 use aule::s;
-use std::f32::consts::PI;
+use std::time::Duration;
 
 fn main() {
     println!("Cleaning up previous output files...");
@@ -23,7 +23,7 @@ fn test_rt_dc_motor() -> RTPlotter {
     let a = 1.0;
     let time = RTTime::from((0.001, 10.0));
 
-    let mut input = Sinusoid::new(1.0, 1.0 / (2.0 * PI), 0.0);
+    let mut input = Sinusoid::new(1.0, Duration::from_secs_f32(1.0), 0.0);
     let mut pid = PID::new(10.0, 1.0, 0.1);
     let mut plant: SS<RK4> = ((k * s) / (s * s + a * k * s)).into();
     let mut writer = Writter::new("output/dc_motor.csv", ["output"]);
@@ -50,7 +50,7 @@ fn test_dc_motor() -> Plotter {
     let a = 1.0;
     let time = Time::from((0.001, 10.0));
 
-    let mut input = Sinusoid::new(1.0, 1.0 / (2.0 * PI), 0.0);
+    let mut input = Sinusoid::new(1.0, Duration::from_secs_f32(1.0), 0.0);
     let mut pid = PID::new(10.0, 1.0, 0.1)
         .with_iae()
         .with_ise()
