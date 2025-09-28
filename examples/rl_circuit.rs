@@ -48,7 +48,7 @@ fn main() {
 fn open_loop_rl_circuit() {
     let time = Time::from((0.001, 0.2));
     let mut rl_circuit = RlCircuit::new(5.0, 0.05);
-    let mut step = Step::new();
+    let mut step = Step::default();
     let mut writer = Writter::new("output/open_loop_rl_circuit.csv", ["output"]);
 
     for dt in time {
@@ -62,7 +62,7 @@ fn closed_loop_rl_circuit() {
 
     let mut pid = PID::new(1.0, 0.0, 0.00);
     let mut rl_circuit = RlCircuit::new(5.0, 0.05);
-    let mut step = Step::new();
+    let mut step = Step::default();
     let mut writer = Writter::new("output/closed_loop_rl_circuit.csv", ["output"]);
 
     for dt in time {

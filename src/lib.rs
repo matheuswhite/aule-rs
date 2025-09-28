@@ -49,7 +49,6 @@ pub mod prelude {
     pub use crate::error::{AsErrorMetric, ErrorMetric};
     pub use crate::input::impulse::Impulse;
     pub use crate::input::ramp::Ramp;
-    pub use crate::input::setpoint::Setpoint;
     pub use crate::input::sinusoid::Sinusoid;
     pub use crate::input::step::Step;
     pub use crate::input::{AsInput, Input};
@@ -74,7 +73,7 @@ mod tests {
     #[test]
     fn test_no_std_support() {
         let time = Time::from(0.1).with_max_time(Duration::from_secs(1));
-        let mut step = Step::new();
+        let mut step = Step::default();
         let mut pid = PID::new(1.0, 0.1, 0.01);
 
         for dt in time {

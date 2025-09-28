@@ -3,7 +3,7 @@ use aule::prelude::*;
 fn main() {
     let time = Time::from((1e-3, 10.0));
 
-    let mut step = Step::new();
+    let mut step = Step::default();
     let mut pid = PID::new(40.0, 10.0, 10.00);
     let mut plant: SS<RK4> = Tf::new(&[1.0], &[1.0, 6.0, 11.0, 6.0]).into();
     let mut writer = Writter::new("output/third_order_system.csv", ["output"]);
@@ -39,32 +39,3 @@ fn main() {
 
     plotter.join();
 }
-
-/*
-|Time| ---> |Input| ---> |Feedback| ---> |PID| ---> |Plant| ----> |Plotter|
-                          ^                          |
-                          |--------------------------|
-
-Time
-|
-v
-Input
-|
-v
-Feedback
-|
-v
-PID
-|
-v
-Plant ------> Feedback (LO)
-|
-v
-Plotter
-
-
-Disturbance
-|
-v
-Plant
-*/

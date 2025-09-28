@@ -59,7 +59,7 @@ fn main() {
 fn open_loop_motor() -> Plotter {
     let time = Time::from((0.001, 0.2));
     let mut motor = Motor::new(1.0, 1.0, 0.1, 0.01, 1.0, 0.01, 0.01);
-    let mut step = Step::new();
+    let mut step = Step::default();
     let mut writer = Writter::new("output/open_loop_motor.csv", ["output"]);
     let mut plotter = Plotter::new("Open loop Motor".to_string(), 0.05, 0.5);
 
@@ -82,7 +82,7 @@ fn open_loop_motor() -> Plotter {
 fn closed_loop_motor() -> Plotter {
     let time = Time::from((0.001, 0.2));
     let mut motor = Motor::new(1.0, 1.0, 0.1, 0.01, 1.0, 0.01, 0.01);
-    let mut step = Step::new();
+    let mut step = Step::default();
     let mut pid = PID::new(10.0, 0.1, 0.01);
     let mut writer = Writter::new("output/closed_loop_motor.csv", ["output"]);
     let mut plotter = Plotter::new("Closed Loop Motor".to_string(), 0.05, 0.5);

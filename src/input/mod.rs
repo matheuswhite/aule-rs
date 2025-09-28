@@ -3,7 +3,6 @@ use core::{ops::Shr, time::Duration};
 
 pub mod impulse;
 pub mod ramp;
-pub mod setpoint;
 pub mod sinusoid;
 pub mod step;
 
