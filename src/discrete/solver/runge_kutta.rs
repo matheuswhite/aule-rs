@@ -1,11 +1,11 @@
-use crate::{discrete::integration::StateEstimation, prelude::Integrator};
+use crate::{discrete::solver::StateEstimation, prelude::Solver};
 use core::time::Duration;
 use ndarray::Array2;
 
 #[derive(Debug, Clone, Copy)]
 pub struct RK4;
 
-impl Integrator for RK4 {
+impl Solver for RK4 {
     fn integrate(
         old_value: Array2<f32>,
         dt: Duration,

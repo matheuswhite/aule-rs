@@ -1,7 +1,7 @@
 use crate::{
     block::siso::{AsSISO, SISO},
-    discrete::integration::StateEstimation,
-    prelude::Integrator,
+    discrete::solver::StateEstimation,
+    prelude::Solver,
     signal::Signal,
 };
 use alloc::vec;
@@ -15,7 +15,7 @@ use std::{
 #[derive(Debug, Clone)]
 pub struct SS<I>
 where
-    I: Integrator + Debug,
+    I: Solver + Debug,
 {
     a: Array2<f32>,
     b: Array2<f32>,
@@ -29,7 +29,7 @@ where
 
 impl<I> SS<I>
 where
-    I: Integrator + Debug,
+    I: Solver + Debug,
 {
     pub fn new(a: Array2<f32>, b: Vec<f32>, c: Vec<f32>, d: f32) -> Self {
         let an = a.shape()[0];
@@ -79,7 +79,7 @@ where
 
 impl<I> StateEstimation for SS<I>
 where
-    I: Integrator + Debug,
+    I: Solver + Debug,
 {
     fn estimate(&self, state: Array2<f32>) -> Array2<f32> {
         let input_matrix = Array2::from_shape_vec((1, 1), vec![self.current_input]).unwrap();
@@ -89,7 +89,7 @@ where
 
 impl<I> SISO for SS<I>
 where
-    I: Integrator + Debug,
+    I: Solver + Debug,
 {
     fn output(&mut self, input: Signal) -> Signal {
         self.current_input = input.value;
@@ -111,11 +111,11 @@ where
     }
 }
 
-impl<I> AsSISO for SS<I> where I: Integrator + Debug + 'static {}
+impl<I> AsSISO for SS<I> where I: Solver + Debug + 'static {}
 
 impl<I> Display for SS<I>
 where
-    I: Integrator + Debug,
+    I: Solver + Debug,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(

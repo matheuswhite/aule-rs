@@ -1,11 +1,11 @@
-use crate::{discrete::integration::StateEstimation, prelude::Integrator};
+use crate::{discrete::solver::StateEstimation, prelude::Solver};
 use core::time::Duration;
 use ndarray::Array2;
 
 #[derive(Debug, Clone, Copy)]
 pub struct Euler;
 
-impl Integrator for Euler {
+impl Solver for Euler {
     fn integrate(
         old_value: Array2<f32>,
         dt: Duration,

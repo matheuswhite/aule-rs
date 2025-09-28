@@ -8,7 +8,7 @@ pub trait StateEstimation {
     fn estimate(&self, state: Array2<f32>) -> Array2<f32>;
 }
 
-pub trait Integrator {
+pub trait Solver {
     fn integrate(
         old_value: Array2<f32>,
         dt: Duration,

@@ -1,5 +1,5 @@
 use crate::{
-    prelude::{Integrator, MIMO, StateEstimation},
+    prelude::{MIMO, Solver, StateEstimation},
     signal::Signal,
 };
 use alloc::vec;
@@ -13,7 +13,7 @@ use ndarray::Array2;
 
 pub struct Observer<I>
 where
-    I: Integrator + Debug,
+    I: Solver + Debug,
 {
     a: Array2<f32>,
     b: Array2<f32>,
@@ -28,7 +28,7 @@ where
 
 impl<I> Observer<I>
 where
-    I: Integrator + Debug,
+    I: Solver + Debug,
 {
     pub fn new<const N: usize>(
         a: Array2<f32>,
@@ -82,7 +82,7 @@ where
 
 impl<I> StateEstimation for Observer<I>
 where
-    I: Integrator + Debug,
+    I: Solver + Debug,
 {
     fn estimate(&self, state: Array2<f32>) -> Array2<f32> {
         let input_matrix = Array2::from_elem((1, 1), self.current_input[0]);
@@ -96,7 +96,7 @@ where
 
 impl<I> MIMO for Observer<I>
 where
-    I: Integrator + Debug,
+    I: Solver + Debug,
 {
     fn output(&mut self, input: Vec<Signal>) -> Vec<Signal> {
         self.current_input = [input[0].value, input[1].value]; // (u, y)
@@ -141,7 +141,7 @@ where
 
 impl<I> Display for Observer<I>
 where
-    I: Integrator + Debug,
+    I: Solver + Debug,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(

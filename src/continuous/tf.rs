@@ -1,4 +1,4 @@
-use crate::{continuous::ss::SS, poly::Polynomial, prelude::Integrator};
+use crate::{continuous::ss::SS, poly::Polynomial, prelude::Solver};
 use alloc::vec;
 use alloc::vec::Vec;
 use core::fmt::Debug;
@@ -26,7 +26,7 @@ impl Tf {
 
 impl<I> From<Tf> for SS<I>
 where
-    I: Integrator + Debug,
+    I: Solver + Debug,
 {
     fn from(tf: Tf) -> Self {
         // Controllable Canonical Form

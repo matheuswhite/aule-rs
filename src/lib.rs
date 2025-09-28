@@ -34,13 +34,13 @@ pub mod prelude {
     #[cfg(feature = "alloc")]
     pub use crate::continuous::ss::SS;
     #[cfg(feature = "alloc")]
-    pub use crate::discrete::integration::Integrator;
+    pub use crate::discrete::solver::Solver;
     #[cfg(feature = "alloc")]
-    pub use crate::discrete::integration::StateEstimation;
+    pub use crate::discrete::solver::StateEstimation;
     #[cfg(feature = "alloc")]
-    pub use crate::discrete::integration::euler::Euler;
+    pub use crate::discrete::solver::euler::Euler;
     #[cfg(feature = "alloc")]
-    pub use crate::discrete::integration::runge_kutta::RK4;
+    pub use crate::discrete::solver::runge_kutta::RK4;
     pub use crate::input::impulse::Impulse;
     pub use crate::input::ramp::Ramp;
     pub use crate::input::sawtooth::Sawtooth;
