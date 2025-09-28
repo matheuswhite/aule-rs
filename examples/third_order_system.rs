@@ -15,10 +15,8 @@ fn main() {
 
     for dt in time {
         let input = dt >> step.as_input();
-        let error = (input - plant.last_output())
-            >> iae.as_error_metric()
-            >> ise.as_error_metric()
-            >> itae.as_error_metric();
+        let error =
+            (input - plant.last_output()) >> iae.as_metric() >> ise.as_metric() >> itae.as_metric();
         let control_signal = error * pid.as_siso();
         good_hart.update([error, control_signal]);
         let output = control_signal * plant.as_siso();

@@ -1,5 +1,5 @@
 use crate::block::siso::{AsSISO, SISO};
-use crate::error::ErrorMetric;
+use crate::metrics::Metric;
 #[cfg(feature = "alloc")]
 use crate::prelude::GoodHart;
 use crate::prelude::{IAE, ISE, ITAE};

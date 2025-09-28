@@ -1,5 +1,5 @@
 use crate::{
-    error::{AsErrorMetric, ErrorMetric},
+    metrics::{AsMetric, Metric},
     signal::Signal,
 };
 
@@ -15,7 +15,7 @@ impl ITAE {
     }
 }
 
-impl ErrorMetric<1> for ITAE {
+impl Metric<1> for ITAE {
     fn update(&mut self, input: [Signal; 1]) -> [Signal; 1] {
         self.n += 1;
         self.acc += self.n as f32 * input[0].value.abs();
@@ -31,4 +31,4 @@ impl ErrorMetric<1> for ITAE {
     }
 }
 
-impl AsErrorMetric<1> for ITAE {}
+impl AsMetric<1> for ITAE {}

@@ -1,23 +1,23 @@
 use crate::{
-    error::{AsErrorMetric, ErrorMetric},
+    metrics::{AsMetric, Metric},
     signal::Signal,
 };
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct IAE {
+pub struct ISE {
     acc: f32,
     n: usize,
 }
 
-impl IAE {
+impl ISE {
     pub fn new() -> Self {
-        IAE { acc: 0.0, n: 0 }
+        ISE { acc: 0.0, n: 0 }
     }
 }
 
-impl ErrorMetric<1> for IAE {
+impl Metric<1> for ISE {
     fn update(&mut self, input: [Signal; 1]) -> [Signal; 1] {
-        self.acc += input[0].value.abs();
+        self.acc += input[0].value * input[0].value;
         self.n += 1;
         input
     }
@@ -31,4 +31,4 @@ impl ErrorMetric<1> for IAE {
     }
 }
 
-impl AsErrorMetric<1> for IAE {}
+impl AsMetric<1> for ISE {}

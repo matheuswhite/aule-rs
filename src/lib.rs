@@ -10,8 +10,8 @@ pub mod block;
 pub mod continuous;
 #[cfg(feature = "alloc")]
 mod discrete;
-mod error;
 mod input;
+mod metrics;
 #[cfg(feature = "alloc")]
 mod output;
 #[cfg(feature = "alloc")]
@@ -41,12 +41,6 @@ pub mod prelude {
     pub use crate::discrete::integration::euler::Euler;
     #[cfg(feature = "alloc")]
     pub use crate::discrete::integration::runge_kutta::RK4;
-    #[cfg(feature = "alloc")]
-    pub use crate::error::good_hart::GoodHart;
-    pub use crate::error::iae::IAE;
-    pub use crate::error::ise::ISE;
-    pub use crate::error::itae::ITAE;
-    pub use crate::error::{AsErrorMetric, ErrorMetric};
     pub use crate::input::impulse::Impulse;
     pub use crate::input::ramp::Ramp;
     pub use crate::input::sawtooth::Sawtooth;
@@ -54,6 +48,12 @@ pub mod prelude {
     pub use crate::input::square::Square;
     pub use crate::input::step::Step;
     pub use crate::input::{AsInput, Input};
+    #[cfg(feature = "alloc")]
+    pub use crate::metrics::good_hart::GoodHart;
+    pub use crate::metrics::iae::IAE;
+    pub use crate::metrics::ise::ISE;
+    pub use crate::metrics::itae::ITAE;
+    pub use crate::metrics::{AsMetric, Metric};
     #[cfg(feature = "std")]
     pub use crate::output::plotter::{JoinAll, Joinable, Plotter, RTPlotter, Savable};
     #[cfg(feature = "alloc")]

@@ -1,5 +1,5 @@
 use crate::{
-    error::{AsErrorMetric, ErrorMetric},
+    metrics::{AsMetric, Metric},
     signal::Signal,
 };
 use alloc::vec::Vec;
@@ -21,7 +21,7 @@ impl GoodHart {
     }
 }
 
-impl ErrorMetric<2> for GoodHart {
+impl Metric<2> for GoodHart {
     fn update(&mut self, input: [Signal; 2]) -> [Signal; 2] {
         let error = input[0].value;
         let control_signal = input[1].value;
@@ -46,4 +46,4 @@ impl ErrorMetric<2> for GoodHart {
     }
 }
 
-impl AsErrorMetric<2> for GoodHart {}
+impl AsMetric<2> for GoodHart {}

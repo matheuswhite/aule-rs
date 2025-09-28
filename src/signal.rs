@@ -1,7 +1,7 @@
 use crate::block::mimo::MIMO;
 #[cfg(feature = "alloc")]
 use crate::output::Output;
-use crate::{block::siso::SISO, error::ErrorMetric};
+use crate::{block::siso::SISO, metrics::Metric};
 #[cfg(feature = "alloc")]
 use alloc::vec::Vec;
 use core::ops::{Add, Div, Mul, Neg, Shr, Sub};
@@ -228,10 +228,10 @@ impl Shr<&mut dyn Output> for Signal {
     }
 }
 
-impl Shr<&mut dyn ErrorMetric<1>> for Signal {
+impl Shr<&mut dyn Metric<1>> for Signal {
     type Output = Signal;
 
-    fn shr(self, rhs: &mut dyn ErrorMetric<1>) -> Self::Output {
+    fn shr(self, rhs: &mut dyn Metric<1>) -> Self::Output {
         let input = [self];
         let output = rhs.update(input);
         output[0]
@@ -248,10 +248,10 @@ impl Shr<&mut dyn Output> for (Signal, Signal) {
     }
 }
 
-impl Shr<&mut dyn ErrorMetric<2>> for (Signal, Signal) {
+impl Shr<&mut dyn Metric<2>> for (Signal, Signal) {
     type Output = (Signal, Signal);
 
-    fn shr(self, rhs: &mut dyn ErrorMetric<2>) -> Self::Output {
+    fn shr(self, rhs: &mut dyn Metric<2>) -> Self::Output {
         let input = [self.0, self.1];
         let output = rhs.update(input);
         (output[0], output[1])
