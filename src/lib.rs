@@ -49,7 +49,9 @@ pub mod prelude {
     pub use crate::error::{AsErrorMetric, ErrorMetric};
     pub use crate::input::impulse::Impulse;
     pub use crate::input::ramp::Ramp;
+    pub use crate::input::sawtooth::Sawtooth;
     pub use crate::input::sinusoid::Sinusoid;
+    pub use crate::input::square::Square;
     pub use crate::input::step::Step;
     pub use crate::input::{AsInput, Input};
     #[cfg(feature = "std")]
