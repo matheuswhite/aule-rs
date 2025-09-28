@@ -2,8 +2,8 @@ use aule::prelude::*;
 use aule::s;
 
 struct Motor {
-    kv: Gain,
-    km: Gain,
+    kv: f32,
+    km: f32,
     tau_l: f32,
     last_output: Option<Signal>,
     eletrical: SS<Euler>,
@@ -13,8 +13,8 @@ struct Motor {
 impl Motor {
     fn new(kv: f32, km: f32, tau_l: f32, la: f32, ra: f32, jm: f32, fm: f32) -> Self {
         Motor {
-            kv: Gain::new(kv),
-            km: Gain::new(km),
+            kv,
+            km,
             tau_l,
             last_output: None,
             eletrical: (1.0 / (la * s + ra)).into(),
@@ -25,8 +25,8 @@ impl Motor {
 
 impl SISO for Motor {
     fn output(&mut self, input: Signal) -> Signal {
-        let eletrical = (input - self.last_output) * self.kv.as_siso() * self.eletrical.as_siso();
-        let mechanical = (eletrical * self.km.as_siso() - self.tau_l) * self.mechanical.as_siso();
+        let eletrical = (input - self.last_output) * self.kv * self.eletrical.as_siso();
+        let mechanical = (eletrical * self.km - self.tau_l) * self.mechanical.as_siso();
 
         self.last_output = Some(mechanical);
 
