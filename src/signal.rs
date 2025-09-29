@@ -1,38 +1,34 @@
-use crate::block::mimo::MIMO;
-#[cfg(feature = "alloc")]
+use crate::block::Block;
+use crate::metrics::Metric;
 use crate::output::Output;
-use crate::{block::siso::SISO, metrics::Metric};
-#[cfg(feature = "alloc")]
-use alloc::vec::Vec;
-use core::ops::{Add, Div, Mul, Neg, Shr, Sub};
+use core::ops::{Add, Div, Mul, Neg, Sub};
 use core::time::Duration;
 
-#[derive(Debug, Clone, Copy, Default, PartialEq)]
-pub struct Signal {
-    pub value: f32,
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct Signal<T> {
+    pub value: T,
     pub dt: Duration,
 }
 
-impl From<Duration> for Signal {
+impl<T: Copy> Copy for Signal<T> {}
+
+impl<T: Default> From<Duration> for Signal<T> {
     fn from(dt: Duration) -> Self {
-        Signal { value: 0.0, dt }
+        Signal {
+            value: T::default(),
+            dt,
+        }
     }
 }
 
-impl From<(f32, Duration)> for Signal {
-    fn from((value, dt): (f32, Duration)) -> Self {
+impl<T> From<(T, Duration)> for Signal<T> {
+    fn from((value, dt): (T, Duration)) -> Self {
         Signal { value, dt }
     }
 }
 
-impl From<(Duration, f32)> for Signal {
-    fn from((dt, value): (Duration, f32)) -> Self {
-        Signal { value, dt }
-    }
-}
-
-impl From<(f32, f32)> for Signal {
-    fn from((value, dt): (f32, f32)) -> Self {
+impl<T> From<(T, f32)> for Signal<T> {
+    fn from((value, dt): (T, f32)) -> Self {
         Signal {
             value,
             dt: Duration::from_secs_f32(dt),
@@ -40,7 +36,7 @@ impl From<(f32, f32)> for Signal {
     }
 }
 
-impl Neg for Signal {
+impl<T: Neg<Output = T>> Neg for Signal<T> {
     type Output = Self;
 
     fn neg(self) -> Self::Output {
@@ -51,7 +47,7 @@ impl Neg for Signal {
     }
 }
 
-impl Sub for Signal {
+impl<T: Sub<Output = T>> Sub for Signal<T> {
     type Output = Self;
 
     fn sub(self, rhs: Self) -> Self::Output {
@@ -62,10 +58,10 @@ impl Sub for Signal {
     }
 }
 
-impl Sub<f32> for Signal {
+impl<T: Sub<Output = T>> Sub<T> for Signal<T> {
     type Output = Self;
 
-    fn sub(self, rhs: f32) -> Self::Output {
+    fn sub(self, rhs: T) -> Self::Output {
         Signal {
             value: self.value - rhs,
             dt: self.dt,
@@ -73,10 +69,10 @@ impl Sub<f32> for Signal {
     }
 }
 
-impl Sub<Option<Signal>> for Signal {
+impl<T: Sub<Output = T>> Sub<Option<Signal<T>>> for Signal<T> {
     type Output = Self;
 
-    fn sub(self, rhs: Option<Signal>) -> Self::Output {
+    fn sub(self, rhs: Option<Signal<T>>) -> Self::Output {
         match rhs {
             Some(signal) => self - signal,
             None => self,
@@ -84,7 +80,7 @@ impl Sub<Option<Signal>> for Signal {
     }
 }
 
-impl Add for Signal {
+impl<T: Add<Output = T>> Add for Signal<T> {
     type Output = Self;
 
     fn add(self, rhs: Self) -> Self::Output {
@@ -95,10 +91,10 @@ impl Add for Signal {
     }
 }
 
-impl Add<f32> for Signal {
+impl<T: Add<Output = T>> Add<T> for Signal<T> {
     type Output = Self;
 
-    fn add(self, rhs: f32) -> Self::Output {
+    fn add(self, rhs: T) -> Self::Output {
         Signal {
             value: self.value + rhs,
             dt: self.dt,
@@ -106,10 +102,10 @@ impl Add<f32> for Signal {
     }
 }
 
-impl Add<Option<Signal>> for Signal {
+impl<T: Add<Output = T>> Add<Option<Signal<T>>> for Signal<T> {
     type Output = Self;
 
-    fn add(self, rhs: Option<Signal>) -> Self::Output {
+    fn add(self, rhs: Option<Signal<T>>) -> Self::Output {
         match rhs {
             Some(signal) => self + signal,
             None => self,
@@ -117,7 +113,7 @@ impl Add<Option<Signal>> for Signal {
     }
 }
 
-impl Div for Signal {
+impl<T: Div<Output = T>> Div for Signal<T> {
     type Output = Self;
 
     fn div(self, rhs: Self) -> Self::Output {
@@ -128,10 +124,10 @@ impl Div for Signal {
     }
 }
 
-impl Div<f32> for Signal {
+impl<T: Div<Output = T>> Div<T> for Signal<T> {
     type Output = Self;
 
-    fn div(self, rhs: f32) -> Self::Output {
+    fn div(self, rhs: T) -> Self::Output {
         Signal {
             value: self.value / rhs,
             dt: self.dt,
@@ -139,7 +135,7 @@ impl Div<f32> for Signal {
     }
 }
 
-impl Mul for Signal {
+impl<T: Mul<Output = T>> Mul for Signal<T> {
     type Output = Self;
 
     fn mul(self, rhs: Self) -> Self::Output {
@@ -150,10 +146,10 @@ impl Mul for Signal {
     }
 }
 
-impl Mul<f32> for Signal {
+impl<T: Mul<Output = T>> Mul<T> for Signal<T> {
     type Output = Self;
 
-    fn mul(self, rhs: f32) -> Self::Output {
+    fn mul(self, rhs: T) -> Self::Output {
         Signal {
             value: self.value * rhs,
             dt: self.dt,
@@ -161,139 +157,64 @@ impl Mul<f32> for Signal {
     }
 }
 
-impl Mul<&mut dyn SISO> for Signal {
-    type Output = Signal;
+impl<I, O> Mul<&mut dyn Block<Input = I, Output = O>> for Signal<I> {
+    type Output = Signal<O>;
 
-    fn mul(self, block: &mut dyn SISO) -> Self::Output {
+    fn mul(self, block: &mut dyn Block<Input = I, Output = O>) -> Self::Output {
         block.output(self)
     }
 }
 
-impl<const I: usize> Mul<&mut dyn MIMO> for [Signal; I] {
-    type Output = Vec<Signal>;
+impl<T: Clone> Mul<&mut dyn Output<T>> for Signal<T> {
+    type Output = Signal<T>;
 
-    fn mul(self, rhs: &mut dyn MIMO) -> Self::Output {
-        rhs.output(self.to_vec())
-    }
-}
-
-impl Mul<&mut dyn MIMO> for &[Signal] {
-    type Output = Vec<Signal>;
-
-    fn mul(self, rhs: &mut dyn MIMO) -> Self::Output {
-        rhs.output(self.to_vec())
-    }
-}
-
-impl Mul<&mut dyn MIMO> for Signal {
-    type Output = Vec<Signal>;
-
-    fn mul(self, rhs: &mut dyn MIMO) -> Self::Output {
-        rhs.output([self].to_vec())
-    }
-}
-
-impl Mul<&mut dyn MIMO> for (Signal, Signal) {
-    type Output = Vec<Signal>;
-
-    fn mul(self, rhs: &mut dyn MIMO) -> Self::Output {
-        rhs.output([self.0, self.1].to_vec())
-    }
-}
-
-impl Mul<&mut dyn MIMO> for (Signal, Signal, Signal) {
-    type Output = Vec<Signal>;
-
-    fn mul(self, rhs: &mut dyn MIMO) -> Self::Output {
-        rhs.output([self.0, self.1, self.2].to_vec())
-    }
-}
-
-#[cfg(feature = "alloc")]
-impl Mul<&mut dyn MIMO> for Vec<Signal> {
-    type Output = Vec<Signal>;
-
-    fn mul(self, rhs: &mut dyn MIMO) -> Self::Output {
-        rhs.output(self)
-    }
-}
-
-#[cfg(feature = "alloc")]
-impl Shr<&mut dyn Output> for Signal {
-    type Output = Signal;
-
-    fn shr(self, monitor: &mut dyn Output) -> Self::Output {
-        monitor.show(&[self]);
+    fn mul(self, monitor: &mut dyn Output<T>) -> Self::Output {
+        monitor.show(self.clone());
         self
     }
 }
 
-impl Shr<&mut dyn Metric<1>> for Signal {
-    type Output = Signal;
+impl<T> Mul<&mut dyn Metric<Input = T>> for Signal<T> {
+    type Output = Signal<T>;
 
-    fn shr(self, rhs: &mut dyn Metric<1>) -> Self::Output {
-        let input = [self];
-        let output = rhs.update(input);
-        output[0]
+    fn mul(self, rhs: &mut dyn Metric<Input = T>) -> Self::Output {
+        let output = rhs.update(self);
+        output
     }
 }
 
-#[cfg(feature = "alloc")]
-impl Shr<&mut dyn Output> for (Signal, Signal) {
-    type Output = (Signal, Signal);
-
-    fn shr(self, monitor: &mut dyn Output) -> Self::Output {
-        monitor.show(&[self.0, self.1]);
-        self
-    }
+#[macro_export]
+macro_rules! merge {
+    ($v:expr) => {
+        Signal {
+            value: $v.map(|x| x.value),
+            dt: $v[0].dt,
+        }
+    };
+    ($v:expr, $($x:expr),+) => {
+        Signal {
+            value: [$v.value, $($x.value),+],
+            dt: $v.dt,
+        }
+    };
 }
 
-impl Shr<&mut dyn Metric<2>> for (Signal, Signal) {
-    type Output = (Signal, Signal);
-
-    fn shr(self, rhs: &mut dyn Metric<2>) -> Self::Output {
-        let input = [self.0, self.1];
-        let output = rhs.update(input);
-        (output[0], output[1])
-    }
+#[macro_export]
+macro_rules! extract_struct {
+    ($signal:expr, $field:tt) => {
+        Signal {
+            value: $signal.value.$field,
+            dt: $signal.dt,
+        }
+    };
 }
 
-#[cfg(feature = "alloc")]
-impl Shr<&mut dyn Output> for (Signal, Signal, Signal) {
-    type Output = (Signal, Signal, Signal);
-
-    fn shr(self, monitor: &mut dyn Output) -> Self::Output {
-        monitor.show(&[self.0, self.1, self.2]);
-        self
-    }
-}
-
-#[cfg(feature = "alloc")]
-impl<'a> Shr<&mut dyn Output> for &'a [Signal] {
-    type Output = &'a [Signal];
-
-    fn shr(self, monitor: &mut dyn Output) -> Self::Output {
-        monitor.show(self);
-        self
-    }
-}
-
-#[cfg(feature = "alloc")]
-impl<const N: usize> Shr<&mut dyn Output> for [Signal; N] {
-    type Output = [Signal; N];
-
-    fn shr(self, monitor: &mut dyn Output) -> Self::Output {
-        monitor.show(&self);
-        self
-    }
-}
-
-#[cfg(feature = "alloc")]
-impl Shr<&mut dyn Output> for Vec<Signal> {
-    type Output = Vec<Signal>;
-
-    fn shr(self, monitor: &mut dyn Output) -> Self::Output {
-        monitor.show(&self);
-        self
-    }
+#[macro_export]
+macro_rules! extract_array {
+    ($signal:expr, $index:expr) => {
+        Signal {
+            value: $signal.value[$index],
+            dt: $signal.dt,
+        }
+    };
 }

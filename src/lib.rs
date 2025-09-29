@@ -23,12 +23,11 @@ mod time;
 pub use crate::continuous::s_var::s;
 
 pub mod prelude {
+    pub use crate::block::Block;
     pub use crate::block::delay::Delay;
-    pub use crate::block::mimo::{AsMIMO, MIMO};
     pub use crate::block::observer::Observer;
     pub use crate::block::pid::PID;
     pub use crate::block::saturation::Saturation;
-    pub use crate::block::siso::{AsSISO, SISO};
     #[cfg(feature = "alloc")]
     pub use crate::continuous::Tf;
     #[cfg(feature = "alloc")]
@@ -41,26 +40,29 @@ pub mod prelude {
     pub use crate::discrete::solver::euler::Euler;
     #[cfg(feature = "alloc")]
     pub use crate::discrete::solver::runge_kutta::RK4;
+    pub use crate::extract_array;
+    pub use crate::extract_struct;
+    pub use crate::input::Input;
     pub use crate::input::impulse::Impulse;
     pub use crate::input::ramp::Ramp;
     pub use crate::input::sawtooth::Sawtooth;
     pub use crate::input::sinusoid::Sinusoid;
     pub use crate::input::square::Square;
     pub use crate::input::step::Step;
-    pub use crate::input::{AsInput, Input};
+    pub use crate::merge;
+    pub use crate::metrics::Metric;
     #[cfg(feature = "alloc")]
     pub use crate::metrics::good_hart::GoodHart;
     pub use crate::metrics::iae::IAE;
     pub use crate::metrics::ise::ISE;
     pub use crate::metrics::itae::ITAE;
-    pub use crate::metrics::{AsMetric, Metric};
+    pub use crate::output::Output;
     #[cfg(feature = "std")]
     pub use crate::output::plotter::{JoinAll, Joinable, Plotter, RTPlotter, Savable};
     #[cfg(feature = "alloc")]
     pub use crate::output::printer::Printer;
     #[cfg(feature = "alloc")]
     pub use crate::output::writer::Writter;
-    pub use crate::output::{AsOutput, Output};
     pub use crate::signal::Signal;
     #[cfg(feature = "std")]
     pub use crate::time::RTTime;
@@ -80,7 +82,7 @@ mod tests {
 
         for dt in time {
             let r = step.output(dt);
-            let y = pid.output(r);
+            let y = pid.output(r.clone());
             let _ = (r, y);
         }
     }

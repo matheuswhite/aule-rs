@@ -1,24 +1,25 @@
-use crate::block::siso::{AsSISO, SISO};
+use crate::block::Block;
 use crate::signal::Signal;
 use alloc::vec;
 use alloc::vec::Vec;
+use core::ops::{Add, Mul};
 use core::time::Duration;
 
-#[derive(Copy, Clone)]
-struct InputBuffered {
+#[derive(Clone)]
+struct InputBuffered<T> {
     instant: Duration,
-    signal: Signal,
+    signal: Signal<T>,
 }
 
-pub struct Delay {
+pub struct Delay<T> {
     delay: Duration,
     current_time: Duration,
-    initial_signal: Signal,
-    input_buffer: Vec<InputBuffered>,
-    last_output: Option<Signal>,
+    initial_signal: Signal<T>,
+    input_buffer: Vec<InputBuffered<T>>,
+    last_output: Option<Signal<T>>,
 }
 
-impl Delay {
+impl<T: Default + Clone> Delay<T> {
     pub fn new(delay: Duration) -> Self {
         assert!(
             delay > Duration::ZERO,
@@ -34,15 +35,15 @@ impl Delay {
         }
     }
 
-    pub fn with_initial_signal(mut self, initial_signal: Signal) -> Self {
-        self.initial_signal = initial_signal;
+    pub fn with_initial_signal(mut self, initial_signal: Signal<T>) -> Self {
+        self.initial_signal = initial_signal.clone();
         self.input_buffer[0].signal = initial_signal;
         self
     }
 
     fn drop_invalid_inputs(&mut self) {
         while self.input_buffer.len() >= 2 {
-            let second = self.input_buffer[1];
+            let second = &self.input_buffer[1];
 
             if self.current_time < second.instant {
                 break;
@@ -53,13 +54,16 @@ impl Delay {
     }
 }
 
-impl SISO for Delay {
-    fn output(&mut self, input: Signal) -> Signal {
+impl<T: Default + Clone + Mul<f32, Output = T> + Add<T, Output = T>> Block for Delay<T> {
+    type Input = T;
+    type Output = T;
+
+    fn output(&mut self, input: Signal<Self::Input>) -> Signal<Self::Output> {
         /* # Update values */
         self.current_time += input.dt;
 
-        let input_buffered_delayed = (self.current_time + self.delay, input).into();
-        let input_buffered = (self.current_time, input).into();
+        let input_buffered_delayed = (self.current_time + self.delay, input.clone()).into();
+        let input_buffered = (self.current_time, input.clone()).into();
         self.input_buffer.push(input_buffered_delayed);
 
         /* # Current time before delay */
@@ -68,19 +72,19 @@ impl SISO for Delay {
                 self.initial_signal.dt = input.dt;
             }
 
-            self.last_output = Some(self.initial_signal);
-            return self.initial_signal;
+            self.last_output = Some(self.initial_signal.clone());
+            return self.initial_signal.clone();
         }
 
         /* # Current time after delay */
         self.drop_invalid_inputs();
 
-        let mut first_input = self.input_buffer[0];
-        let mut second_input = self.input_buffer.get(1).copied().unwrap_or(input_buffered);
+        let mut first_input = &self.input_buffer[0];
+        let mut second_input = self.input_buffer.get(1).unwrap_or(&input_buffered);
 
         if self.current_time < first_input.instant {
             second_input = first_input;
-            first_input = input_buffered;
+            first_input = &input_buffered;
         }
 
         let gama = if first_input.instant != second_input.instant {
@@ -96,28 +100,26 @@ impl SISO for Delay {
         );
 
         let output_dt = (first_input.signal.dt + second_input.signal.dt).as_secs_f32() / 2.0;
-        let output_value =
-            (1.0 - gama) * first_input.signal.value + gama * second_input.signal.value;
+        let output_value = first_input.signal.value.clone() * (1.0 - gama)
+            + second_input.signal.value.clone() * gama;
         let output = Signal {
             dt: Duration::from_secs_f32(output_dt),
             value: output_value,
         };
-        self.last_output = Some(output);
+        self.last_output = Some(output.clone());
         output
     }
 
-    fn last_output(&self) -> Option<Signal> {
-        self.last_output
+    fn last_output(&self) -> Option<Signal<T>> {
+        self.last_output.clone()
     }
 }
 
-impl From<(Duration, Signal)> for InputBuffered {
-    fn from((instant, signal): (Duration, Signal)) -> Self {
+impl<T> From<(Duration, Signal<T>)> for InputBuffered<T> {
+    fn from((instant, signal): (Duration, Signal<T>)) -> Self {
         Self { instant, signal }
     }
 }
-
-impl AsSISO for Delay {}
 
 #[cfg(test)]
 mod tests {
@@ -128,14 +130,14 @@ mod tests {
     #[test]
     fn test_delay_happy_way() {
         let mut delay = Delay::new(Duration::from_secs(2))
-            .with_initial_signal(Signal::from((Duration::from_secs(1), 0.0)));
+            .with_initial_signal(Signal::from((0.0f32, Duration::from_secs(1))));
         let input_signal = Signal {
             dt: Duration::from_secs(1),
             value: 1.0,
         };
         let mut output_signals = Vec::new();
         for _ in 0..3 {
-            let output = delay.output(input_signal);
+            let output = delay.output(input_signal.clone());
             output_signals.push(output);
         }
         // Output signals will be:
@@ -157,7 +159,7 @@ mod tests {
     #[test]
     fn test_delay_half_dt() {
         let mut delay = Delay::new(Duration::from_secs(2))
-            .with_initial_signal(Signal::from((Duration::from_secs(1), 0.0)));
+            .with_initial_signal(Signal::from((0.0f32, Duration::from_secs(1))));
         let mut input_signals = Vec::new();
         for i in 0..3 {
             input_signals.push(Signal {
@@ -200,7 +202,7 @@ mod tests {
     #[test]
     fn test_delay_large_dt() {
         let mut delay = Delay::new(Duration::from_secs(2))
-            .with_initial_signal(Signal::from((Duration::from_secs(1), 0.0)));
+            .with_initial_signal(Signal::from((0.0f32, Duration::from_secs(1))));
         let large_input_signal = Signal {
             dt: Duration::from_secs(5),
             value: 1.0,
@@ -211,7 +213,7 @@ mod tests {
         };
         let mut output_signals = Vec::new();
         output_signals.push(delay.output(large_input_signal));
-        output_signals.push(delay.output(input_signal));
+        output_signals.push(delay.output(input_signal.clone()));
         output_signals.push(delay.output(input_signal));
         for i in 0..6 {
             let half_input_signal = Signal {
@@ -244,7 +246,7 @@ mod tests {
     #[test]
     fn test_delay_large_dt_in_middle() {
         let mut delay = Delay::new(Duration::from_secs(2))
-            .with_initial_signal(Signal::from((Duration::from_secs(1), 0.0)));
+            .with_initial_signal(Signal::from((0.0f32, Duration::from_secs(1))));
         let large_input_signal = |v: i32| Signal {
             dt: Duration::from_secs(5),
             value: v as f32,

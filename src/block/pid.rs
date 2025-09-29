@@ -1,4 +1,5 @@
-use crate::block::siso::{AsSISO, SISO};
+use crate::block::Block;
+use crate::merge;
 use crate::metrics::Metric;
 #[cfg(feature = "alloc")]
 use crate::prelude::GoodHart;
@@ -18,7 +19,7 @@ pub struct PID {
     kd: f32,
     last_input: f32,
     last_integral: f32,
-    last_output: Option<Signal>,
+    last_output: Option<Signal<f32>>,
     iae: Option<IAE>,
     ise: Option<ISE>,
     itae: Option<ITAE>,
@@ -115,18 +116,21 @@ impl PID {
     }
 }
 
-impl SISO for PID {
-    fn output(&mut self, input: Signal) -> Signal {
+impl Block for PID {
+    type Input = f32;
+    type Output = f32;
+
+    fn output(&mut self, input: Signal<f32>) -> Signal<f32> {
         if let Some(iae) = &mut self.iae {
-            iae.update([input]);
+            iae.update(input.clone());
         }
 
         if let Some(ise) = &mut self.ise {
-            ise.update([input]);
+            ise.update(input.clone());
         }
 
         if let Some(itae) = &mut self.itae {
-            itae.update([input]);
+            itae.update(input.clone());
         }
 
         let proportional = input.value;
@@ -149,21 +153,19 @@ impl SISO for PID {
             dt: input.dt,
         };
 
-        self.last_output = Some(output);
+        self.last_output = Some(output.clone());
         self.last_input = input.value;
         self.last_integral = integral;
 
         #[cfg(feature = "alloc")]
         if let Some(good_hart) = &mut self.good_hart {
-            good_hart.update([input, output]);
+            good_hart.update(merge!(input, output));
         }
 
         output
     }
 
-    fn last_output(&self) -> Option<Signal> {
-        self.last_output
+    fn last_output(&self) -> Option<Signal<f32>> {
+        self.last_output.clone()
     }
 }
-
-impl AsSISO for PID {}

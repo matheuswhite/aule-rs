@@ -30,11 +30,11 @@ fn test_rt_dc_motor() -> RTPlotter {
     let mut plotter = RTPlotter::new("Real Time DC Motor".to_string(), 1.0, 1.0);
 
     for dt in time {
-        let signal = dt >> input.as_input();
+        let signal = dt * input.as_mut();
         let output =
-            (signal - plant.last_output()) * pid.as_siso() * plant.as_siso() >> writer.as_output();
+            (signal - plant.last_output()) * pid.as_mut() * plant.as_mut() * writer.as_mut();
 
-        let _ = (signal, output) >> plotter.as_output();
+        let _ = merge!(signal, output) * plotter.as_mut();
     }
 
     let res = plotter
@@ -61,11 +61,11 @@ fn test_dc_motor() -> Plotter {
     let mut plotter = Plotter::new("DC Motor".to_string(), 1.0, 1.0);
 
     for dt in time {
-        let signal = dt >> input.as_input();
+        let signal = dt * input.as_mut();
         let output =
-            (signal - plant.last_output()) * pid.as_siso() * plant.as_siso() >> writer.as_output();
+            (signal - plant.last_output()) * pid.as_mut() * plant.as_mut() * writer.as_mut();
 
-        let _ = (signal, output) >> plotter.as_output();
+        let _ = merge!(signal, output) * plotter.as_mut();
     }
 
     println!("PID error metrics: {}", pid.error_metrics());

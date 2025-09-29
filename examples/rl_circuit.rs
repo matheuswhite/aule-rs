@@ -2,7 +2,7 @@ use aule::prelude::*;
 use aule::s;
 
 pub struct RlCircuit {
-    last_output: Option<Signal>,
+    last_output: Option<Signal<f32>>,
     integrator: SS<RK4>,
 }
 
@@ -15,21 +15,22 @@ impl RlCircuit {
     }
 }
 
-impl SISO for RlCircuit {
-    fn output(&mut self, input: Signal) -> Signal {
-        let output = input * self.integrator.as_siso();
+impl Block for RlCircuit {
+    type Input = f32;
+    type Output = f32;
+
+    fn output(&mut self, input: Signal<Self::Input>) -> Signal<Self::Output> {
+        let output = input * self.integrator.as_mut();
 
         self.last_output = Some(output);
 
         output
     }
 
-    fn last_output(&self) -> Option<Signal> {
+    fn last_output(&self) -> Option<Signal<Self::Output>> {
         self.last_output
     }
 }
-
-impl AsSISO for RlCircuit {}
 
 fn main() {
     println!("Cleaning up previous output files...");
@@ -52,8 +53,8 @@ fn open_loop_rl_circuit() {
     let mut writer = Writter::new("output/open_loop_rl_circuit.csv", ["output"]);
 
     for dt in time {
-        let input = dt >> step.as_input();
-        let _ = input * rl_circuit.as_siso() >> writer.as_output();
+        let input = dt * step.as_mut();
+        let _ = input * rl_circuit.as_mut() * writer.as_mut();
     }
 }
 
@@ -66,8 +67,10 @@ fn closed_loop_rl_circuit() {
     let mut writer = Writter::new("output/closed_loop_rl_circuit.csv", ["output"]);
 
     for dt in time {
-        let input = dt >> step.as_input();
-        let _ = (input - rl_circuit.last_output()) * pid.as_siso() * rl_circuit.as_siso()
-            >> writer.as_output();
+        let input = dt * step.as_mut();
+        let _ = (input - rl_circuit.last_output())
+            * pid.as_mut()
+            * rl_circuit.as_mut()
+            * writer.as_mut();
     }
 }

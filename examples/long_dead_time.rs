@@ -17,12 +17,12 @@ fn open_loop() {
     let mut plotter = Plotter::new("[Long Dead Time] Open Loop".to_string(), 100.0, 1.0);
 
     for dt in time {
-        let reference = dt >> step.as_input();
+        let reference = dt * step.as_mut();
 
-        let plant_output = reference * plant.as_siso();
-        let delayed_output = plant_output * delay.as_siso();
+        let plant_output = reference * plant.as_mut();
+        let delayed_output = plant_output * delay.as_mut();
 
-        let _ = delayed_output >> plotter.as_output();
+        let _ = delayed_output * plotter.as_mut();
     }
 
     plotter.display();
@@ -41,18 +41,18 @@ fn pi_controller() {
     let mut plotter = Plotter::new(format!("[Long Dead Time] PI {:?}", kp), 100.0, 0.2);
 
     for dt in time {
-        let reference = dt >> step.as_input();
+        let reference = dt * step.as_mut();
         let mut outputs = [Signal::default(); 3];
 
         for i in 0..3 {
             let error = reference - delay[i].last_output();
-            let control_signal = error * controller[i].as_siso();
+            let control_signal = error * controller[i].as_mut();
 
-            let plant_output = control_signal * plant[i].as_siso();
-            outputs[i] = plant_output * delay[i].as_siso();
+            let plant_output = control_signal * plant[i].as_mut();
+            outputs[i] = plant_output * delay[i].as_mut();
         }
 
-        let _ = outputs >> plotter.as_output();
+        let _ = merge!(outputs) * plotter.as_mut();
     }
 
     plotter.display();
@@ -92,51 +92,53 @@ fn smith_predictor() {
     };
 
     for dt in time {
-        let reference = dt >> step.as_input();
+        let reference = dt * step.as_mut();
 
-        let with_predictor_output = reference * with_predictor.as_siso();
-        let without_predictor_output = reference * without_predictor.as_siso();
+        let with_predictor_output = reference * with_predictor.as_mut();
+        let without_predictor_output = reference * without_predictor.as_mut();
 
-        let _ = (with_predictor_output, without_predictor_output) >> plotter.as_output();
+        let _ = merge!(with_predictor_output, without_predictor_output) * plotter.as_mut();
     }
 
     plotter.display();
     plotter.join();
 }
 
+type SmithPredictorFilteredRK4 = SmithPredictorFiltered<SS<RK4>, SS<RK4>>;
+
 struct BlockCollection {
     controller: PID,
     plant: SS<RK4>,
-    delay: Delay,
-    smith_predictor: Option<SmithPredictorFiltered<SS<RK4>, SS<RK4>>>,
+    delay: Delay<f32>,
+    smith_predictor: Option<SmithPredictorFilteredRK4>,
 }
 
-impl SISO for BlockCollection {
-    fn output(&mut self, input: Signal) -> Signal {
-        if let Some(smith_predictor) = &mut self.smith_predictor {
-            let preditor_last_output = smith_predictor
-                .last_output()
-                .map(|last_output| last_output[0]);
-            let error = input - preditor_last_output;
-            let control_signal = error * self.controller.as_siso();
+impl Block for BlockCollection {
+    type Input = f32;
+    type Output = f32;
 
-            let plant_output = control_signal * self.plant.as_siso();
-            let delayed_output = plant_output * self.delay.as_siso();
-            let _predicted_output = (control_signal, delayed_output) * smith_predictor.as_mimo();
+    fn output(&mut self, input: Signal<Self::Input>) -> Signal<Self::Output> {
+        if let Some(smith_predictor) = &mut self.smith_predictor {
+            let preditor_last_output = smith_predictor.last_output();
+            let error = input - preditor_last_output;
+            let control_signal = error * self.controller.as_mut();
+
+            let plant_output = control_signal * self.plant.as_mut();
+            let delayed_output = plant_output * self.delay.as_mut();
+            let _predicted_output =
+                merge!(control_signal, delayed_output) * smith_predictor.as_mut();
 
             delayed_output
         } else {
             let error = input - self.delay.last_output();
-            let control_signal = error * self.controller.as_siso();
+            let control_signal = error * self.controller.as_mut();
 
-            let plant_output = control_signal * self.plant.as_siso();
-            plant_output * self.delay.as_siso()
+            let plant_output = control_signal * self.plant.as_mut();
+            plant_output * self.delay.as_mut()
         }
     }
 
-    fn last_output(&self) -> Option<Signal> {
+    fn last_output(&self) -> Option<Signal<Self::Output>> {
         self.delay.last_output()
     }
 }
-
-impl AsSISO for BlockCollection {}

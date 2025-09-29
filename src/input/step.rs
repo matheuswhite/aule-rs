@@ -1,4 +1,4 @@
-use crate::input::{AsInput, Input, Signal};
+use crate::input::{Input, Signal};
 use core::time::Duration;
 
 pub struct Step {
@@ -18,12 +18,12 @@ impl Default for Step {
 }
 
 impl Input for Step {
-    fn output(&mut self, dt: Duration) -> Signal {
+    type Output = f32;
+
+    fn output(&mut self, dt: Duration) -> Signal<Self::Output> {
         Signal {
             value: self.value,
             dt,
         }
     }
 }
-
-impl AsInput for Step {}

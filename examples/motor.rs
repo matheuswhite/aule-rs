@@ -5,7 +5,7 @@ struct Motor {
     kv: f32,
     km: f32,
     tau_l: f32,
-    last_output: Option<Signal>,
+    last_output: Option<Signal<f32>>,
     eletrical: SS<Euler>,
     mechanical: SS<Euler>,
 }
@@ -23,22 +23,23 @@ impl Motor {
     }
 }
 
-impl SISO for Motor {
-    fn output(&mut self, input: Signal) -> Signal {
-        let eletrical = (input - self.last_output) * self.kv * self.eletrical.as_siso();
-        let mechanical = (eletrical * self.km - self.tau_l) * self.mechanical.as_siso();
+impl Block for Motor {
+    type Input = f32;
+    type Output = f32;
+
+    fn output(&mut self, input: Signal<Self::Input>) -> Signal<Self::Output> {
+        let eletrical = (input - self.last_output) * self.kv * self.eletrical.as_mut();
+        let mechanical = (eletrical * self.km - self.tau_l) * self.mechanical.as_mut();
 
         self.last_output = Some(mechanical);
 
         mechanical
     }
 
-    fn last_output(&self) -> Option<Signal> {
+    fn last_output(&self) -> Option<Signal<f32>> {
         self.last_output
     }
 }
-
-impl AsSISO for Motor {}
 
 fn main() {
     println!("Cleaning up previous output files...");
@@ -57,17 +58,17 @@ fn main() {
 }
 
 fn open_loop_motor() -> Plotter {
-    let time = Time::from((0.001, 0.2));
+    let time = Time::from((1e-3, 1.0));
     let mut motor = Motor::new(1.0, 1.0, 0.1, 0.01, 1.0, 0.01, 0.01);
     let mut step = Step::default();
     let mut writer = Writter::new("output/open_loop_motor.csv", ["output"]);
     let mut plotter = Plotter::new("Open loop Motor".to_string(), 0.05, 0.5);
 
     for dt in time {
-        let input = dt >> step.as_input();
-        let output = input * motor.as_siso() >> writer.as_output();
+        let input = dt * step.as_mut();
+        let output = input * motor.as_mut() * writer.as_mut();
 
-        let _ = output >> plotter.as_output();
+        let _ = output * plotter.as_mut();
     }
 
     plotter.display();
@@ -80,7 +81,7 @@ fn open_loop_motor() -> Plotter {
 }
 
 fn closed_loop_motor() -> Plotter {
-    let time = Time::from((0.001, 0.2));
+    let time = Time::from((1e-3, 1.0));
     let mut motor = Motor::new(1.0, 1.0, 0.1, 0.01, 1.0, 0.01, 0.01);
     let mut step = Step::default();
     let mut pid = PID::new(10.0, 0.1, 0.01);
@@ -88,12 +89,12 @@ fn closed_loop_motor() -> Plotter {
     let mut plotter = Plotter::new("Closed Loop Motor".to_string(), 0.05, 0.5);
 
     for dt in time {
-        let input = dt >> step.as_input();
+        let input = dt * step.as_mut();
         let error = input - motor.last_output().unwrap_or_default();
-        let control_signal = error * pid.as_siso();
-        let output = control_signal * motor.as_siso() >> writer.as_output();
+        let control_signal = error * pid.as_mut();
+        let output = control_signal * motor.as_mut() * writer.as_mut();
 
-        let _ = output >> plotter.as_output();
+        let _ = output * plotter.as_mut();
     }
 
     plotter.display();

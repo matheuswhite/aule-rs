@@ -1,14 +1,11 @@
-use crate::{
-    metrics::{AsMetric, Metric},
-    signal::Signal,
-};
+use crate::{metrics::Metric, signal::Signal};
 use alloc::vec::Vec;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GoodHart {
     error: Vec<f32>,
     control_signal: Vec<f32>,
-    alphas: [f32; 3],
+    alphas: (f32, f32, f32),
 }
 
 impl GoodHart {
@@ -16,15 +13,17 @@ impl GoodHart {
         GoodHart {
             error: Vec::new(),
             control_signal: Vec::new(),
-            alphas: [alpha1, alpha2, alpha3],
+            alphas: (alpha1, alpha2, alpha3),
         }
     }
 }
 
-impl Metric<2> for GoodHart {
-    fn update(&mut self, input: [Signal; 2]) -> [Signal; 2] {
-        let error = input[0].value;
-        let control_signal = input[1].value;
+impl Metric for GoodHart {
+    type Input = [f32; 2];
+
+    fn update(&mut self, input: Signal<Self::Input>) -> Signal<Self::Input> {
+        let error = input.value[0];
+        let control_signal = input.value[1];
         self.error.push(error);
         self.control_signal.push(control_signal);
 
@@ -42,8 +41,6 @@ impl Metric<2> for GoodHart {
         let e2 = self.control_signal.iter().map(|u| u - e1).sum::<f32>() / n;
         let e3 = self.error.iter().map(|e| e.abs()).sum::<f32>() / n;
 
-        self.alphas[0] * e1 + self.alphas[1] * e2 + self.alphas[2] * e3
+        self.alphas.0 * e1 + self.alphas.1 * e2 + self.alphas.2 * e3
     }
 }
-
-impl AsMetric<2> for GoodHart {}

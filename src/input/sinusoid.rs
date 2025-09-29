@@ -1,7 +1,4 @@
-use crate::{
-    input::{AsInput, Input},
-    signal::Signal,
-};
+use crate::{input::Input, signal::Signal};
 use core::time::Duration;
 
 pub struct Sinusoid {
@@ -23,7 +20,9 @@ impl Sinusoid {
 }
 
 impl Input for Sinusoid {
-    fn output(&mut self, dt: Duration) -> Signal {
+    type Output = f32;
+
+    fn output(&mut self, dt: Duration) -> Signal<Self::Output> {
         self.sim_time += dt;
         let t = self.sim_time.as_secs_f32();
         let value = self.amplitude * (t / self.period.as_secs_f32() + self.phase);
@@ -34,5 +33,3 @@ impl Input for Sinusoid {
         Signal { value, dt }
     }
 }
-
-impl AsInput for Sinusoid {}

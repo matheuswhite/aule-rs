@@ -1,46 +1,27 @@
-use crate::block::siso::{AsSISO, SISO};
+use crate::block::Block;
 use crate::signal::Signal;
 
-pub struct Saturation {
-    min: f32,
-    max: f32,
-    last_output: Option<Signal>,
+pub struct Saturation<T: Ord + Clone> {
+    min: T,
+    max: T,
+    last_output: Option<Signal<T>>,
 }
 
-impl From<f32> for Saturation {
-    fn from(value: f32) -> Self {
-        Saturation {
-            min: -value,
-            max: value,
-            last_output: None,
-        }
-    }
-}
+impl<T: Ord + Clone> Block for Saturation<T> {
+    type Input = T;
+    type Output = T;
 
-impl From<(f32, f32)> for Saturation {
-    fn from((min, max): (f32, f32)) -> Self {
-        Saturation {
-            min,
-            max,
-            last_output: None,
-        }
-    }
-}
-
-impl SISO for Saturation {
-    fn output(&mut self, input: Signal) -> Signal {
-        let saturated_value = input.value.clamp(self.min, self.max);
+    fn output(&mut self, input: Signal<T>) -> Signal<T> {
+        let saturated_value = input.value.clamp(self.min.clone(), self.max.clone());
         let output = Signal {
             value: saturated_value,
             dt: input.dt,
         };
-        self.last_output = Some(output);
+        self.last_output = Some(output.clone());
         output
     }
 
-    fn last_output(&self) -> Option<Signal> {
-        self.last_output
+    fn last_output(&self) -> Option<Signal<T>> {
+        self.last_output.clone()
     }
 }
-
-impl AsSISO for Saturation {}

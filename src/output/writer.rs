@@ -1,4 +1,4 @@
-use crate::output::{AsOutput, Output};
+use crate::output::Output;
 use crate::signal::Signal;
 use alloc::format;
 use alloc::string::String;
@@ -45,14 +45,21 @@ impl Writter {
     }
 }
 
-impl Output for Writter {
-    fn show(&mut self, inputs: &[Signal]) {
-        self.sim_time += inputs[0].dt;
+impl Output<f32> for Writter {
+    fn show(&mut self, inputs: Signal<f32>) {
+        self.sim_time += inputs.dt;
 
-        let values: Vec<String> = inputs.iter().map(|v| v.value.to_string()).collect();
-        let line = format!("{},{}\n", self.sim_time.as_secs_f32(), values.join(","));
+        let line = format!("{},{}\n", self.sim_time.as_secs_f32(), inputs.value);
         self.append_line(line).expect("Failed to write data line");
     }
 }
 
-impl AsOutput for Writter {}
+impl<const N: usize> Output<[f32; N]> for Writter {
+    fn show(&mut self, inputs: Signal<[f32; N]>) {
+        self.sim_time += inputs.dt;
+
+        let values: Vec<String> = inputs.value.iter().map(|v| v.to_string()).collect();
+        let line = format!("{},{}\n", self.sim_time.as_secs_f32(), values.join(","));
+        self.append_line(line).expect("Failed to write data line");
+    }
+}

@@ -1,4 +1,4 @@
-use crate::output::{AsOutput, Output};
+use crate::output::Output;
 use crate::signal::Signal;
 use alloc::format;
 use alloc::string::String;
@@ -20,16 +20,25 @@ impl Printer {
     }
 }
 
-impl Output for Printer {
-    fn show(&mut self, inputs: &[Signal]) {
+impl Output<f32> for Printer {
+    fn show(&mut self, inputs: Signal<f32>) {
+        let unit = if self.units.len() == 1 {
+            self.units[0].as_str()
+        } else {
+            ""
+        };
+        println!("[{}] {}", self.title, format!("{} {}", inputs.value, unit));
+    }
+}
+impl<const N: usize> Output<[f32; N]> for Printer {
+    fn show(&mut self, inputs: Signal<[f32; N]>) {
         let values = inputs
+            .value
             .iter()
             .zip(self.units.iter())
-            .map(|(input, unit)| format!("{} {}", input.value, unit))
+            .map(|(input, unit)| format!("{} {}", input, unit))
             .collect::<Vec<_>>()
             .join(", ");
         println!("[{}] {}", self.title, values);
     }
 }
-
-impl AsOutput for Printer {}

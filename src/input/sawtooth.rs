@@ -1,18 +1,18 @@
-use crate::{
-    input::{AsInput, Input},
-    signal::Signal,
+use crate::{input::Input, signal::Signal};
+use core::{
+    ops::{Add, Div, Mul},
+    time::Duration,
 };
-use core::time::Duration;
 
-pub struct Sawtooth {
-    amplitude: f32,
+pub struct Sawtooth<T> {
+    amplitude: T,
     period: Duration,
-    offset: f32,
+    offset: T,
     sim_time: Duration,
 }
 
-impl Sawtooth {
-    pub fn new(amplitude: f32, period: Duration, offset: f32) -> Self {
+impl<T> Sawtooth<T> {
+    pub fn new(amplitude: T, period: Duration, offset: T) -> Self {
         Sawtooth {
             amplitude,
             period,
@@ -22,17 +22,21 @@ impl Sawtooth {
     }
 }
 
-impl Input for Sawtooth {
-    fn output(&mut self, dt: Duration) -> Signal {
+impl<T> Input for Sawtooth<T>
+where
+    T: Div<f32, Output = T> + Mul<f32, Output = T> + Add<T, Output = T> + Clone,
+{
+    type Output = T;
+
+    fn output(&mut self, dt: Duration) -> Signal<Self::Output> {
         self.sim_time += dt;
 
         let t = self.sim_time.as_secs_f32();
         let period_secs = self.period.as_secs_f32();
 
-        let value = (self.amplitude / period_secs) * (t % period_secs) + self.offset;
+        let value =
+            (self.amplitude.clone() / period_secs) * (t % period_secs) + self.offset.clone();
 
         Signal { value, dt }
     }
 }
-
-impl AsInput for Sawtooth {}

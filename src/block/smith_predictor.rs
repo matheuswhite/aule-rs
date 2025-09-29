@@ -1,34 +1,31 @@
-use crate::{
-    prelude::{AsMIMO, Delay, MIMO, SISO},
-    signal::Signal,
-};
-use alloc::vec;
-use alloc::vec::Vec;
+use crate::block::Block;
+use crate::extract_array;
+use crate::{prelude::Delay, signal::Signal};
 use core::time::Duration;
 
 pub struct SmithPredictor<P>
 where
-    P: SISO,
+    P: Block<Input = f32, Output = f32>,
 {
     process: P,
-    delay: Delay,
-    last_output: Option<Signal>,
+    delay: Delay<f32>,
+    last_output: Option<Signal<f32>>,
 }
 
 pub struct SmithPredictorFiltered<P, F>
 where
-    P: SISO,
-    F: SISO,
+    P: Block<Input = f32, Output = f32>,
+    F: Block<Input = f32, Output = f32>,
 {
     process: P,
     filter: F,
-    delay: Delay,
-    last_output: Option<Signal>,
+    delay: Delay<f32>,
+    last_output: Option<Signal<f32>>,
 }
 
 impl<P> SmithPredictor<P>
 where
-    P: SISO,
+    P: Block<Input = f32, Output = f32>,
 {
     pub fn new(process: P, delay: Duration) -> Self {
         SmithPredictor {
@@ -41,8 +38,8 @@ where
 
 impl<P, F> SmithPredictorFiltered<P, F>
 where
-    P: SISO,
-    F: SISO,
+    P: Block<Input = f32, Output = f32>,
+    F: Block<Input = f32, Output = f32>,
 {
     pub fn new(process: P, filter: F, delay: Duration) -> Self {
         SmithPredictorFiltered {
@@ -54,66 +51,56 @@ where
     }
 }
 
-impl<P> MIMO for SmithPredictor<P>
+impl<P> Block for SmithPredictor<P>
 where
-    P: SISO,
+    P: Block<Input = f32, Output = f32>,
 {
-    fn output(&mut self, input: Vec<Signal>) -> Vec<Signal> {
-        let control_signal = input[0];
-        let measured_output = input[1];
+    type Input = [f32; 2]; // (u, y)
+    type Output = f32;
+
+    fn output(&mut self, input: Signal<Self::Input>) -> Signal<Self::Output> {
+        let control_signal = extract_array!(input, 0);
+        let measured_output = extract_array!(input, 1);
 
         let predicted_output = self.process.output(control_signal);
-        let delayed_predicted_output = self.delay.output(predicted_output);
+        let delayed_predicted_output = self.delay.output(measured_output.clone());
 
         let output_diff = measured_output - delayed_predicted_output;
 
         let output = predicted_output + output_diff;
-        self.last_output = Some(output);
-        vec![output]
+        self.last_output = Some(output.clone());
+        output
     }
 
-    fn last_output(&self) -> Option<Vec<Signal>> {
-        self.last_output.map(|s| vec![s])
-    }
-
-    fn dimensions(&self) -> (usize, usize) {
-        (2, 1)
+    fn last_output(&self) -> Option<Signal<Self::Output>> {
+        self.last_output.clone()
     }
 }
 
-impl<P, F> MIMO for SmithPredictorFiltered<P, F>
+impl<P, F> Block for SmithPredictorFiltered<P, F>
 where
-    P: SISO,
-    F: SISO,
+    P: Block<Input = f32, Output = f32>,
+    F: Block<Input = f32, Output = f32>,
 {
-    fn output(&mut self, input: Vec<Signal>) -> Vec<Signal> {
-        let control_signal = input[0];
-        let measured_output = input[1];
+    type Input = [f32; 2]; // (u, y)
+    type Output = f32;
+
+    fn output(&mut self, input: Signal<Self::Input>) -> Signal<Self::Output> {
+        let control_signal = extract_array!(input, 0);
+        let measured_output = extract_array!(input, 1);
 
         let predicted_output = self.process.output(control_signal);
-        let delayed_predicted_output = self.delay.output(predicted_output);
+        let delayed_predicted_output = self.delay.output(predicted_output.clone());
 
         let output_diff = measured_output - delayed_predicted_output;
         let output_diff_filtered = self.filter.output(output_diff);
 
         let output = predicted_output + output_diff_filtered;
-        self.last_output = Some(output);
-        vec![output]
+        self.last_output = Some(output.clone());
+        output
     }
 
-    fn last_output(&self) -> Option<Vec<Signal>> {
-        self.last_output.map(|s| vec![s])
+    fn last_output(&self) -> Option<Signal<Self::Output>> {
+        self.last_output.clone()
     }
-
-    fn dimensions(&self) -> (usize, usize) {
-        (2, 1)
-    }
-}
-
-impl<P> AsMIMO for SmithPredictor<P> where P: SISO + 'static {}
-impl<P, F> AsMIMO for SmithPredictorFiltered<P, F>
-where
-    P: SISO + 'static,
-    F: SISO + 'static,
-{
 }

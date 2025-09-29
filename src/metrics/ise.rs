@@ -1,7 +1,4 @@
-use crate::{
-    metrics::{AsMetric, Metric},
-    signal::Signal,
-};
+use crate::{metrics::Metric, signal::Signal};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct ISE {
@@ -15,9 +12,11 @@ impl ISE {
     }
 }
 
-impl Metric<1> for ISE {
-    fn update(&mut self, input: [Signal; 1]) -> [Signal; 1] {
-        self.acc += input[0].value * input[0].value;
+impl Metric for ISE {
+    type Input = f32;
+
+    fn update(&mut self, input: Signal<Self::Input>) -> Signal<Self::Input> {
+        self.acc += input.value * input.value;
         self.n += 1;
         input
     }
@@ -30,5 +29,3 @@ impl Metric<1> for ISE {
         }
     }
 }
-
-impl AsMetric<1> for ISE {}

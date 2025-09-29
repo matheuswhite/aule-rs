@@ -1,9 +1,4 @@
-use crate::{
-    block::siso::{AsSISO, SISO},
-    discrete::solver::StateEstimation,
-    prelude::Solver,
-    signal::Signal,
-};
+use crate::{block::Block, discrete::solver::StateEstimation, prelude::Solver, signal::Signal};
 use alloc::vec;
 use alloc::vec::Vec;
 use ndarray::Array2;
@@ -23,7 +18,7 @@ where
     d: Array2<f32>,
     state: Array2<f32>,
     current_input: f32,
-    last_output: Option<Signal>,
+    last_output: Option<Signal<f32>>,
     _marker: PhantomData<I>,
 }
 
@@ -87,11 +82,14 @@ where
     }
 }
 
-impl<I> SISO for SS<I>
+impl<I> Block for SS<I>
 where
     I: Solver + Debug,
 {
-    fn output(&mut self, input: Signal) -> Signal {
+    type Input = f32;
+    type Output = f32;
+
+    fn output(&mut self, input: Signal<f32>) -> Signal<f32> {
         self.current_input = input.value;
         self.state = I::integrate(self.state.clone(), input.dt, self);
 
@@ -101,17 +99,15 @@ where
             value: output[[0, 0]],
             dt: input.dt,
         };
-        self.last_output = Some(output);
+        self.last_output = Some(output.clone());
 
         output
     }
 
-    fn last_output(&self) -> Option<Signal> {
-        self.last_output
+    fn last_output(&self) -> Option<Signal<f32>> {
+        self.last_output.clone()
     }
 }
-
-impl<I> AsSISO for SS<I> where I: Solver + Debug + 'static {}
 
 impl<I> Display for SS<I>
 where

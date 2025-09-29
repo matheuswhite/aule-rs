@@ -1,29 +1,29 @@
-use crate::{
-    input::{AsInput, Input},
-    signal::Signal,
-};
+use crate::{input::Input, signal::Signal};
 use core::time::Duration;
 
-pub struct Impulse {
-    value: Option<f32>,
+pub struct Impulse<T> {
+    value: Option<T>,
 }
 
-impl Impulse {
-    pub fn new(value: f32) -> Self {
+impl<T> Impulse<T> {
+    pub fn new(value: T) -> Self {
         Impulse { value: Some(value) }
     }
 }
 
-impl Input for Impulse {
-    fn output(&mut self, dt: Duration) -> Signal {
+impl<T: Default> Input for Impulse<T> {
+    type Output = T;
+
+    fn output(&mut self, dt: Duration) -> Signal<Self::Output> {
         match self.value.take() {
             Some(value) => {
                 self.value = None; // Reset value after output
                 Signal { value, dt }
             }
-            None => Signal { value: 0.0, dt }, // If no value is set, return 0.0
+            None => Signal {
+                value: T::default(),
+                dt,
+            }, // If no value is set, return 0.0
         }
     }
 }
-
-impl AsInput for Impulse {}

@@ -1,7 +1,4 @@
-use crate::{
-    metrics::{AsMetric, Metric},
-    signal::Signal,
-};
+use crate::{metrics::Metric, signal::Signal};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct ITAE {
@@ -15,10 +12,12 @@ impl ITAE {
     }
 }
 
-impl Metric<1> for ITAE {
-    fn update(&mut self, input: [Signal; 1]) -> [Signal; 1] {
+impl Metric for ITAE {
+    type Input = f32;
+
+    fn update(&mut self, input: Signal<Self::Input>) -> Signal<Self::Input> {
         self.n += 1;
-        self.acc += self.n as f32 * input[0].value.abs();
+        self.acc += self.n as f32 * input.value.abs();
         input
     }
 
@@ -30,5 +29,3 @@ impl Metric<1> for ITAE {
         }
     }
 }
-
-impl AsMetric<1> for ITAE {}

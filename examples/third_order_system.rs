@@ -14,14 +14,13 @@ fn main() {
     let mut plotter = Plotter::new("Third Order System".to_string(), 1.0, 0.25);
 
     for dt in time {
-        let input = dt >> step.as_input();
-        let error =
-            (input - plant.last_output()) >> iae.as_metric() >> ise.as_metric() >> itae.as_metric();
-        let control_signal = error * pid.as_siso();
-        good_hart.update([error, control_signal]);
-        let output = control_signal * plant.as_siso();
+        let input = dt * step.as_mut();
+        let error = (input - plant.last_output()) * iae.as_mut() * ise.as_mut() * itae.as_mut();
+        let control_signal = error * pid.as_mut();
+        let _ = merge!(error, control_signal) * good_hart.as_mut();
+        let output = control_signal * plant.as_mut();
 
-        let _ = (input, output) >> plotter.as_output() >> writer.as_output();
+        let _ = merge!(input, output) * plotter.as_mut() * writer.as_mut();
     }
 
     println!("IAE Value: {}", iae.value());

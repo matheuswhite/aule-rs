@@ -1,16 +1,13 @@
-use crate::{
-    input::{AsInput, Input},
-    signal::Signal,
-};
-use core::time::Duration;
+use crate::{input::Input, signal::Signal};
+use core::{ops::Mul, time::Duration};
 
-pub struct Ramp {
-    value: f32,
+pub struct Ramp<T> {
+    value: T,
     sim_time: Duration,
 }
 
-impl Ramp {
-    pub fn new(value: f32) -> Self {
+impl<T> Ramp<T> {
+    pub fn new(value: T) -> Self {
         Ramp {
             value,
             sim_time: Duration::default(),
@@ -18,12 +15,12 @@ impl Ramp {
     }
 }
 
-impl Input for Ramp {
-    fn output(&mut self, dt: Duration) -> Signal {
+impl<T: Mul<f32, Output = T> + Clone> Input for Ramp<T> {
+    type Output = T;
+
+    fn output(&mut self, dt: Duration) -> Signal<Self::Output> {
         self.sim_time += dt;
-        let value = self.value * self.sim_time.as_secs_f32();
+        let value = self.value.clone() * self.sim_time.as_secs_f32();
         Signal { value, dt }
     }
 }
-
-impl AsInput for Ramp {}

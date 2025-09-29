@@ -1,5 +1,6 @@
-use crate::output::{AsOutput, Output};
+use crate::output::Output;
 use crate::signal::Signal;
+use alloc::vec;
 use alloc::vec::Vec;
 use std::boxed::Box;
 use std::format;
@@ -11,7 +12,7 @@ use std::time::{Duration, Instant};
 
 pub struct Plotter {
     sim_time: Duration,
-    data: Vec<Vec<Signal>>,
+    data: Vec<Vec<Signal<f32>>>,
     child: Option<Child>,
     grid: (f32, f32),
     title: String,
@@ -98,14 +99,25 @@ impl RTPlotter {
     }
 }
 
-impl Output for Plotter {
-    fn show(&mut self, input: &[Signal]) {
-        self.sim_time += input[0].dt;
+impl Output<f32> for Plotter {
+    fn show(&mut self, inputs: Signal<f32>) {
+        self.sim_time += inputs.dt;
+        self.data.push(vec![Signal {
+            value: inputs.value,
+            dt: self.sim_time.into(),
+        }]);
+    }
+}
+
+impl<const N: usize> Output<[f32; N]> for Plotter {
+    fn show(&mut self, inputs: Signal<[f32; N]>) {
+        self.sim_time += inputs.dt;
         self.data.push(
-            input
-                .into_iter()
+            inputs
+                .value
+                .iter()
                 .map(|s| Signal {
-                    value: s.value,
+                    value: *s,
                     dt: self.sim_time.into(),
                 })
                 .collect(),
@@ -113,9 +125,45 @@ impl Output for Plotter {
     }
 }
 
-impl Output for RTPlotter {
-    fn show(&mut self, input: &[Signal]) {
-        self.sim_time += input[0].dt;
+impl Output<f32> for RTPlotter {
+    fn show(&mut self, inputs: Signal<f32>) {
+        self.sim_time += inputs.dt;
+
+        if Instant::now().duration_since(self.last_update) < Duration::from_millis(17) {
+            return;
+        }
+        self.last_update = Instant::now();
+
+        if self.child.is_none() {
+            let command = Command::new("rtgraph")
+                .stdin(Stdio::piped())
+                .stdout(Stdio::piped())
+                .stderr(Stdio::piped())
+                .arg("-xs")
+                .arg(self.grid.0.to_string())
+                .arg("-ys")
+                .arg(self.grid.1.to_string())
+                .arg("-t")
+                .arg(&self.title)
+                .spawn()
+                .expect("Failed to start rtgraph process");
+            self.child = Some(command);
+        }
+
+        self.child
+            .as_ref()
+            .unwrap()
+            .stdin
+            .as_ref()
+            .unwrap()
+            .write_all(format!("{},{}\n", self.sim_time.as_secs_f32(), inputs.value).as_bytes())
+            .unwrap();
+    }
+}
+
+impl<const N: usize> Output<[f32; N]> for RTPlotter {
+    fn show(&mut self, inputs: Signal<[f32; N]>) {
+        self.sim_time += inputs.dt;
 
         if Instant::now().duration_since(self.last_update) < Duration::from_millis(17) {
             return;
@@ -148,9 +196,10 @@ impl Output for RTPlotter {
                 format!(
                     "{},{}\n",
                     self.sim_time.as_secs_f32(),
-                    input
-                        .into_iter()
-                        .map(|s| s.value.to_string())
+                    inputs
+                        .value
+                        .iter()
+                        .map(|s| s.to_string())
                         .collect::<Vec<_>>()
                         .join(",")
                 )
@@ -241,10 +290,6 @@ impl Savable for RTPlotter {
         Ok(output)
     }
 }
-
-impl AsOutput for Plotter {}
-
-impl AsOutput for RTPlotter {}
 
 pub trait JoinAll {
     fn join_all(&mut self);
