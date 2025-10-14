@@ -47,17 +47,17 @@ impl PID {
     }
 
     pub fn with_iae(mut self) -> Self {
-        self.iae = Some(IAE::new());
+        self.iae = Some(IAE::default());
         self
     }
 
     pub fn with_ise(mut self) -> Self {
-        self.ise = Some(ISE::new());
+        self.ise = Some(ISE::default());
         self
     }
 
     pub fn with_itae(mut self) -> Self {
-        self.itae = Some(ITAE::new());
+        self.itae = Some(ITAE::default());
         self
     }
 

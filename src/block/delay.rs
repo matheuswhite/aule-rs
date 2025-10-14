@@ -2,24 +2,24 @@ use crate::block::Block;
 use crate::signal::Signal;
 use alloc::vec;
 use alloc::vec::Vec;
-use core::ops::{Add, Mul};
 use core::time::Duration;
 
-#[derive(Clone)]
-struct InputBuffered<T> {
+#[derive(Clone, Debug)]
+struct InputBuffered {
     instant: Duration,
-    signal: Signal<T>,
+    signal: Signal<f32>,
 }
 
-pub struct Delay<T> {
+#[derive(Clone, Debug)]
+pub struct Delay {
     delay: Duration,
     current_time: Duration,
-    initial_signal: Signal<T>,
-    input_buffer: Vec<InputBuffered<T>>,
-    last_output: Option<Signal<T>>,
+    initial_signal: Signal<f32>,
+    input_buffer: Vec<InputBuffered>,
+    last_output: Option<Signal<f32>>,
 }
 
-impl<T: Default + Clone> Delay<T> {
+impl Delay {
     pub fn new(delay: Duration) -> Self {
         assert!(
             delay > Duration::ZERO,
@@ -35,7 +35,7 @@ impl<T: Default + Clone> Delay<T> {
         }
     }
 
-    pub fn with_initial_signal(mut self, initial_signal: Signal<T>) -> Self {
+    pub fn with_initial_signal(mut self, initial_signal: Signal<f32>) -> Self {
         self.initial_signal = initial_signal.clone();
         self.input_buffer[0].signal = initial_signal;
         self
@@ -54,9 +54,9 @@ impl<T: Default + Clone> Delay<T> {
     }
 }
 
-impl<T: Default + Clone + Mul<f32, Output = T> + Add<T, Output = T>> Block for Delay<T> {
-    type Input = T;
-    type Output = T;
+impl Block for Delay {
+    type Input = f32;
+    type Output = f32;
 
     fn output(&mut self, input: Signal<Self::Input>) -> Signal<Self::Output> {
         /* # Update values */
@@ -110,13 +110,13 @@ impl<T: Default + Clone + Mul<f32, Output = T> + Add<T, Output = T>> Block for D
         output
     }
 
-    fn last_output(&self) -> Option<Signal<T>> {
+    fn last_output(&self) -> Option<Signal<f32>> {
         self.last_output.clone()
     }
 }
 
-impl<T> From<(Duration, Signal<T>)> for InputBuffered<T> {
-    fn from((instant, signal): (Duration, Signal<T>)) -> Self {
+impl From<(Duration, Signal<f32>)> for InputBuffered {
+    fn from((instant, signal): (Duration, Signal<f32>)) -> Self {
         Self { instant, signal }
     }
 }
@@ -153,7 +153,7 @@ mod tests {
     #[should_panic(expected = "Delay duration must be greater than zero")]
     fn test_delay_zero_duration() {
         Delay::new(Duration::from_secs(0))
-            .with_initial_signal(Signal::from((Duration::from_secs(1), 0.0)));
+            .with_initial_signal(Signal::from((0.0, Duration::from_secs(1))));
     }
 
     #[test]

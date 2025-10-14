@@ -6,6 +6,7 @@ use alloc::string::ToString;
 use alloc::vec::Vec;
 use std::println;
 
+#[derive(Debug, Clone, PartialEq)]
 pub struct Printer {
     title: String,
     units: Vec<String>,

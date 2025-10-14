@@ -8,7 +8,7 @@ where
     P: Block<Input = f32, Output = f32>,
 {
     process: P,
-    delay: Delay<f32>,
+    delay: Delay,
     last_output: Option<Signal<f32>>,
 }
 
@@ -19,7 +19,7 @@ where
 {
     process: P,
     filter: F,
-    delay: Delay<f32>,
+    delay: Delay,
     last_output: Option<Signal<f32>>,
 }
 

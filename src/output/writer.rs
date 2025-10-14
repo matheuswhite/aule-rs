@@ -10,6 +10,7 @@ use std::{
     time::Duration,
 };
 
+#[derive(Debug, Clone, PartialEq)]
 pub struct Writter {
     filename: String,
     sim_time: Duration,

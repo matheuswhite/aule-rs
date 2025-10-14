@@ -2,6 +2,7 @@ use crate::continuous::{Polynomial, Tf};
 use core::ops::{Add, Div, Mul, Sub};
 
 #[allow(non_camel_case_types)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct s;
 
 impl Add<s> for f32 {

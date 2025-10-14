@@ -1,6 +1,7 @@
 use crate::{input::Input, signal::Signal};
-use core::time::Duration;
+use core::{f32::consts::PI, time::Duration};
 
+#[derive(Debug, Clone, PartialEq)]
 pub struct Sinusoid {
     amplitude: f32,
     period: Duration,
@@ -15,6 +16,17 @@ impl Sinusoid {
             period,
             phase,
             sim_time: Duration::default(),
+        }
+    }
+}
+
+impl Default for Sinusoid {
+    fn default() -> Self {
+        Self {
+            amplitude: 1.0,
+            period: Duration::from_secs_f32(2.0 * PI),
+            phase: 0.0,
+            sim_time: Default::default(),
         }
     }
 }

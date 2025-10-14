@@ -1,15 +1,9 @@
 use crate::{metrics::Metric, signal::Signal};
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, Default, PartialEq)]
 pub struct IAE {
     acc: f32,
     n: usize,
-}
-
-impl IAE {
-    pub fn new() -> Self {
-        IAE { acc: 0.0, n: 0 }
-    }
 }
 
 impl Metric for IAE {

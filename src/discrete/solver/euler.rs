@@ -2,7 +2,7 @@ use crate::{discrete::solver::StateEstimation, prelude::Solver};
 use core::time::Duration;
 use ndarray::Array2;
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Euler;
 
 impl Solver for Euler {

@@ -1,6 +1,7 @@
 use crate::block::Block;
 use crate::signal::Signal;
 
+#[derive(Debug, Clone)]
 pub struct Saturation<T: Ord + Clone> {
     min: T,
     max: T,

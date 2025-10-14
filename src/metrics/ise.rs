@@ -1,15 +1,9 @@
 use crate::{metrics::Metric, signal::Signal};
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, Default, PartialEq)]
 pub struct ISE {
     acc: f32,
     n: usize,
-}
-
-impl ISE {
-    pub fn new() -> Self {
-        ISE { acc: 0.0, n: 0 }
-    }
 }
 
 impl Metric for ISE {

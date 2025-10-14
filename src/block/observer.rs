@@ -9,6 +9,7 @@ use core::{
 };
 use ndarray::Array2;
 
+#[derive(Debug, Clone)]
 pub struct Observer<I, const N: usize>
 where
     I: Solver + Debug,

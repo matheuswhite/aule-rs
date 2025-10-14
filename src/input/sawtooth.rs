@@ -1,18 +1,16 @@
 use crate::{input::Input, signal::Signal};
-use core::{
-    ops::{Add, Div, Mul},
-    time::Duration,
-};
+use core::{f32::consts::PI, time::Duration};
 
-pub struct Sawtooth<T> {
-    amplitude: T,
+#[derive(Debug, Clone, PartialEq)]
+pub struct Sawtooth {
+    amplitude: f32,
     period: Duration,
-    offset: T,
+    offset: f32,
     sim_time: Duration,
 }
 
-impl<T> Sawtooth<T> {
-    pub fn new(amplitude: T, period: Duration, offset: T) -> Self {
+impl Sawtooth {
+    pub fn new(amplitude: f32, period: Duration, offset: f32) -> Self {
         Sawtooth {
             amplitude,
             period,
@@ -22,11 +20,19 @@ impl<T> Sawtooth<T> {
     }
 }
 
-impl<T> Input for Sawtooth<T>
-where
-    T: Div<f32, Output = T> + Mul<f32, Output = T> + Add<T, Output = T> + Clone,
-{
-    type Output = T;
+impl Default for Sawtooth {
+    fn default() -> Self {
+        Self {
+            amplitude: 1.0,
+            period: Duration::from_secs_f32(2.0 * PI),
+            offset: 0.0,
+            sim_time: Default::default(),
+        }
+    }
+}
+
+impl Input for Sawtooth {
+    type Output = f32;
 
     fn output(&mut self, dt: Duration) -> Signal<Self::Output> {
         self.sim_time += dt;

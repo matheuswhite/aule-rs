@@ -109,7 +109,7 @@ type SmithPredictorFilteredRK4 = SmithPredictorFiltered<SS<RK4>, SS<RK4>>;
 struct BlockCollection {
     controller: PID,
     plant: SS<RK4>,
-    delay: Delay<f32>,
+    delay: Delay,
     smith_predictor: Option<SmithPredictorFilteredRK4>,
 }
 

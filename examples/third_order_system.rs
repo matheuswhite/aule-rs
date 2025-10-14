@@ -7,9 +7,9 @@ fn main() {
     let mut pid = PID::new(40.0, 10.0, 10.00);
     let mut plant: SS<RK4> = Tf::new(&[1.0], &[1.0, 6.0, 11.0, 6.0]).into();
     let mut writer = Writter::new("output/third_order_system.csv", ["output"]);
-    let mut iae = IAE::new();
-    let mut ise = ISE::new();
-    let mut itae = ITAE::new();
+    let mut iae = IAE::default();
+    let mut ise = ISE::default();
+    let mut itae = ITAE::default();
     let mut good_hart = GoodHart::new(0.3, 0.3, 0.4);
     let mut plotter = Plotter::new("Third Order System".to_string(), 1.0, 0.25);
 

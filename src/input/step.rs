@@ -1,6 +1,7 @@
 use crate::input::{Input, Signal};
 use core::time::Duration;
 
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Step {
     value: f32,
 }

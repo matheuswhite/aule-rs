@@ -10,6 +10,7 @@ use std::string::String;
 use std::string::ToString;
 use std::time::{Duration, Instant};
 
+#[derive(Debug)]
 pub struct Plotter {
     sim_time: Duration,
     data: Vec<Vec<Signal<f32>>>,
@@ -18,6 +19,7 @@ pub struct Plotter {
     title: String,
 }
 
+#[derive(Debug)]
 pub struct RTPlotter {
     sim_time: Duration,
     last_update: Instant,
