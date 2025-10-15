@@ -21,7 +21,7 @@ fn main() {
 fn test_rt_dc_motor() -> RTPlotter {
     let k = 1.0;
     let a = 1.0;
-    let time = RTTime::from((0.001, 10.0));
+    let time = Time::from((0.001, 10.0));
 
     let mut input = Sinusoid::new(1.0, Duration::from_secs_f32(1.0), 0.0);
     let mut pid = PID::new(10.0, 1.0, 0.1);

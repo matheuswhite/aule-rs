@@ -64,8 +64,6 @@ pub mod prelude {
     #[cfg(feature = "alloc")]
     pub use crate::output::writer::Writter;
     pub use crate::signal::Signal;
-    #[cfg(feature = "std")]
-    pub use crate::time::RTTime;
     pub use crate::time::Time;
 }
 
