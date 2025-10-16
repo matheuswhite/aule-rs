@@ -1,27 +1,52 @@
-use crate::{block::Block, signal::Signal};
+use core::marker::PhantomData;
+
+use crate::{block::Block, signal::Signal, time::TimeType};
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct Ramp {
+pub struct Ramp<T>
+where
+    T: TimeType,
+{
     value: f32,
+    _marker: PhantomData<T>,
 }
 
-impl Ramp {
+impl<T> Ramp<T>
+where
+    T: TimeType,
+{
     pub fn new(value: f32) -> Self {
-        Ramp { value }
+        Ramp {
+            value,
+            _marker: PhantomData,
+        }
     }
 }
 
-impl Default for Ramp {
+impl<T> Default for Ramp<T>
+where
+    T: TimeType,
+{
     fn default() -> Self {
-        Self { value: 1.0 }
+        Self {
+            value: 1.0,
+            _marker: PhantomData,
+        }
     }
 }
 
-impl Block for Ramp {
+impl<T> Block for Ramp<T>
+where
+    T: TimeType,
+{
     type Input = ();
     type Output = f32;
+    type TimeType = T;
 
-    fn output(&mut self, input: Signal<Self::Input>) -> Signal<Self::Output> {
+    fn output(
+        &mut self,
+        input: Signal<Self::Input, Self::TimeType>,
+    ) -> Signal<Self::Output, Self::TimeType> {
         let value = self.value * input.delta.sim_time().as_secs_f32();
         Signal {
             value,

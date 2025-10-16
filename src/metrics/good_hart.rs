@@ -1,19 +1,29 @@
-use crate::{block::Block, signal::Signal};
+use core::marker::PhantomData;
+
+use crate::{block::Block, signal::Signal, time::TimeType};
 use alloc::vec::Vec;
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct GoodHart {
+pub struct GoodHart<T>
+where
+    T: TimeType,
+{
     error: Vec<f32>,
     control_signal: Vec<f32>,
     alphas: (f32, f32, f32),
+    _marker: PhantomData<T>,
 }
 
-impl GoodHart {
+impl<T> GoodHart<T>
+where
+    T: TimeType,
+{
     pub fn new(alpha1: f32, alpha2: f32, alpha3: f32) -> Self {
-        GoodHart {
+        Self {
             error: Vec::new(),
             control_signal: Vec::new(),
             alphas: (alpha1, alpha2, alpha3),
+            _marker: PhantomData,
         }
     }
 
@@ -32,11 +42,18 @@ impl GoodHart {
     }
 }
 
-impl Block for GoodHart {
+impl<T> Block for GoodHart<T>
+where
+    T: TimeType,
+{
     type Input = (f32, f32);
     type Output = (f32, f32);
+    type TimeType = T;
 
-    fn output(&mut self, input: Signal<Self::Input>) -> Signal<Self::Output> {
+    fn output(
+        &mut self,
+        input: Signal<Self::Input, Self::TimeType>,
+    ) -> Signal<Self::Output, Self::TimeType> {
         let error = input.value.0;
         let control_signal = input.value.1;
         self.error.push(error);

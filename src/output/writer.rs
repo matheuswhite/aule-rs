@@ -1,5 +1,6 @@
 use crate::block::Block;
 use crate::signal::Signal;
+use crate::time::TimeType;
 use alloc::format;
 use alloc::string::String;
 use alloc::string::ToString;
@@ -11,12 +12,18 @@ use std::{
 };
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct Writter<const N: usize> {
+pub struct Writter<const N: usize, T>
+where
+    T: TimeType,
+{
     filename: String,
-    _marker: PhantomData<[(); N]>,
+    _marker: PhantomData<[T; N]>,
 }
 
-impl<const N: usize> Writter<N> {
+impl<const N: usize, T> Writter<N, T>
+where
+    T: TimeType,
+{
     pub fn new(filename: &str, variable_names: [&str; N]) -> Self {
         let writer = Self {
             filename: filename.to_string(),
@@ -46,11 +53,18 @@ impl<const N: usize> Writter<N> {
     }
 }
 
-impl<const N: usize> Block for Writter<N> {
+impl<const N: usize, T> Block for Writter<N, T>
+where
+    T: TimeType,
+{
     type Input = [f32; N];
     type Output = [f32; N];
+    type TimeType = T;
 
-    fn output(&mut self, input: Signal<Self::Input>) -> Signal<Self::Output> {
+    fn output(
+        &mut self,
+        input: Signal<Self::Input, Self::TimeType>,
+    ) -> Signal<Self::Output, Self::TimeType> {
         let values: Vec<String> = input.value.iter().map(|v| v.to_string()).collect();
         let line = format!(
             "{},{}\n",

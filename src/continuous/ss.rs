@@ -1,4 +1,7 @@
-use crate::{block::Block, discrete::solver::StateEstimation, prelude::Solver, signal::Signal};
+use crate::{
+    block::Block, discrete::solver::StateEstimation, prelude::Solver, signal::Signal,
+    time::Continuous,
+};
 use alloc::vec;
 use alloc::vec::Vec;
 use ndarray::Array2;
@@ -88,8 +91,12 @@ where
 {
     type Input = f32;
     type Output = f32;
+    type TimeType = Continuous;
 
-    fn output(&mut self, input: Signal<Self::Input>) -> Signal<Self::Output> {
+    fn output(
+        &mut self,
+        input: Signal<Self::Input, Self::TimeType>,
+    ) -> Signal<Self::Output, Self::TimeType> {
         self.current_input = input.value;
         self.state = I::integrate(self.state.clone(), input.delta.dt(), self);
 

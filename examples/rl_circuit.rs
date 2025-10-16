@@ -18,8 +18,12 @@ impl RlCircuit {
 impl Block for RlCircuit {
     type Input = f32;
     type Output = f32;
+    type TimeType = Continuous;
 
-    fn output(&mut self, input: Signal<Self::Input>) -> Signal<Self::Output> {
+    fn output(
+        &mut self,
+        input: Signal<Self::Input, Self::TimeType>,
+    ) -> Signal<Self::Output, Self::TimeType> {
         let output = input * self.integrator.as_block();
 
         self.last_output = Some(output.value);

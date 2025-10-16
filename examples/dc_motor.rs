@@ -18,7 +18,7 @@ fn main() {
     (rt_plotter, plotter).join_all();
 }
 
-fn test_rt_dc_motor() -> RTPlotter<2> {
+fn test_rt_dc_motor() -> RTPlotter<2, Continuous> {
     let k = 1.0;
     let a = 1.0;
     let time = Time::continuous(0.001, 10.0);
@@ -45,7 +45,7 @@ fn test_rt_dc_motor() -> RTPlotter<2> {
     plotter
 }
 
-fn test_dc_motor() -> Plotter<2> {
+fn test_dc_motor() -> Plotter<2, Continuous> {
     let k = 1.0;
     let a = 1.0;
     let time = Time::continuous(0.001, 10.0);

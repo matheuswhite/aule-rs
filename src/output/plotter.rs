@@ -1,5 +1,6 @@
 use crate::block::Block;
 use crate::signal::Signal;
+use crate::time::TimeType;
 use alloc::vec::Vec;
 use core::marker::PhantomData;
 use std::boxed::Box;
@@ -11,20 +12,26 @@ use std::string::ToString;
 use std::time::{Duration, Instant};
 
 #[derive(Debug)]
-pub struct Plotter<const N: usize> {
-    data: Vec<[Signal<f32>; N]>,
+pub struct Plotter<const N: usize, T>
+where
+    T: TimeType,
+{
+    data: Vec<[Signal<f32, T>; N]>,
     child: Option<Child>,
     grid: (f32, f32),
     title: String,
 }
 
 #[derive(Debug)]
-pub struct RTPlotter<const N: usize> {
+pub struct RTPlotter<const N: usize, T>
+where
+    T: TimeType,
+{
     last_update: Instant,
     child: Option<Child>,
     grid: (f32, f32),
     title: String,
-    _marker: PhantomData<[(); N]>,
+    _marker: PhantomData<[T; N]>,
 }
 
 pub trait Joinable {
@@ -35,7 +42,10 @@ pub trait Savable {
     fn save(&mut self, path: &str) -> Result<String, String>;
 }
 
-impl<const N: usize> Plotter<N> {
+impl<const N: usize, T> Plotter<N, T>
+where
+    T: TimeType,
+{
     pub fn new(title: String, x_grid: f32, y_grid: f32) -> Self {
         Self {
             data: Vec::new(),
@@ -87,7 +97,10 @@ impl<const N: usize> Plotter<N> {
     }
 }
 
-impl<const N: usize> RTPlotter<N> {
+impl<const N: usize, T> RTPlotter<N, T>
+where
+    T: TimeType,
+{
     pub fn new(title: String, x_grid: f32, y_grid: f32) -> Self {
         Self {
             last_update: Instant::now(),
@@ -99,11 +112,18 @@ impl<const N: usize> RTPlotter<N> {
     }
 }
 
-impl<const N: usize> Block for Plotter<N> {
+impl<const N: usize, T> Block for Plotter<N, T>
+where
+    T: TimeType,
+{
     type Input = [f32; N];
     type Output = [f32; N];
+    type TimeType = T;
 
-    fn output(&mut self, input: Signal<Self::Input>) -> Signal<Self::Output> {
+    fn output(
+        &mut self,
+        input: Signal<Self::Input, Self::TimeType>,
+    ) -> Signal<Self::Output, Self::TimeType> {
         self.data.push(input.value.map(|s| Signal {
             value: s,
             delta: input.delta,
@@ -112,11 +132,18 @@ impl<const N: usize> Block for Plotter<N> {
     }
 }
 
-impl<const N: usize> Block for RTPlotter<N> {
+impl<const N: usize, T> Block for RTPlotter<N, T>
+where
+    T: TimeType,
+{
     type Input = [f32; N];
     type Output = [f32; N];
+    type TimeType = T;
 
-    fn output(&mut self, input: Signal<Self::Input>) -> Signal<Self::Output> {
+    fn output(
+        &mut self,
+        input: Signal<Self::Input, Self::TimeType>,
+    ) -> Signal<Self::Output, Self::TimeType> {
         if Instant::now().duration_since(self.last_update) < Duration::from_millis(17) {
             return input;
         }
@@ -163,7 +190,10 @@ impl<const N: usize> Block for RTPlotter<N> {
     }
 }
 
-impl<const N: usize> Drop for Plotter<N> {
+impl<const N: usize, T> Drop for Plotter<N, T>
+where
+    T: TimeType,
+{
     fn drop(&mut self) {
         if let Some(child) = &mut self.child {
             child.kill().unwrap();
@@ -171,7 +201,10 @@ impl<const N: usize> Drop for Plotter<N> {
     }
 }
 
-impl<const N: usize> Drop for RTPlotter<N> {
+impl<const N: usize, T> Drop for RTPlotter<N, T>
+where
+    T: TimeType,
+{
     fn drop(&mut self) {
         if let Some(child) = &mut self.child {
             child.kill().unwrap();
@@ -179,7 +212,10 @@ impl<const N: usize> Drop for RTPlotter<N> {
     }
 }
 
-impl<const N: usize> Joinable for Plotter<N> {
+impl<const N: usize, T> Joinable for Plotter<N, T>
+where
+    T: TimeType,
+{
     fn join(&mut self) {
         if let Some(child) = &mut self.child {
             let _ = child.wait();
@@ -187,7 +223,10 @@ impl<const N: usize> Joinable for Plotter<N> {
     }
 }
 
-impl<const N: usize> Joinable for RTPlotter<N> {
+impl<const N: usize, T> Joinable for RTPlotter<N, T>
+where
+    T: TimeType,
+{
     fn join(&mut self) {
         if let Some(child) = &mut self.child {
             let _ = child.wait();
@@ -195,7 +234,10 @@ impl<const N: usize> Joinable for RTPlotter<N> {
     }
 }
 
-impl<const N: usize> Savable for Plotter<N> {
+impl<const N: usize, T> Savable for Plotter<N, T>
+where
+    T: TimeType,
+{
     fn save(&mut self, path: &str) -> Result<String, String> {
         let Some(child) = self.child.as_mut() else {
             return Err("Plotter process is not running.".to_string());
@@ -220,7 +262,10 @@ impl<const N: usize> Savable for Plotter<N> {
     }
 }
 
-impl<const N: usize> Savable for RTPlotter<N> {
+impl<const N: usize, T> Savable for RTPlotter<N, T>
+where
+    T: TimeType,
+{
     fn save(&mut self, path: &str) -> Result<String, String> {
         let Some(child) = self.child.as_mut() else {
             return Err("Plotter process is not running.".to_string());

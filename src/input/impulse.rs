@@ -1,29 +1,52 @@
-use crate::{block::Block, signal::Signal};
+use core::marker::PhantomData;
+
+use crate::{block::Block, signal::Signal, time::TimeType};
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct Impulse {
+pub struct Impulse<T>
+where
+    T: TimeType,
+{
     value: Option<f32>,
+    _marker: PhantomData<T>,
 }
 
-impl Impulse {
+impl<T> Impulse<T>
+where
+    T: TimeType,
+{
     pub fn new(value: f32) -> Self {
-        Impulse { value: Some(value) }
-    }
-}
-
-impl Default for Impulse {
-    fn default() -> Self {
-        Self {
-            value: Some(f32::MAX),
+        Impulse {
+            value: Some(value),
+            _marker: PhantomData,
         }
     }
 }
 
-impl Block for Impulse {
+impl<T> Default for Impulse<T>
+where
+    T: TimeType,
+{
+    fn default() -> Self {
+        Self {
+            value: Some(f32::MAX),
+            _marker: PhantomData,
+        }
+    }
+}
+
+impl<T> Block for Impulse<T>
+where
+    T: TimeType,
+{
     type Input = ();
     type Output = f32;
+    type TimeType = T;
 
-    fn output(&mut self, input: Signal<Self::Input>) -> Signal<Self::Output> {
+    fn output(
+        &mut self,
+        input: Signal<Self::Input, Self::TimeType>,
+    ) -> Signal<Self::Output, Self::TimeType> {
         match self.value.take() {
             Some(value) => {
                 self.value = None; // Reset value after output

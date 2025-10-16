@@ -26,8 +26,12 @@ impl Motor {
 impl Block for Motor {
     type Input = f32;
     type Output = f32;
+    type TimeType = Continuous;
 
-    fn output(&mut self, input: Signal<Self::Input>) -> Signal<Self::Output> {
+    fn output(
+        &mut self,
+        input: Signal<Self::Input, Self::TimeType>,
+    ) -> Signal<Self::Output, Self::TimeType> {
         let eletrical = (input - self.last_output) * self.kv * self.eletrical.as_block();
         let mechanical = (eletrical * self.km - self.tau_l) * self.mechanical.as_block();
 
@@ -57,7 +61,7 @@ fn main() {
     (plotter1, plotter2).join_all();
 }
 
-fn open_loop_motor() -> Plotter<1> {
+fn open_loop_motor() -> Plotter<1, Continuous> {
     let time = Time::continuous(1e-3, 1.0);
     let mut motor = Motor::new(1.0, 1.0, 0.1, 0.01, 1.0, 0.01, 0.01);
     let mut step = Step::default();
@@ -80,7 +84,7 @@ fn open_loop_motor() -> Plotter<1> {
     plotter
 }
 
-fn closed_loop_motor() -> Plotter<1> {
+fn closed_loop_motor() -> Plotter<1, Continuous> {
     let time = Time::continuous(1e-3, 1.0);
     let mut motor = Motor::new(1.0, 1.0, 0.1, 0.01, 1.0, 0.01, 0.01);
     let mut step = Step::default();

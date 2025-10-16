@@ -3,6 +3,7 @@ use crate::block::Block;
 use crate::prelude::GoodHart;
 use crate::prelude::{IAE, ISE, ITAE};
 use crate::signal::Signal;
+use crate::time::TimeType;
 #[cfg(feature = "alloc")]
 use alloc::format;
 #[cfg(feature = "alloc")]
@@ -11,22 +12,28 @@ use alloc::string::String;
 use alloc::string::ToString;
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct PID {
+pub struct PID<TT>
+where
+    TT: TimeType,
+{
     kp: f32,
     ki: f32,
     kd: f32,
     last_input: f32,
     last_integral: f32,
     last_output: Option<f32>,
-    iae: Option<IAE>,
-    ise: Option<ISE>,
-    itae: Option<ITAE>,
+    iae: Option<IAE<TT>>,
+    ise: Option<ISE<TT>>,
+    itae: Option<ITAE<TT>>,
     #[cfg(feature = "alloc")]
-    good_hart: Option<GoodHart>,
+    good_hart: Option<GoodHart<TT>>,
     anti_windup: Option<(f32, f32)>,
 }
 
-impl PID {
+impl<TT> PID<TT>
+where
+    TT: TimeType + Default,
+{
     pub fn new(kp: f32, ki: f32, kd: f32) -> Self {
         PID {
             kp,
@@ -114,11 +121,18 @@ impl PID {
     }
 }
 
-impl Block for PID {
+impl<TT> Block for PID<TT>
+where
+    TT: TimeType + 'static,
+{
     type Input = f32;
     type Output = f32;
+    type TimeType = TT;
 
-    fn output(&mut self, input: Signal<Self::Input>) -> Signal<Self::Output> {
+    fn output(
+        &mut self,
+        input: Signal<Self::Input, Self::TimeType>,
+    ) -> Signal<Self::Output, Self::TimeType> {
         if let Some(iae) = &mut self.iae {
             let _ = input * iae.as_block();
         }

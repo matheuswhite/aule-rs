@@ -38,7 +38,7 @@ fn pi_controller() {
     let mut controller = kp.map(|kp| PID::new(kp, kp / ti, 0.0));
     let mut plant = kp.map(|_| SS::<RK4>::from(5.6 / (40.2 * s + 1.0)));
     let mut delay = kp.map(|_| Delay::new(Duration::from_secs_f32(93.9)));
-    let mut plotter = Plotter::<3>::new(format!("[Long Dead Time] PI {:?}", kp), 100.0, 0.2);
+    let mut plotter = Plotter::new(format!("[Long Dead Time] PI {:?}", kp), 100.0, 0.2);
 
     for dt in time {
         let reference = dt * step.as_block();
@@ -116,20 +116,24 @@ fn smith_predictor() {
     plotter.join();
 }
 
-type SmithPredictorFilteredRK4 = SmithPredictorFiltered<SS<RK4>, SS<RK4>>;
+type SmithPredictorFilteredRK4 = SmithPredictorFiltered<SS<RK4>, SS<RK4>, Continuous>;
 
 struct BlockCollection {
-    controller: PID,
+    controller: PID<Continuous>,
     plant: SS<RK4>,
-    delay: Delay,
+    delay: Delay<Continuous>,
     smith_predictor: Option<SmithPredictorFilteredRK4>,
 }
 
 impl Block for BlockCollection {
     type Input = f32;
     type Output = f32;
+    type TimeType = Continuous;
 
-    fn output(&mut self, input: Signal<Self::Input>) -> Signal<Self::Output> {
+    fn output(
+        &mut self,
+        input: Signal<Self::Input, Self::TimeType>,
+    ) -> Signal<Self::Output, Self::TimeType> {
         if let Some(smith_predictor) = &mut self.smith_predictor {
             let preditor_last_output = smith_predictor.last_output();
             let error = input - preditor_last_output;

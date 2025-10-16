@@ -1,30 +1,34 @@
 use crate::block::Block;
+use crate::time::TimeType;
 use crate::{prelude::Delay, signal::Signal};
 use core::time::Duration;
 
-pub struct SmithPredictor<P>
+pub struct SmithPredictor<P, TT>
 where
-    P: Block<Input = f32, Output = f32>,
+    P: Block<Input = f32, Output = f32, TimeType = TT>,
+    TT: TimeType,
 {
     process: P,
-    delay: Delay,
+    delay: Delay<TT>,
     last_output: Option<f32>,
 }
 
-pub struct SmithPredictorFiltered<P, F>
+pub struct SmithPredictorFiltered<P, F, TT>
 where
-    P: Block<Input = f32, Output = f32>,
-    F: Block<Input = f32, Output = f32>,
+    P: Block<Input = f32, Output = f32, TimeType = TT>,
+    F: Block<Input = f32, Output = f32, TimeType = TT>,
+    TT: TimeType,
 {
     process: P,
     filter: F,
-    delay: Delay,
+    delay: Delay<TT>,
     last_output: Option<f32>,
 }
 
-impl<P> SmithPredictor<P>
+impl<P, TT> SmithPredictor<P, TT>
 where
-    P: Block<Input = f32, Output = f32>,
+    P: Block<Input = f32, Output = f32, TimeType = TT>,
+    TT: TimeType,
 {
     pub fn new(process: P, delay: Duration) -> Self {
         SmithPredictor {
@@ -35,10 +39,11 @@ where
     }
 }
 
-impl<P, F> SmithPredictorFiltered<P, F>
+impl<P, F, TT> SmithPredictorFiltered<P, F, TT>
 where
-    P: Block<Input = f32, Output = f32>,
-    F: Block<Input = f32, Output = f32>,
+    P: Block<Input = f32, Output = f32, TimeType = TT>,
+    F: Block<Input = f32, Output = f32, TimeType = TT>,
+    TT: TimeType,
 {
     pub fn new(process: P, filter: F, delay: Duration) -> Self {
         SmithPredictorFiltered {
@@ -50,14 +55,19 @@ where
     }
 }
 
-impl<P> Block for SmithPredictor<P>
+impl<P, TT> Block for SmithPredictor<P, TT>
 where
-    P: Block<Input = f32, Output = f32>,
+    P: Block<Input = f32, Output = f32, TimeType = TT>,
+    TT: TimeType,
 {
     type Input = (f32, f32); // (u, y)
     type Output = f32;
+    type TimeType = TT;
 
-    fn output(&mut self, input: Signal<Self::Input>) -> Signal<Self::Output> {
+    fn output(
+        &mut self,
+        input: Signal<Self::Input, Self::TimeType>,
+    ) -> Signal<Self::Output, Self::TimeType> {
         let (control_signal, measured_output) = input.unzip();
 
         let predicted_output = self.process.output(control_signal);
@@ -75,15 +85,20 @@ where
     }
 }
 
-impl<P, F> Block for SmithPredictorFiltered<P, F>
+impl<P, F, TT> Block for SmithPredictorFiltered<P, F, TT>
 where
-    P: Block<Input = f32, Output = f32>,
-    F: Block<Input = f32, Output = f32>,
+    P: Block<Input = f32, Output = f32, TimeType = TT>,
+    F: Block<Input = f32, Output = f32, TimeType = TT>,
+    TT: TimeType,
 {
     type Input = (f32, f32); // (u, y)
     type Output = f32;
+    type TimeType = TT;
 
-    fn output(&mut self, input: Signal<Self::Input>) -> Signal<Self::Output> {
+    fn output(
+        &mut self,
+        input: Signal<Self::Input, Self::TimeType>,
+    ) -> Signal<Self::Output, Self::TimeType> {
         let (control_signal, measured_output) = input.unzip();
 
         let predicted_output = self.process.output(control_signal);

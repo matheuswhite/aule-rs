@@ -2,6 +2,7 @@ use crate::{
     block::Block,
     prelude::{Solver, StateEstimation},
     signal::Signal,
+    time::TimeType,
 };
 use core::{
     fmt::{Debug, Display},
@@ -10,9 +11,10 @@ use core::{
 use ndarray::Array2;
 
 #[derive(Debug, Clone)]
-pub struct Observer<I, const N: usize>
+pub struct Observer<I, const N: usize, D>
 where
     I: Solver + Debug,
+    D: TimeType,
 {
     a: Array2<f32>,
     b: Array2<f32>,
@@ -23,11 +25,13 @@ where
     state: Array2<f32>,
     last_output: Option<(f32, [f32; N])>, // (y, x_hat)
     _marker: PhantomData<I>,
+    _marker_time: PhantomData<D>,
 }
 
-impl<I, const N: usize> Observer<I, N>
+impl<I, const N: usize, D> Observer<I, N, D>
 where
     I: Solver + Debug,
+    D: TimeType,
 {
     pub fn new(a: Array2<f32>, b: [f32; N], c: [f32; N], d: f32, l: [f32; N]) -> Self {
         let an = a.shape()[0];
@@ -52,6 +56,7 @@ where
             last_output: None,
             current_input: (0.0, 0.0),
             _marker: PhantomData,
+            _marker_time: PhantomData,
         }
     }
 
@@ -73,9 +78,10 @@ where
     }
 }
 
-impl<I, const N: usize> StateEstimation for Observer<I, N>
+impl<I, const N: usize, D> StateEstimation for Observer<I, N, D>
 where
     I: Solver + Debug,
+    D: TimeType,
 {
     fn estimate(&self, state: Array2<f32>) -> Array2<f32> {
         let input_matrix = Array2::from_elem((1, 1), self.current_input.0);
@@ -87,14 +93,19 @@ where
     }
 }
 
-impl<I, const N: usize> Block for Observer<I, N>
+impl<I, const N: usize, D> Block for Observer<I, N, D>
 where
     I: Solver + Debug,
+    D: TimeType,
 {
     type Input = (f32, f32); // (u, y)
     type Output = (f32, [f32; N]); // (y, x_hat)
+    type TimeType = D;
 
-    fn output(&mut self, input: Signal<Self::Input>) -> Signal<Self::Output> {
+    fn output(
+        &mut self,
+        input: Signal<Self::Input, Self::TimeType>,
+    ) -> Signal<Self::Output, Self::TimeType> {
         let dt = input.delta.dt();
 
         self.current_input = (input.value.0, input.value.1); // (u, y)
@@ -123,9 +134,10 @@ where
     }
 }
 
-impl<I, const N: usize> Display for Observer<I, N>
+impl<I, const N: usize, D> Display for Observer<I, N, D>
 where
     I: Solver + Debug,
+    D: TimeType,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(

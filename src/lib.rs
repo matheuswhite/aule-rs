@@ -59,7 +59,7 @@ pub mod prelude {
     pub use crate::tier1::observer::Observer;
     pub use crate::tier1::pid::PID;
     pub use crate::tier1::saturation::Saturation;
-    pub use crate::time::{Delta, EndlessTime, Time, TimeType};
+    pub use crate::time::{Continuous, Delta, Discrete, EndlessTime, Time, TimeType};
 }
 
 #[cfg(test)]

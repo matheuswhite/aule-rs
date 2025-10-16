@@ -1,58 +1,79 @@
 use core::{
+    fmt::Debug,
+    marker::PhantomData,
     ops::{Add, AddAssign},
     time::Duration,
 };
 
 use crate::signal::Signal;
 
-#[derive(Debug, Clone, Default, Copy, PartialEq)]
-pub enum TimeType {
-    #[default]
-    Continuous,
-    Discrete,
-}
+pub trait TimeType: Debug + Clone + Copy + PartialEq {}
+
+#[derive(Debug, Clone, Copy, PartialEq, Default)]
+pub struct Continuous;
+impl TimeType for Continuous {}
+
+#[derive(Debug, Clone, Copy, PartialEq, Default)]
+pub struct Discrete;
+impl TimeType for Discrete {}
 
 #[derive(Debug, Clone, Copy, PartialEq)]
-pub struct Delta {
+pub struct Delta<T>
+where
+    T: TimeType,
+{
     dt: Duration,
     sim_time: Duration,
-    time_type: TimeType,
+    _marker: PhantomData<T>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct Time {
+pub struct Time<T>
+where
+    T: TimeType,
+{
     dt: Duration,
     sim_time: Duration,
     max_time: Duration,
-    time_type: TimeType,
+    _marker: PhantomData<T>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct EndlessTime {
+pub struct EndlessTime<T>
+where
+    T: TimeType,
+{
     dt: Duration,
     sim_time: Duration,
-    time_type: TimeType,
+    _marker: PhantomData<T>,
 }
 
-impl Time {
+impl Time<Continuous> {
     pub fn continuous(dt: f32, max_time: f32) -> Self {
-        Time {
+        Self {
             dt: Duration::from_secs_f32(dt),
             sim_time: Duration::default(),
             max_time: Duration::from_secs_f32(max_time),
-            time_type: TimeType::Continuous,
+            _marker: PhantomData,
         }
     }
+}
 
+impl Time<Discrete> {
     pub fn discrete(dt: f32, max_time: f32) -> Self {
-        Time {
+        Self {
             dt: Duration::from_secs_f32(dt),
             sim_time: Duration::default(),
             max_time: Duration::from_secs_f32(max_time),
-            time_type: TimeType::Discrete,
+            _marker: PhantomData,
         }
     }
+}
 
+impl<T> Time<T>
+where
+    T: TimeType,
+{
     pub fn max_time(&self) -> Duration {
         self.max_time
     }
@@ -62,29 +83,39 @@ impl Time {
     }
 }
 
-impl EndlessTime {
+impl EndlessTime<Continuous> {
     pub fn continuous(dt: f32) -> Self {
-        EndlessTime {
+        Self {
             dt: Duration::from_secs_f32(dt),
             sim_time: Duration::default(),
-            time_type: TimeType::Continuous,
+            _marker: PhantomData,
         }
     }
+}
 
+impl EndlessTime<Discrete> {
     pub fn discrete(dt: f32) -> Self {
         EndlessTime {
             dt: Duration::from_secs_f32(dt),
             sim_time: Duration::default(),
-            time_type: TimeType::Discrete,
+            _marker: PhantomData,
         }
     }
+}
 
+impl<T> EndlessTime<T>
+where
+    T: TimeType,
+{
     pub fn set_dt(&mut self, dt: f32) {
         self.dt = Duration::from_secs_f32(dt);
     }
 }
 
-impl Delta {
+impl<T> Delta<T>
+where
+    T: TimeType,
+{
     pub fn dt(&self) -> Duration {
         self.dt
     }
@@ -93,20 +124,11 @@ impl Delta {
         self.sim_time
     }
 
-    pub fn time_type(&self) -> TimeType {
-        self.time_type
-    }
-
     pub fn merge(self, other: Self) -> Self {
-        assert!(
-            self.time_type == other.time_type,
-            "Cannot merge Deltas of different TimeTypes"
-        );
-
         Self {
             dt: self.dt.min(other.dt),
             sim_time: self.sim_time.min(other.sim_time),
-            time_type: self.time_type,
+            _marker: PhantomData,
         }
     }
 
@@ -119,97 +141,114 @@ impl Delta {
     }
 }
 
-impl Add<(Duration, Duration)> for Delta {
-    type Output = Delta;
+impl<T> Add<(Duration, Duration)> for Delta<T>
+where
+    T: TimeType,
+{
+    type Output = Self;
 
     fn add(self, rhs: (Duration, Duration)) -> Self::Output {
         Self {
             dt: self.dt + rhs.0,
             sim_time: self.sim_time + rhs.1,
-            time_type: self.time_type,
+            _marker: PhantomData,
         }
     }
 }
 
-impl AddAssign<(Duration, Duration)> for Delta {
+impl<T> AddAssign<(Duration, Duration)> for Delta<T>
+where
+    T: TimeType,
+{
     fn add_assign(&mut self, rhs: (Duration, Duration)) {
         self.dt += rhs.0;
         self.sim_time += rhs.1;
     }
 }
 
-impl Add<Duration> for Delta {
-    type Output = Delta;
+impl<T> Add<Duration> for Delta<T>
+where
+    T: TimeType,
+{
+    type Output = Self;
 
     fn add(self, rhs: Duration) -> Self::Output {
         Self {
             dt: self.dt,
             sim_time: self.sim_time + rhs,
-            time_type: self.time_type,
+            _marker: PhantomData,
         }
     }
 }
 
-impl AddAssign<Duration> for Delta {
+impl<T> AddAssign<Duration> for Delta<T>
+where
+    T: TimeType,
+{
     fn add_assign(&mut self, rhs: Duration) {
         self.sim_time += rhs;
     }
 }
 
-impl TimeType {
-    pub fn is_continuous(&self) -> bool {
-        matches!(self, TimeType::Continuous)
-    }
-
-    pub fn is_discrete(&self) -> bool {
-        matches!(self, TimeType::Discrete)
-    }
-}
-
-impl Default for Time {
+impl<T> Default for Time<T>
+where
+    T: TimeType,
+{
     fn default() -> Self {
         Self {
             dt: Duration::from_secs_f32(1e-3),
             sim_time: Duration::default(),
             max_time: Duration::from_secs_f32(10.0),
-            time_type: TimeType::Continuous,
+            _marker: PhantomData,
         }
     }
 }
 
-impl Default for EndlessTime {
+impl<T> Default for EndlessTime<T>
+where
+    T: TimeType,
+{
     fn default() -> Self {
         Self {
             dt: Duration::from_secs_f32(1e-3),
             sim_time: Duration::default(),
-            time_type: TimeType::Continuous,
+            _marker: PhantomData,
         }
     }
 }
 
-impl From<(Duration, TimeType)> for EndlessTime {
-    fn from((dt, time_type): (Duration, TimeType)) -> Self {
+impl<T> From<(Duration, T)> for EndlessTime<T>
+where
+    T: TimeType,
+{
+    fn from((dt, _time_type): (Duration, T)) -> Self {
         Self {
             dt,
             sim_time: Duration::default(),
-            time_type,
+            _marker: PhantomData,
         }
     }
 }
 
-impl From<(Duration, Duration, TimeType)> for Time {
-    fn from((dt, max_time, time_type): (Duration, Duration, TimeType)) -> Self {
-        Time {
+impl<T> From<(Duration, Duration, T)> for Time<T>
+where
+    T: TimeType,
+{
+    fn from((dt, max_time, _time_type): (Duration, Duration, T)) -> Self {
+        Self {
             dt,
             sim_time: Duration::default(),
             max_time,
-            time_type,
+            _marker: PhantomData,
         }
     }
 }
 
-impl Iterator for Time {
-    type Item = Signal<()>;
+impl<T> Iterator for Time<T>
+where
+    T: TimeType,
+{
+    type Item = Signal<(), T>;
 
     fn next(&mut self) -> Option<Self::Item> {
         self.sim_time += self.dt;
@@ -220,7 +259,7 @@ impl Iterator for Time {
                 delta: Delta {
                     dt: self.dt,
                     sim_time: self.sim_time,
-                    time_type: self.time_type,
+                    _marker: PhantomData,
                 },
             })
         } else {
@@ -229,8 +268,11 @@ impl Iterator for Time {
     }
 }
 
-impl Iterator for EndlessTime {
-    type Item = Signal<()>;
+impl<T> Iterator for EndlessTime<T>
+where
+    T: TimeType,
+{
+    type Item = Signal<(), T>;
 
     fn next(&mut self) -> Option<Self::Item> {
         self.sim_time += self.dt;
@@ -240,7 +282,7 @@ impl Iterator for EndlessTime {
             delta: Delta {
                 dt: self.dt,
                 sim_time: self.sim_time,
-                time_type: self.time_type,
+                _marker: PhantomData,
             },
         })
     }
