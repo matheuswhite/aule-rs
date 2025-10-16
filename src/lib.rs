@@ -22,6 +22,10 @@ mod time;
 
 #[cfg(feature = "alloc")]
 pub use crate::continuous::s_var::s;
+#[cfg(feature = "alloc")]
+pub use crate::discrete::z_inv_var::z_inv;
+#[cfg(feature = "alloc")]
+pub use crate::discrete::z_var::z;
 
 pub mod prelude {
     pub use crate::block::Block;
@@ -37,7 +41,10 @@ pub mod prelude {
     pub use crate::discrete::solver::euler::Euler;
     #[cfg(feature = "alloc")]
     pub use crate::discrete::solver::runge_kutta::RK4;
+    #[cfg(feature = "alloc")]
     pub use crate::discrete::ss::DSS;
+    #[cfg(feature = "alloc")]
+    pub use crate::discrete::tf::DTf;
     pub use crate::input::impulse::Impulse;
     pub use crate::input::ramp::Ramp;
     pub use crate::input::sawtooth::Sawtooth;
