@@ -1,7 +1,7 @@
-use crate::output::Output;
+use crate::block::Block;
 use crate::signal::Signal;
-use alloc::vec;
 use alloc::vec::Vec;
+use core::marker::PhantomData;
 use std::boxed::Box;
 use std::format;
 use std::io::{Read, Write};
@@ -11,21 +11,20 @@ use std::string::ToString;
 use std::time::{Duration, Instant};
 
 #[derive(Debug)]
-pub struct Plotter {
-    sim_time: Duration,
-    data: Vec<Vec<Signal<f32>>>,
+pub struct Plotter<const N: usize> {
+    data: Vec<[Signal<f32>; N]>,
     child: Option<Child>,
     grid: (f32, f32),
     title: String,
 }
 
 #[derive(Debug)]
-pub struct RTPlotter {
-    sim_time: Duration,
+pub struct RTPlotter<const N: usize> {
     last_update: Instant,
     child: Option<Child>,
     grid: (f32, f32),
     title: String,
+    _marker: PhantomData<[(); N]>,
 }
 
 pub trait Joinable {
@@ -36,10 +35,9 @@ pub trait Savable {
     fn save(&mut self, path: &str) -> Result<String, String>;
 }
 
-impl Plotter {
+impl<const N: usize> Plotter<N> {
     pub fn new(title: String, x_grid: f32, y_grid: f32) -> Self {
         Self {
-            sim_time: Duration::from_secs(0),
             data: Vec::new(),
             child: None,
             grid: (x_grid, y_grid),
@@ -64,7 +62,7 @@ impl Plotter {
         );
 
         for signals in &self.data {
-            let time = &signals[0].dt.as_secs_f32();
+            let time = &signals[0].delta.sim_time().as_secs_f32();
 
             if let Some(child) = &self.child {
                 child
@@ -89,86 +87,38 @@ impl Plotter {
     }
 }
 
-impl RTPlotter {
+impl<const N: usize> RTPlotter<N> {
     pub fn new(title: String, x_grid: f32, y_grid: f32) -> Self {
         Self {
-            sim_time: Duration::from_secs(0),
             last_update: Instant::now(),
             child: None,
             grid: (x_grid, y_grid),
             title,
+            _marker: PhantomData,
         }
     }
 }
 
-impl Output<f32> for Plotter {
-    fn show(&mut self, inputs: Signal<f32>) {
-        self.sim_time += inputs.dt;
-        self.data.push(vec![Signal {
-            value: inputs.value,
-            dt: self.sim_time.into(),
-        }]);
+impl<const N: usize> Block for Plotter<N> {
+    type Input = [f32; N];
+    type Output = [f32; N];
+
+    fn output(&mut self, input: Signal<Self::Input>) -> Signal<Self::Output> {
+        self.data.push(input.value.map(|s| Signal {
+            value: s,
+            delta: input.delta,
+        }));
+        input
     }
 }
 
-impl<const N: usize> Output<[f32; N]> for Plotter {
-    fn show(&mut self, inputs: Signal<[f32; N]>) {
-        self.sim_time += inputs.dt;
-        self.data.push(
-            inputs
-                .value
-                .iter()
-                .map(|s| Signal {
-                    value: *s,
-                    dt: self.sim_time.into(),
-                })
-                .collect(),
-        );
-    }
-}
+impl<const N: usize> Block for RTPlotter<N> {
+    type Input = [f32; N];
+    type Output = [f32; N];
 
-impl Output<f32> for RTPlotter {
-    fn show(&mut self, inputs: Signal<f32>) {
-        self.sim_time += inputs.dt;
-
+    fn output(&mut self, input: Signal<Self::Input>) -> Signal<Self::Output> {
         if Instant::now().duration_since(self.last_update) < Duration::from_millis(17) {
-            return;
-        }
-        self.last_update = Instant::now();
-
-        if self.child.is_none() {
-            let command = Command::new("rtgraph")
-                .stdin(Stdio::piped())
-                .stdout(Stdio::piped())
-                .stderr(Stdio::piped())
-                .arg("-xs")
-                .arg(self.grid.0.to_string())
-                .arg("-ys")
-                .arg(self.grid.1.to_string())
-                .arg("-t")
-                .arg(&self.title)
-                .spawn()
-                .expect("Failed to start rtgraph process");
-            self.child = Some(command);
-        }
-
-        self.child
-            .as_ref()
-            .unwrap()
-            .stdin
-            .as_ref()
-            .unwrap()
-            .write_all(format!("{},{}\n", self.sim_time.as_secs_f32(), inputs.value).as_bytes())
-            .unwrap();
-    }
-}
-
-impl<const N: usize> Output<[f32; N]> for RTPlotter {
-    fn show(&mut self, inputs: Signal<[f32; N]>) {
-        self.sim_time += inputs.dt;
-
-        if Instant::now().duration_since(self.last_update) < Duration::from_millis(17) {
-            return;
+            return input;
         }
         self.last_update = Instant::now();
 
@@ -197,8 +147,8 @@ impl<const N: usize> Output<[f32; N]> for RTPlotter {
             .write_all(
                 format!(
                     "{},{}\n",
-                    self.sim_time.as_secs_f32(),
-                    inputs
+                    input.delta.sim_time().as_secs_f32(),
+                    input
                         .value
                         .iter()
                         .map(|s| s.to_string())
@@ -208,10 +158,12 @@ impl<const N: usize> Output<[f32; N]> for RTPlotter {
                 .as_bytes(),
             )
             .unwrap();
+
+        input
     }
 }
 
-impl Drop for Plotter {
+impl<const N: usize> Drop for Plotter<N> {
     fn drop(&mut self) {
         if let Some(child) = &mut self.child {
             child.kill().unwrap();
@@ -219,7 +171,7 @@ impl Drop for Plotter {
     }
 }
 
-impl Drop for RTPlotter {
+impl<const N: usize> Drop for RTPlotter<N> {
     fn drop(&mut self) {
         if let Some(child) = &mut self.child {
             child.kill().unwrap();
@@ -227,7 +179,7 @@ impl Drop for RTPlotter {
     }
 }
 
-impl Joinable for Plotter {
+impl<const N: usize> Joinable for Plotter<N> {
     fn join(&mut self) {
         if let Some(child) = &mut self.child {
             let _ = child.wait();
@@ -235,7 +187,7 @@ impl Joinable for Plotter {
     }
 }
 
-impl Joinable for RTPlotter {
+impl<const N: usize> Joinable for RTPlotter<N> {
     fn join(&mut self) {
         if let Some(child) = &mut self.child {
             let _ = child.wait();
@@ -243,7 +195,7 @@ impl Joinable for RTPlotter {
     }
 }
 
-impl Savable for Plotter {
+impl<const N: usize> Savable for Plotter<N> {
     fn save(&mut self, path: &str) -> Result<String, String> {
         let Some(child) = self.child.as_mut() else {
             return Err("Plotter process is not running.".to_string());
@@ -268,7 +220,7 @@ impl Savable for Plotter {
     }
 }
 
-impl Savable for RTPlotter {
+impl<const N: usize> Savable for RTPlotter<N> {
     fn save(&mut self, path: &str) -> Result<String, String> {
         let Some(child) = self.child.as_mut() else {
             return Err("Plotter process is not running.".to_string());

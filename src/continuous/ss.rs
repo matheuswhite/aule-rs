@@ -18,7 +18,7 @@ where
     d: Array2<f32>,
     state: Array2<f32>,
     current_input: f32,
-    last_output: Option<Signal<f32>>,
+    last_output: Option<f32>,
     _marker: PhantomData<I>,
 }
 
@@ -89,23 +89,23 @@ where
     type Input = f32;
     type Output = f32;
 
-    fn output(&mut self, input: Signal<f32>) -> Signal<f32> {
+    fn output(&mut self, input: Signal<Self::Input>) -> Signal<Self::Output> {
         self.current_input = input.value;
-        self.state = I::integrate(self.state.clone(), input.dt, self);
+        self.state = I::integrate(self.state.clone(), input.delta.dt(), self);
 
         let input_matrix = Array2::from_shape_vec((1, 1), vec![input.value]).unwrap();
         let output = self.c.dot(&self.state) + self.d.dot(&input_matrix);
         let output = Signal {
             value: output[[0, 0]],
-            dt: input.dt,
+            delta: input.delta,
         };
-        self.last_output = Some(output.clone());
+        self.last_output = Some(output.value);
 
         output
     }
 
-    fn last_output(&self) -> Option<Signal<f32>> {
-        self.last_output.clone()
+    fn last_output(&self) -> Option<Self::Output> {
+        self.last_output
     }
 }
 

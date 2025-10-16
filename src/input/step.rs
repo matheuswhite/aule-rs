@@ -1,5 +1,4 @@
-use crate::input::{Input, Signal};
-use core::time::Duration;
+use crate::{block::Block, signal::Signal};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Step {
@@ -18,13 +17,14 @@ impl Default for Step {
     }
 }
 
-impl Input for Step {
+impl Block for Step {
+    type Input = ();
     type Output = f32;
 
-    fn output(&mut self, dt: Duration) -> Signal<Self::Output> {
+    fn output(&mut self, input: Signal<Self::Input>) -> Signal<Self::Output> {
         Signal {
             value: self.value,
-            dt,
+            delta: input.delta,
         }
     }
 }

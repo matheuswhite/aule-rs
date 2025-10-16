@@ -1,6 +1,6 @@
-use aule::block::smith_predictor::SmithPredictorFiltered;
 use aule::prelude::*;
 use aule::s;
+use aule::tier1::smith_predictor::SmithPredictorFiltered;
 use std::time::Duration;
 
 fn main() {
@@ -10,19 +10,19 @@ fn main() {
 }
 
 fn open_loop() {
-    let time = Time::from((1e-2, 400.0));
+    let time = Time::continuous(1e-2, 400.0);
     let mut step = Step::default();
     let mut plant: SS<RK4> = (5.6 / (40.2 * s + 1.0)).into();
     let mut delay = Delay::new(Duration::from_secs_f32(93.9));
     let mut plotter = Plotter::new("[Long Dead Time] Open Loop".to_string(), 100.0, 1.0);
 
     for dt in time {
-        let reference = dt * step.as_mut();
+        let reference = dt * step.as_block();
 
-        let plant_output = reference * plant.as_mut();
-        let delayed_output = plant_output * delay.as_mut();
+        let plant_output = reference * plant.as_block();
+        let delayed_output = plant_output * delay.as_block();
 
-        let _ = delayed_output * plotter.as_mut();
+        let _ = delayed_output * plotter.as_block();
     }
 
     plotter.display();
@@ -30,7 +30,7 @@ fn open_loop() {
 }
 
 fn pi_controller() {
-    let time = Time::from((1e-2, 2000.0));
+    let time = Time::continuous(1e-2, 2000.0);
     let mut step = Step::default();
 
     let kp = [0.06, 0.08, 0.1];
@@ -38,21 +38,30 @@ fn pi_controller() {
     let mut controller = kp.map(|kp| PID::new(kp, kp / ti, 0.0));
     let mut plant = kp.map(|_| SS::<RK4>::from(5.6 / (40.2 * s + 1.0)));
     let mut delay = kp.map(|_| Delay::new(Duration::from_secs_f32(93.9)));
-    let mut plotter = Plotter::new(format!("[Long Dead Time] PI {:?}", kp), 100.0, 0.2);
+    let mut plotter = Plotter::<3>::new(format!("[Long Dead Time] PI {:?}", kp), 100.0, 0.2);
 
     for dt in time {
-        let reference = dt * step.as_mut();
-        let mut outputs = [Signal::default(); 3];
+        let reference = dt * step.as_block();
+        let mut outputs = [(); 3].map(|_| dt.map(|_| 0.0));
 
         for i in 0..3 {
             let error = reference - delay[i].last_output();
-            let control_signal = error * controller[i].as_mut();
+            let control_signal = error * controller[i].as_block();
 
-            let plant_output = control_signal * plant[i].as_mut();
-            outputs[i] = plant_output * delay[i].as_mut();
+            let plant_output = control_signal * plant[i].as_block();
+            outputs[i] = plant_output * delay[i].as_block();
         }
 
-        let _ = merge!(outputs) * plotter.as_mut();
+        let output =
+            outputs
+                .into_iter()
+                .enumerate()
+                .fold(dt.map(|_| [0.0; 3]), |mut acc, (i, v)| {
+                    acc.value[i] = v.value;
+                    acc.delta = acc.delta.merge(v.delta);
+                    acc
+                });
+        let _ = output * plotter.as_block();
     }
 
     plotter.display();
@@ -60,7 +69,7 @@ fn pi_controller() {
 }
 
 fn smith_predictor() {
-    let time = Time::from((1e-2, 700.0));
+    let time = Time::continuous(1e-2, 700.0);
     let mut step = Step::default();
     let mut plotter = Plotter::new(
         "[Long Dead Time] Smith Predictor vs Pure PI".to_string(),
@@ -92,12 +101,15 @@ fn smith_predictor() {
     };
 
     for dt in time {
-        let reference = dt * step.as_mut();
+        let reference = dt * step.as_block();
 
-        let with_predictor_output = reference * with_predictor.as_mut();
-        let without_predictor_output = reference * without_predictor.as_mut();
+        let with_predictor_output = reference * with_predictor.as_block();
+        let without_predictor_output = reference * without_predictor.as_block();
 
-        let _ = merge!(with_predictor_output, without_predictor_output) * plotter.as_mut();
+        let _ = with_predictor_output
+            .zip(without_predictor_output)
+            .map(|(with, without)| [with, without])
+            * plotter.as_block();
     }
 
     plotter.display();
@@ -121,24 +133,23 @@ impl Block for BlockCollection {
         if let Some(smith_predictor) = &mut self.smith_predictor {
             let preditor_last_output = smith_predictor.last_output();
             let error = input - preditor_last_output;
-            let control_signal = error * self.controller.as_mut();
+            let control_signal = error * self.controller.as_block();
 
-            let plant_output = control_signal * self.plant.as_mut();
-            let delayed_output = plant_output * self.delay.as_mut();
-            let _predicted_output =
-                merge!(control_signal, delayed_output) * smith_predictor.as_mut();
+            let plant_output = control_signal * self.plant.as_block();
+            let delayed_output = plant_output * self.delay.as_block();
+            let _predicted_output = control_signal.zip(delayed_output) * smith_predictor.as_block();
 
             delayed_output
         } else {
             let error = input - self.delay.last_output();
-            let control_signal = error * self.controller.as_mut();
+            let control_signal = error * self.controller.as_block();
 
-            let plant_output = control_signal * self.plant.as_mut();
-            plant_output * self.delay.as_mut()
+            let plant_output = control_signal * self.plant.as_block();
+            plant_output * self.delay.as_block()
         }
     }
 
-    fn last_output(&self) -> Option<Signal<Self::Output>> {
+    fn last_output(&self) -> Option<Self::Output> {
         self.delay.last_output()
     }
 }

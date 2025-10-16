@@ -1,12 +1,12 @@
 use aule::prelude::*;
 
 fn main() {
-    let time = Time::from((1e-3, 10.0));
+    let time = Time::continuous(1e-3, 10.0);
 
     let mut step = Step::default();
     let mut pid = PID::new(40.0, 10.0, 10.00);
     let mut plant: SS<RK4> = Tf::new(&[1.0], &[1.0, 6.0, 11.0, 6.0]).into();
-    let mut writer = Writter::new("output/third_order_system.csv", ["output"]);
+    let mut writer = Writter::new("output/third_order_system.csv", ["input", "output"]);
     let mut iae = IAE::default();
     let mut ise = ISE::default();
     let mut itae = ITAE::default();
@@ -14,13 +14,14 @@ fn main() {
     let mut plotter = Plotter::new("Third Order System".to_string(), 1.0, 0.25);
 
     for dt in time {
-        let input = dt * step.as_mut();
-        let error = (input - plant.last_output()) * iae.as_mut() * ise.as_mut() * itae.as_mut();
-        let control_signal = error * pid.as_mut();
-        let _ = merge!(error, control_signal) * good_hart.as_mut();
-        let output = control_signal * plant.as_mut();
+        let input = dt * step.as_block();
+        let error =
+            (input - plant.last_output()) * iae.as_block() * ise.as_block() * itae.as_block();
+        let control_signal = error * pid.as_block();
+        let output = control_signal * plant.as_block();
 
-        let _ = merge!(input, output) * plotter.as_mut() * writer.as_mut();
+        let _ = error.zip(control_signal) * good_hart.as_block();
+        let _ = input.zip(output).map(|(i, o)| [i, o]) * plotter.as_block() * writer.as_block();
     }
 
     println!("IAE Value: {}", iae.value());

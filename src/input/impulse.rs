@@ -1,5 +1,4 @@
-use crate::{input::Input, signal::Signal};
-use core::time::Duration;
+use crate::{block::Block, signal::Signal};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Impulse {
@@ -20,16 +19,23 @@ impl Default for Impulse {
     }
 }
 
-impl Input for Impulse {
+impl Block for Impulse {
+    type Input = ();
     type Output = f32;
 
-    fn output(&mut self, dt: Duration) -> Signal<Self::Output> {
+    fn output(&mut self, input: Signal<Self::Input>) -> Signal<Self::Output> {
         match self.value.take() {
             Some(value) => {
                 self.value = None; // Reset value after output
-                Signal { value, dt }
+                Signal {
+                    value,
+                    delta: input.delta,
+                }
             }
-            None => Signal { value: 0.0, dt }, // If no value is set, return 0.0
+            None => Signal {
+                value: 0.0,
+                delta: input.delta,
+            }, // If no value is set, return 0.0
         }
     }
 }

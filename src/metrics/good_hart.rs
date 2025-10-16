@@ -1,4 +1,4 @@
-use crate::{metrics::Metric, signal::Signal};
+use crate::{block::Block, signal::Signal};
 use alloc::vec::Vec;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -16,21 +16,8 @@ impl GoodHart {
             alphas: (alpha1, alpha2, alpha3),
         }
     }
-}
 
-impl Metric for GoodHart {
-    type Input = [f32; 2];
-
-    fn update(&mut self, input: Signal<Self::Input>) -> Signal<Self::Input> {
-        let error = input.value[0];
-        let control_signal = input.value[1];
-        self.error.push(error);
-        self.control_signal.push(control_signal);
-
-        input
-    }
-
-    fn value(&self) -> f32 {
+    pub fn value(&self) -> f32 {
         if self.error.is_empty() || self.control_signal.is_empty() {
             return 0.0;
         }
@@ -42,5 +29,19 @@ impl Metric for GoodHart {
         let e3 = self.error.iter().map(|e| e.abs()).sum::<f32>() / n;
 
         self.alphas.0 * e1 + self.alphas.1 * e2 + self.alphas.2 * e3
+    }
+}
+
+impl Block for GoodHart {
+    type Input = (f32, f32);
+    type Output = (f32, f32);
+
+    fn output(&mut self, input: Signal<Self::Input>) -> Signal<Self::Output> {
+        let error = input.value.0;
+        let control_signal = input.value.1;
+        self.error.push(error);
+        self.control_signal.push(control_signal);
+
+        input
     }
 }

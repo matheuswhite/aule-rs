@@ -1,6 +1,4 @@
 use crate::block::Block;
-use crate::merge;
-use crate::metrics::Metric;
 #[cfg(feature = "alloc")]
 use crate::prelude::GoodHart;
 use crate::prelude::{IAE, ISE, ITAE};
@@ -19,7 +17,7 @@ pub struct PID {
     kd: f32,
     last_input: f32,
     last_integral: f32,
-    last_output: Option<Signal<f32>>,
+    last_output: Option<f32>,
     iae: Option<IAE>,
     ise: Option<ISE>,
     itae: Option<ITAE>,
@@ -120,22 +118,22 @@ impl Block for PID {
     type Input = f32;
     type Output = f32;
 
-    fn output(&mut self, input: Signal<f32>) -> Signal<f32> {
+    fn output(&mut self, input: Signal<Self::Input>) -> Signal<Self::Output> {
         if let Some(iae) = &mut self.iae {
-            iae.update(input.clone());
+            let _ = input * iae.as_block();
         }
 
         if let Some(ise) = &mut self.ise {
-            ise.update(input.clone());
+            let _ = input * ise.as_block();
         }
 
         if let Some(itae) = &mut self.itae {
-            itae.update(input.clone());
+            let _ = input * itae.as_block();
         }
 
         let proportional = input.value;
-        let integral = self.last_integral + input.value * input.dt.as_secs_f32();
-        let derivative = (input.value - self.last_input) / input.dt.as_secs_f32();
+        let integral = self.last_integral + input.value * input.delta.dt().as_secs_f32();
+        let derivative = (input.value - self.last_input) / input.delta.dt().as_secs_f32();
 
         let output = self.kp * proportional + self.ki * integral + self.kd * derivative;
         let (output, integral) = if let Some((min, max)) = self.anti_windup {
@@ -148,24 +146,21 @@ impl Block for PID {
             (output, integral)
         };
 
-        let output = Signal {
-            value: output,
-            dt: input.dt,
-        };
+        let output = input.replace(output);
 
-        self.last_output = Some(output.clone());
+        self.last_output = Some(output.value);
         self.last_input = input.value;
         self.last_integral = integral;
 
         #[cfg(feature = "alloc")]
         if let Some(good_hart) = &mut self.good_hart {
-            good_hart.update(merge!(input, output));
+            let _ = input.zip(output) * good_hart.as_block();
         }
 
         output
     }
 
-    fn last_output(&self) -> Option<Signal<f32>> {
-        self.last_output.clone()
+    fn last_output(&self) -> Option<Self::Output> {
+        self.last_output
     }
 }

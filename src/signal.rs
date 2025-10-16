@@ -1,38 +1,90 @@
 use crate::block::Block;
-use crate::metrics::Metric;
-use crate::output::Output;
+use crate::time::Delta;
 use core::ops::{Add, Div, Mul, Neg, Sub};
-use core::time::Duration;
 
-#[derive(Debug, Clone, Default, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Signal<T> {
     pub value: T,
-    pub dt: Duration,
+    pub delta: Delta,
 }
 
 impl<T: Copy> Copy for Signal<T> {}
 
-impl<T: Default> From<Duration> for Signal<T> {
-    fn from(dt: Duration) -> Self {
-        Signal {
-            value: T::default(),
-            dt,
-        }
-    }
-}
-
-impl<T> From<(T, Duration)> for Signal<T> {
-    fn from((value, dt): (T, Duration)) -> Self {
-        Signal { value, dt }
-    }
-}
-
-impl<T> From<(T, f32)> for Signal<T> {
-    fn from((value, dt): (T, f32)) -> Self {
+impl<T> Signal<T> {
+    pub fn replace(self, value: T) -> Self {
         Signal {
             value,
-            dt: Duration::from_secs_f32(dt),
+            delta: self.delta,
         }
+    }
+
+    pub fn map<U, F>(self, f: F) -> Signal<U>
+    where
+        F: FnOnce(T) -> U,
+    {
+        Signal {
+            value: f(self.value),
+            delta: self.delta,
+        }
+    }
+
+    pub fn filter<P>(self, predicate: P) -> Option<Self>
+    where
+        P: FnOnce(&T, &Delta) -> bool,
+    {
+        if predicate(&self.value, &self.delta) {
+            Some(self)
+        } else {
+            None
+        }
+    }
+
+    pub fn zip<U>(self, other: Signal<U>) -> Signal<(T, U)> {
+        Signal {
+            value: (self.value, other.value),
+            delta: self.delta.merge(other.delta),
+        }
+    }
+
+    pub fn unzip<U, V>(self) -> (Signal<U>, Signal<V>)
+    where
+        T: Into<(U, V)>,
+    {
+        let (u, v) = self.value.into();
+        (
+            Signal {
+                value: u,
+                delta: self.delta,
+            },
+            Signal {
+                value: v,
+                delta: self.delta,
+            },
+        )
+    }
+}
+
+impl<T> Signal<Signal<T>> {
+    pub fn flatten(self) -> Signal<T> {
+        Signal {
+            value: self.value.value,
+            delta: self.value.delta.merge(self.delta),
+        }
+    }
+}
+
+impl<T: Default> From<Delta> for Signal<T> {
+    fn from(delta: Delta) -> Self {
+        Signal {
+            value: T::default(),
+            delta,
+        }
+    }
+}
+
+impl<T> From<(T, Delta)> for Signal<T> {
+    fn from((value, delta): (T, Delta)) -> Self {
+        Signal { value, delta }
     }
 }
 
@@ -42,7 +94,7 @@ impl<T: Neg<Output = T>> Neg for Signal<T> {
     fn neg(self) -> Self::Output {
         Signal {
             value: -self.value,
-            dt: self.dt,
+            delta: self.delta,
         }
     }
 }
@@ -53,7 +105,7 @@ impl<T: Sub<Output = T>> Sub for Signal<T> {
     fn sub(self, rhs: Self) -> Self::Output {
         Signal {
             value: self.value - rhs.value,
-            dt: Duration::from_secs_f32((self.dt.as_secs_f32() + rhs.dt.as_secs_f32()) / 2.0),
+            delta: self.delta.merge(rhs.delta),
         }
     }
 }
@@ -64,7 +116,18 @@ impl<T: Sub<Output = T>> Sub<T> for Signal<T> {
     fn sub(self, rhs: T) -> Self::Output {
         Signal {
             value: self.value - rhs,
-            dt: self.dt,
+            delta: self.delta,
+        }
+    }
+}
+
+impl<T: Sub<Output = T> + Default> Sub<Option<T>> for Signal<T> {
+    type Output = Self;
+
+    fn sub(self, rhs: Option<T>) -> Self::Output {
+        Signal {
+            value: self.value - rhs.unwrap_or_default(),
+            delta: self.delta,
         }
     }
 }
@@ -86,7 +149,7 @@ impl<T: Add<Output = T>> Add for Signal<T> {
     fn add(self, rhs: Self) -> Self::Output {
         Signal {
             value: self.value + rhs.value,
-            dt: Duration::from_secs_f32((self.dt.as_secs_f32() + rhs.dt.as_secs_f32()) / 2.0),
+            delta: self.delta.merge(rhs.delta),
         }
     }
 }
@@ -97,7 +160,7 @@ impl<T: Add<Output = T>> Add<T> for Signal<T> {
     fn add(self, rhs: T) -> Self::Output {
         Signal {
             value: self.value + rhs,
-            dt: self.dt,
+            delta: self.delta,
         }
     }
 }
@@ -119,7 +182,7 @@ impl<T: Div<Output = T>> Div for Signal<T> {
     fn div(self, rhs: Self) -> Self::Output {
         Signal {
             value: self.value / rhs.value,
-            dt: Duration::from_secs_f32((self.dt.as_secs_f32() + rhs.dt.as_secs_f32()) / 2.0),
+            delta: self.delta.merge(rhs.delta),
         }
     }
 }
@@ -130,7 +193,7 @@ impl<T: Div<Output = T>> Div<T> for Signal<T> {
     fn div(self, rhs: T) -> Self::Output {
         Signal {
             value: self.value / rhs,
-            dt: self.dt,
+            delta: self.delta,
         }
     }
 }
@@ -141,7 +204,7 @@ impl<T: Mul<Output = T>> Mul for Signal<T> {
     fn mul(self, rhs: Self) -> Self::Output {
         Signal {
             value: self.value * rhs.value,
-            dt: Duration::from_secs_f32((self.dt.as_secs_f32() + rhs.dt.as_secs_f32()) / 2.0),
+            delta: self.delta.merge(rhs.delta),
         }
     }
 }
@@ -152,7 +215,7 @@ impl<T: Mul<Output = T>> Mul<T> for Signal<T> {
     fn mul(self, rhs: T) -> Self::Output {
         Signal {
             value: self.value * rhs,
-            dt: self.dt,
+            delta: self.delta,
         }
     }
 }
@@ -165,56 +228,12 @@ impl<I, O> Mul<&mut dyn Block<Input = I, Output = O>> for Signal<I> {
     }
 }
 
-impl<T: Clone> Mul<&mut dyn Output<T>> for Signal<T> {
-    type Output = Signal<T>;
+impl<I, O: Clone> Mul<&mut dyn Block<Input = [I; 1], Output = [O; 1]>> for Signal<I> {
+    type Output = Signal<O>;
 
-    fn mul(self, monitor: &mut dyn Output<T>) -> Self::Output {
-        monitor.show(self.clone());
-        self
+    fn mul(self, block: &mut dyn Block<Input = [I; 1], Output = [O; 1]>) -> Self::Output {
+        block
+            .output(self.map(|value| [value]))
+            .map(|arr| arr[0].clone())
     }
-}
-
-impl<T> Mul<&mut dyn Metric<Input = T>> for Signal<T> {
-    type Output = Signal<T>;
-
-    fn mul(self, rhs: &mut dyn Metric<Input = T>) -> Self::Output {
-        let output = rhs.update(self);
-        output
-    }
-}
-
-#[macro_export]
-macro_rules! merge {
-    ($v:expr) => {
-        Signal {
-            value: $v.map(|x| x.value),
-            dt: $v[0].dt,
-        }
-    };
-    ($v:expr, $($x:expr),+) => {
-        Signal {
-            value: [$v.value, $($x.value),+],
-            dt: $v.dt,
-        }
-    };
-}
-
-#[macro_export]
-macro_rules! extract_struct {
-    ($signal:expr, $field:tt) => {
-        Signal {
-            value: $signal.value.$field,
-            dt: $signal.dt,
-        }
-    };
-}
-
-#[macro_export]
-macro_rules! extract_array {
-    ($signal:expr, $index:expr) => {
-        Signal {
-            value: $signal.value[$index],
-            dt: $signal.dt,
-        }
-    };
 }

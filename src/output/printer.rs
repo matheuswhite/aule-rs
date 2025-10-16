@@ -1,4 +1,4 @@
-use crate::output::Output;
+use crate::block::Block;
 use crate::signal::Signal;
 use alloc::format;
 use alloc::string::String;
@@ -7,33 +7,26 @@ use alloc::vec::Vec;
 use std::println;
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct Printer {
+pub struct Printer<const N: usize> {
     title: String,
-    units: Vec<String>,
+    units: [String; N],
 }
 
-impl Printer {
-    pub fn new<const N: usize>(title: &str, units: [&str; N]) -> Self {
+impl<const N: usize> Printer<N> {
+    pub fn new(title: &str, units: [&str; N]) -> Self {
         Printer {
             title: title.to_string(),
-            units: units.iter().map(|&s| s.to_string()).collect(),
+            units: units.map(|s| s.to_string()),
         }
     }
 }
 
-impl Output<f32> for Printer {
-    fn show(&mut self, inputs: Signal<f32>) {
-        let unit = if self.units.len() == 1 {
-            self.units[0].as_str()
-        } else {
-            ""
-        };
-        println!("[{}] {}", self.title, format!("{} {}", inputs.value, unit));
-    }
-}
-impl<const N: usize> Output<[f32; N]> for Printer {
-    fn show(&mut self, inputs: Signal<[f32; N]>) {
-        let values = inputs
+impl<const N: usize> Block for Printer<N> {
+    type Input = [f32; N];
+    type Output = [f32; N];
+
+    fn output(&mut self, input: Signal<Self::Input>) -> Signal<Self::Output> {
+        let values = input
             .value
             .iter()
             .zip(self.units.iter())
@@ -41,5 +34,7 @@ impl<const N: usize> Output<[f32; N]> for Printer {
             .collect::<Vec<_>>()
             .join(", ");
         println!("[{}] {}", self.title, values);
+
+        input
     }
 }

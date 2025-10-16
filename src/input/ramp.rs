@@ -1,36 +1,31 @@
-use crate::{input::Input, signal::Signal};
-use core::time::Duration;
+use crate::{block::Block, signal::Signal};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Ramp {
     value: f32,
-    sim_time: Duration,
 }
 
 impl Ramp {
     pub fn new(value: f32) -> Self {
-        Ramp {
-            value,
-            sim_time: Duration::default(),
-        }
+        Ramp { value }
     }
 }
 
 impl Default for Ramp {
     fn default() -> Self {
-        Self {
-            value: 1.0,
-            sim_time: Default::default(),
-        }
+        Self { value: 1.0 }
     }
 }
 
-impl Input for Ramp {
+impl Block for Ramp {
+    type Input = ();
     type Output = f32;
 
-    fn output(&mut self, dt: Duration) -> Signal<Self::Output> {
-        self.sim_time += dt;
-        let value = self.value.clone() * self.sim_time.as_secs_f32();
-        Signal { value, dt }
+    fn output(&mut self, input: Signal<Self::Input>) -> Signal<Self::Output> {
+        let value = self.value * input.delta.sim_time().as_secs_f32();
+        Signal {
+            value,
+            delta: input.delta,
+        }
     }
 }

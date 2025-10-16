@@ -5,7 +5,7 @@ use crate::signal::Signal;
 pub struct Saturation<T: Ord + Clone> {
     min: T,
     max: T,
-    last_output: Option<Signal<T>>,
+    last_output: Option<T>,
 }
 
 impl<T: Ord + Clone> Block for Saturation<T> {
@@ -16,13 +16,13 @@ impl<T: Ord + Clone> Block for Saturation<T> {
         let saturated_value = input.value.clamp(self.min.clone(), self.max.clone());
         let output = Signal {
             value: saturated_value,
-            dt: input.dt,
+            delta: input.delta,
         };
-        self.last_output = Some(output.clone());
+        self.last_output = Some(output.value.clone());
         output
     }
 
-    fn last_output(&self) -> Option<Signal<T>> {
+    fn last_output(&self) -> Option<Self::Output> {
         self.last_output.clone()
     }
 }

@@ -2,7 +2,7 @@ use aule::prelude::*;
 use aule::s;
 
 pub struct RlCircuit {
-    last_output: Option<Signal<f32>>,
+    last_output: Option<f32>,
     integrator: SS<RK4>,
 }
 
@@ -20,14 +20,14 @@ impl Block for RlCircuit {
     type Output = f32;
 
     fn output(&mut self, input: Signal<Self::Input>) -> Signal<Self::Output> {
-        let output = input * self.integrator.as_mut();
+        let output = input * self.integrator.as_block();
 
-        self.last_output = Some(output);
+        self.last_output = Some(output.value);
 
         output
     }
 
-    fn last_output(&self) -> Option<Signal<Self::Output>> {
+    fn last_output(&self) -> Option<Self::Output> {
         self.last_output
     }
 }
@@ -47,19 +47,19 @@ fn main() {
 }
 
 fn open_loop_rl_circuit() {
-    let time = Time::from((0.001, 0.2));
+    let time = Time::continuous(0.001, 0.2);
     let mut rl_circuit = RlCircuit::new(5.0, 0.05);
     let mut step = Step::default();
     let mut writer = Writter::new("output/open_loop_rl_circuit.csv", ["output"]);
 
     for dt in time {
-        let input = dt * step.as_mut();
-        let _ = input * rl_circuit.as_mut() * writer.as_mut();
+        let input = dt * step.as_block();
+        let _ = input * rl_circuit.as_block() * writer.as_block();
     }
 }
 
 fn closed_loop_rl_circuit() {
-    let time = Time::from((0.001, 0.2));
+    let time = Time::continuous(0.001, 0.2);
 
     let mut pid = PID::new(1.0, 0.0, 0.00);
     let mut rl_circuit = RlCircuit::new(5.0, 0.05);
@@ -67,10 +67,10 @@ fn closed_loop_rl_circuit() {
     let mut writer = Writter::new("output/closed_loop_rl_circuit.csv", ["output"]);
 
     for dt in time {
-        let input = dt * step.as_mut();
+        let input = dt * step.as_block();
         let _ = (input - rl_circuit.last_output())
-            * pid.as_mut()
-            * rl_circuit.as_mut()
-            * writer.as_mut();
+            * pid.as_block()
+            * rl_circuit.as_block()
+            * writer.as_block();
     }
 }

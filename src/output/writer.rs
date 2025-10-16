@@ -1,26 +1,26 @@
-use crate::output::Output;
+use crate::block::Block;
 use crate::signal::Signal;
 use alloc::format;
 use alloc::string::String;
 use alloc::string::ToString;
 use alloc::vec::Vec;
+use core::marker::PhantomData;
 use std::{
     fs::OpenOptions,
     io::{self, Write},
-    time::Duration,
 };
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct Writter {
+pub struct Writter<const N: usize> {
     filename: String,
-    sim_time: Duration,
+    _marker: PhantomData<[(); N]>,
 }
 
-impl Writter {
-    pub fn new<const N: usize>(filename: &str, variable_names: [&str; N]) -> Self {
-        let writer = Writter {
+impl<const N: usize> Writter<N> {
+    pub fn new(filename: &str, variable_names: [&str; N]) -> Self {
+        let writer = Self {
             filename: filename.to_string(),
-            sim_time: Duration::default(),
+            _marker: PhantomData,
         };
 
         writer
@@ -30,7 +30,7 @@ impl Writter {
         writer
     }
 
-    fn write_header<const N: usize>(&self, variable_names: [&str; N]) -> Result<(), io::Error> {
+    fn write_header(&self, variable_names: [&str; N]) -> Result<(), io::Error> {
         OpenOptions::new()
             .write(true)
             .create(true)
@@ -46,21 +46,19 @@ impl Writter {
     }
 }
 
-impl Output<f32> for Writter {
-    fn show(&mut self, inputs: Signal<f32>) {
-        self.sim_time += inputs.dt;
+impl<const N: usize> Block for Writter<N> {
+    type Input = [f32; N];
+    type Output = [f32; N];
 
-        let line = format!("{},{}\n", self.sim_time.as_secs_f32(), inputs.value);
+    fn output(&mut self, input: Signal<Self::Input>) -> Signal<Self::Output> {
+        let values: Vec<String> = input.value.iter().map(|v| v.to_string()).collect();
+        let line = format!(
+            "{},{}\n",
+            input.delta.sim_time().as_secs_f32(),
+            values.join(",")
+        );
         self.append_line(line).expect("Failed to write data line");
-    }
-}
 
-impl<const N: usize> Output<[f32; N]> for Writter {
-    fn show(&mut self, inputs: Signal<[f32; N]>) {
-        self.sim_time += inputs.dt;
-
-        let values: Vec<String> = inputs.value.iter().map(|v| v.to_string()).collect();
-        let line = format!("{},{}\n", self.sim_time.as_secs_f32(), values.join(","));
-        self.append_line(line).expect("Failed to write data line");
+        input
     }
 }
