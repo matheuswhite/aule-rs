@@ -56,12 +56,14 @@ where
             delta: self.delta.merge(other.delta),
         }
     }
+}
 
-    pub fn unzip<U, V>(self) -> (Signal<U, D>, Signal<V, D>)
-    where
-        T: Into<(U, V)>,
-    {
-        let (u, v) = self.value.into();
+impl<U, V, D> Signal<(U, V), D>
+where
+    D: TimeType,
+{
+    pub fn unzip(self) -> (Signal<U, D>, Signal<V, D>) {
+        let (u, v) = self.value;
         (
             Signal {
                 value: u,

@@ -1,6 +1,6 @@
 use aule::prelude::*;
 use aule::s;
-use aule::tier1::smith_predictor::SmithPredictorFiltered;
+use aule::tier2::SmithPredictorFiltered;
 use std::time::Duration;
 
 fn main() {

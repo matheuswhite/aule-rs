@@ -17,7 +17,9 @@ mod output;
 #[cfg(feature = "alloc")]
 pub mod poly;
 mod signal;
-pub mod tier1;
+mod tier1;
+pub mod tier2;
+pub mod tier3;
 mod time;
 
 #[cfg(feature = "alloc")]
