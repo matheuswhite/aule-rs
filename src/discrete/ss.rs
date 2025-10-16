@@ -11,6 +11,7 @@ pub struct DSS {
     b: Array2<f32>,
     c: Array2<f32>,
     d: Array2<f32>,
+    initial_state: Option<Vec<f32>>,
     state: Array2<f32>,
     last_output: Option<f32>,
 }
@@ -38,6 +39,7 @@ impl DSS {
             c: Array2::from_shape_vec((1, cn), c).unwrap(),
             d: Array2::from_shape_vec((1, 1), vec![d]).unwrap(),
             state: Array2::zeros((an, 1)),
+            initial_state: None,
             last_output: None,
         }
     }
@@ -51,6 +53,7 @@ impl DSS {
             "Initial state vector must have the same length as the number of states."
         );
 
+        self.initial_state = Some(initial_state.clone());
         self.state = Array2::from_shape_vec((xn, 1), initial_state).unwrap();
         self
     }
@@ -76,6 +79,16 @@ impl Block for DSS {
 
     fn last_output(&self) -> Option<Self::Output> {
         self.last_output
+    }
+
+    fn reset(&mut self) {
+        if let Some(initial_state) = &self.initial_state {
+            let xn = initial_state.len();
+            self.state = Array2::from_shape_vec((xn, 1), initial_state.clone()).unwrap();
+        } else {
+            self.state.fill(0.0);
+        }
+        self.last_output = None;
     }
 }
 

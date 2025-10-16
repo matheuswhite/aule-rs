@@ -41,4 +41,8 @@ where
     fn last_output(&self) -> Option<Self::Output> {
         self.last_output.clone()
     }
+
+    fn reset(&mut self) {
+        self.last_output = None;
+    }
 }

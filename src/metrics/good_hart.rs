@@ -61,4 +61,9 @@ where
 
         input
     }
+
+    fn reset(&mut self) {
+        self.error.clear();
+        self.control_signal.clear();
+    }
 }

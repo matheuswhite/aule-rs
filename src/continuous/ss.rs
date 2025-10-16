@@ -20,6 +20,7 @@ where
     c: Array2<f32>,
     d: Array2<f32>,
     state: Array2<f32>,
+    initial_state: Option<Vec<f32>>,
     current_input: f32,
     last_output: Option<f32>,
     _marker: PhantomData<I>,
@@ -51,6 +52,7 @@ where
             c: Array2::from_shape_vec((1, cn), c).unwrap(),
             d: Array2::from_shape_vec((1, 1), vec![d]).unwrap(),
             state: Array2::zeros((an, 1)),
+            initial_state: None,
             last_output: None,
             current_input: 0.0,
             _marker: PhantomData,
@@ -66,6 +68,7 @@ where
             "Initial state must match the number of rows in 'a'."
         );
 
+        self.initial_state = Some(initial_state.clone());
         self.state = Array2::from_shape_vec((xn, 1), initial_state).unwrap();
         self
     }
@@ -110,6 +113,17 @@ where
 
     fn last_output(&self) -> Option<Self::Output> {
         self.last_output
+    }
+
+    fn reset(&mut self) {
+        if let Some(initial_state) = &self.initial_state {
+            self.state =
+                Array2::from_shape_vec((initial_state.len(), 1), initial_state.clone()).unwrap();
+        } else {
+            self.state.fill(0.0);
+        }
+        self.current_input = 0.0;
+        self.last_output = None;
     }
 }
 

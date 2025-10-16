@@ -41,4 +41,9 @@ where
         self.n += 1;
         input
     }
+
+    fn reset(&mut self) {
+        self.acc = 0.0;
+        self.n = 0;
+    }
 }

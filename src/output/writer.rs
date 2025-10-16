@@ -17,7 +17,8 @@ where
     T: TimeType,
 {
     filename: String,
-    _marker: PhantomData<[T; N]>,
+    variable_names: [String; N],
+    _marker: PhantomData<T>,
 }
 
 impl<const N: usize, T> Writter<N, T>
@@ -27,17 +28,18 @@ where
     pub fn new(filename: &str, variable_names: [&str; N]) -> Self {
         let writer = Self {
             filename: filename.to_string(),
+            variable_names: variable_names.map(|s| s.to_string()),
             _marker: PhantomData,
         };
 
         writer
-            .write_header(variable_names)
+            .write_header(&variable_names)
             .expect("Failed to write header");
 
         writer
     }
 
-    fn write_header(&self, variable_names: [&str; N]) -> Result<(), io::Error> {
+    fn write_header(&self, variable_names: &[&str]) -> Result<(), io::Error> {
         OpenOptions::new()
             .write(true)
             .create(true)
@@ -74,5 +76,17 @@ where
         self.append_line(line).expect("Failed to write data line");
 
         input
+    }
+
+    fn reset(&mut self) {
+        std::fs::remove_file(&self.filename).ok();
+
+        let variable_names = self
+            .variable_names
+            .iter()
+            .map(|s| s.as_str())
+            .collect::<Vec<_>>();
+        self.write_header(&variable_names)
+            .expect("Failed to reset writer");
     }
 }

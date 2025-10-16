@@ -132,6 +132,11 @@ where
     fn last_output(&self) -> Option<Self::Output> {
         self.last_output
     }
+
+    fn reset(&mut self) {
+        self.input_buffer.clear();
+        self.last_output = None;
+    }
 }
 
 #[cfg(test)]

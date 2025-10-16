@@ -64,7 +64,7 @@ pub mod prelude {
     pub use crate::output::printer::Printer;
     #[cfg(feature = "alloc")]
     pub use crate::output::writer::Writter;
-    pub use crate::signal::Signal;
+    pub use crate::signal::{IgnoreOutput, Signal};
     pub use crate::tier1::delay::Delay;
     pub use crate::tier1::observer::Observer;
     pub use crate::tier1::pid::PID;

@@ -104,4 +104,10 @@ where
     fn last_output(&self) -> Option<Self::Output> {
         self.last_output
     }
+
+    fn reset(&mut self) {
+        self.last_input = 0.0;
+        self.last_integral = 0.0;
+        self.last_output = None;
+    }
 }

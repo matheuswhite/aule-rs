@@ -130,6 +130,14 @@ where
         }));
         input
     }
+
+    fn reset(&mut self) {
+        self.data.clear();
+        if let Some(child) = &mut self.child {
+            let _ = child.kill();
+            self.child = None;
+        }
+    }
 }
 
 impl<const N: usize, T> Block for RTPlotter<N, T>
@@ -187,6 +195,13 @@ where
             .unwrap();
 
         input
+    }
+
+    fn reset(&mut self) {
+        if let Some(child) = &mut self.child {
+            let _ = child.kill();
+            self.child = None;
+        }
     }
 }
 

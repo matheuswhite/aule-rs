@@ -41,4 +41,9 @@ where
         self.acc += self.n as f32 * input.value.abs();
         input
     }
+
+    fn reset(&mut self) {
+        self.acc = 0.0;
+        self.n = 0;
+    }
 }

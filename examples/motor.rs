@@ -72,7 +72,7 @@ fn open_loop_motor() -> Plotter<1, Continuous> {
         let input = dt * step.as_block();
         let output = input * motor.as_block() * writer.as_block();
 
-        let _ = output * plotter.as_block();
+        output * plotter.as_block() * IgnoreOutput;
     }
 
     plotter.display();
@@ -98,7 +98,7 @@ fn closed_loop_motor() -> Plotter<1, Continuous> {
         let control_signal = error * pid.as_block();
         let output = control_signal * motor.as_block() * writer.as_block();
 
-        let _ = output * plotter.as_block();
+        output * plotter.as_block() * IgnoreOutput;
     }
 
     plotter.display();

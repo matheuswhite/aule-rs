@@ -83,6 +83,12 @@ where
     fn last_output(&self) -> Option<Self::Output> {
         self.last_output
     }
+
+    fn reset(&mut self) {
+        self.process.reset();
+        self.delay.reset();
+        self.last_output = None;
+    }
 }
 
 impl<P, F, TT> Block for SmithPredictorFiltered<P, F, TT>
@@ -114,5 +120,12 @@ where
 
     fn last_output(&self) -> Option<Self::Output> {
         self.last_output
+    }
+
+    fn reset(&mut self) {
+        self.process.reset();
+        self.filter.reset();
+        self.delay.reset();
+        self.last_output = None;
     }
 }

@@ -57,6 +57,10 @@ impl Time<Continuous> {
             _marker: PhantomData,
         }
     }
+
+    pub fn reset(&mut self) {
+        self.sim_time = Duration::default();
+    }
 }
 
 impl Time<Discrete> {
@@ -67,6 +71,10 @@ impl Time<Discrete> {
             max_time: Duration::from_secs_f32(max_time),
             _marker: PhantomData,
         }
+    }
+
+    pub fn reset(&mut self) {
+        self.sim_time = Duration::default();
     }
 }
 

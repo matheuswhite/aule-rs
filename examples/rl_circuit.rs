@@ -58,7 +58,7 @@ fn open_loop_rl_circuit() {
 
     for dt in time {
         let input = dt * step.as_block();
-        let _ = input * rl_circuit.as_block() * writer.as_block();
+        input * rl_circuit.as_block() * writer.as_block() * IgnoreOutput;
     }
 }
 
@@ -72,9 +72,10 @@ fn closed_loop_rl_circuit() {
 
     for dt in time {
         let input = dt * step.as_block();
-        let _ = (input - rl_circuit.last_output())
+        (input - rl_circuit.last_output())
             * pid.as_block()
             * rl_circuit.as_block()
-            * writer.as_block();
+            * writer.as_block()
+            * IgnoreOutput;
     }
 }

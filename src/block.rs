@@ -20,4 +20,6 @@ pub trait Block {
     {
         self
     }
+
+    fn reset(&mut self) {}
 }
