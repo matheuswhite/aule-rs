@@ -1,34 +1,21 @@
-use crate::{
-    block::Block, discrete::solver::StateEstimation, prelude::Solver, signal::Signal,
-    time::Continuous,
-};
+use crate::block::Block;
+use crate::signal::Signal;
+use crate::time::Discrete;
 use alloc::vec;
 use alloc::vec::Vec;
+use core::fmt::Display;
 use ndarray::Array2;
-use std::{
-    fmt::{Debug, Display},
-    marker::PhantomData,
-};
 
-#[derive(Debug, Clone)]
-pub struct SS<I>
-where
-    I: Solver + Debug,
-{
+pub struct DSS {
     a: Array2<f32>,
     b: Array2<f32>,
     c: Array2<f32>,
     d: Array2<f32>,
     state: Array2<f32>,
-    current_input: f32,
     last_output: Option<f32>,
-    _marker: PhantomData<I>,
 }
 
-impl<I> SS<I>
-where
-    I: Solver + Debug,
-{
+impl DSS {
     pub fn new(a: Array2<f32>, b: Vec<f32>, c: Vec<f32>, d: f32) -> Self {
         let an = a.shape()[0];
         let am = a.shape()[1];
@@ -52,8 +39,6 @@ where
             d: Array2::from_shape_vec((1, 1), vec![d]).unwrap(),
             state: Array2::zeros((an, 1)),
             last_output: None,
-            current_input: 0.0,
-            _marker: PhantomData,
         }
     }
 
@@ -62,49 +47,30 @@ where
         let xn = initial_state.len();
 
         assert_eq!(
-            an, xn,
-            "Initial state must match the number of rows in 'a'."
+            xn, an,
+            "Initial state vector must have the same length as the number of states."
         );
 
         self.state = Array2::from_shape_vec((xn, 1), initial_state).unwrap();
         self
     }
-
-    pub fn with_integrator(self, _integrator: I) -> Self {
-        self
-    }
 }
 
-impl<I> StateEstimation for SS<I>
-where
-    I: Solver + Debug,
-{
-    fn estimate(&self, state: Array2<f32>) -> Array2<f32> {
-        let input_matrix = Array2::from_shape_vec((1, 1), vec![self.current_input]).unwrap();
-        self.a.dot(&state) + self.b.dot(&input_matrix)
-    }
-}
-
-impl<I> Block for SS<I>
-where
-    I: Solver + Debug,
-{
+impl Block for DSS {
     type Input = f32;
     type Output = f32;
-    type TimeType = Continuous;
+    type TimeType = Discrete;
 
     fn output(
         &mut self,
         input: Signal<Self::Input, Self::TimeType>,
     ) -> Signal<Self::Output, Self::TimeType> {
-        self.current_input = input.value;
-        self.state = I::integrate(self.state.clone(), input.delta.dt(), self);
-
         let input_matrix = Array2::from_shape_vec((1, 1), vec![input.value]).unwrap();
+        self.state = self.a.dot(&self.state) + self.b.dot(&input_matrix);
+
         let output = self.c.dot(&self.state) + self.d.dot(&input_matrix);
         let output = input.replace(output[[0, 0]]);
         self.last_output = Some(output.value);
-
         output
     }
 
@@ -113,11 +79,8 @@ where
     }
 }
 
-impl<I> Display for SS<I>
-where
-    I: Solver + Debug,
-{
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl Display for DSS {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         write!(
             f,
             "A: {}\n\tB: {}\n\tC: {}\n\tD: {}\n\tx: {}",
