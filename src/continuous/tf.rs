@@ -60,7 +60,7 @@ where
         let mut b_mat = vec![0.0; n];
         b_mat[n - 1] = 1.0;
 
-        let c_mat = b[1..].iter().rev().map(|c| *c).collect();
+        let c_mat = b[1..].iter().rev().copied().collect();
 
         SS::new(a_mat, b_mat, c_mat, b0)
     }

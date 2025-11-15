@@ -47,6 +47,7 @@ where
         OpenOptions::new()
             .write(true)
             .create(true)
+            .truncate(true)
             .open(&self.filename)?
             .write_all(("t,".to_string() + &variable_names.join(",") + "\n").as_bytes())
     }

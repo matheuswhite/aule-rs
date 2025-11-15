@@ -61,7 +61,7 @@ impl Polynomial {
     }
 
     pub fn lead_coeff(&self) -> f32 {
-        self.coeff.get(0).copied().unwrap_or(0.0)
+        self.coeff.first().copied().unwrap_or(0.0)
     }
 
     pub fn companion_matrix(self) -> Array2<f32> {

@@ -114,7 +114,7 @@ where
             0.0
         };
         assert!(
-            (0.0 <= gama) && (gama <= 1.0),
+            (0.0..=1.0).contains(&gama),
             "gama must be in [0, 1], got {}",
             gama
         );

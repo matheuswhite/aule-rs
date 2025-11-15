@@ -114,8 +114,8 @@ where
         let y = self.c.dot(&self.state) + self.d.dot(&u);
         let output = (y[[0, 0]], {
             let mut x_hat = [0.0; N];
-            for i in 0..N {
-                x_hat[i] = self.state[[i, 0]];
+            for (i, x) in x_hat.iter_mut().enumerate() {
+                *x = self.state[[i, 0]];
             }
             x_hat
         });
