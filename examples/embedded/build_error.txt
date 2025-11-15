@@ -1,0 +1,2 @@
+   Compiling embedded v0.1.0 (/Users/matheuswhite/repo/mestrado/aule/embedded)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.79s

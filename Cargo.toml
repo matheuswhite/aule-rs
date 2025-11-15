@@ -5,13 +5,19 @@ edition = "2024"
 
 
 [dependencies]
-ndarray = { version = "0.16.0", default-features = false, optional = true }
 libm = { version = "0.2" }
 
 [features]
 default = ["std"]
 alloc = ["ndarray"]
 std = ["alloc"]
+
+[dependencies.ndarray]
+version = "0.16.0"
+default-features = false
+optional = true
+# TODO: make this only for no_std targets with thumbv6m-none-eabi
+features = ["portable-atomic-critical-section"]
 
 [lib]
 name = "aule"

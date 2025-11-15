@@ -12,7 +12,7 @@ pub mod continuous;
 mod discrete;
 mod input;
 mod metrics;
-#[cfg(feature = "alloc")]
+#[cfg(feature = "std")]
 mod output;
 #[cfg(feature = "alloc")]
 pub mod poly;
@@ -60,19 +60,21 @@ pub mod prelude {
     pub use crate::metrics::itae::ITAE;
     #[cfg(feature = "std")]
     pub use crate::output::plotter::{JoinAll, Joinable, Plotter, RTPlotter, Savable};
-    #[cfg(feature = "alloc")]
+    #[cfg(feature = "std")]
     pub use crate::output::printer::Printer;
-    #[cfg(feature = "alloc")]
+    #[cfg(feature = "std")]
     pub use crate::output::writer::Writter;
     pub use crate::signal::{IgnoreOutput, Signal};
+    #[cfg(feature = "alloc")]
     pub use crate::tier1::delay::Delay;
+    #[cfg(feature = "alloc")]
     pub use crate::tier1::observer::Observer;
     pub use crate::tier1::pid::PID;
     pub use crate::tier1::saturation::Saturation;
     pub use crate::time::{Continuous, Delta, Discrete, EndlessTime, Time, TimeType};
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "std"))]
 mod tests {
     use crate::prelude::*;
 

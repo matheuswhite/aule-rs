@@ -139,7 +139,7 @@ where
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "std"))]
 mod tests {
     use crate::{prelude::*, time::Continuous};
     use alloc::vec::Vec;

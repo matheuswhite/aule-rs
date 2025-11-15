@@ -172,7 +172,7 @@ impl From<z_inv> for PolynomialInverse {
 impl_poly_ops!(z_inv);
 
 impl Display for PolynomialInverse {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         let string = self
             .coeff()
             .iter()
@@ -191,7 +191,7 @@ impl Display for PolynomialInverse {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "std"))]
 mod test_f32_impl {
     use super::*;
 
@@ -266,7 +266,7 @@ mod test_f32_impl {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "std"))]
 mod test_s_impl {
     use super::*;
 

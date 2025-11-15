@@ -165,7 +165,7 @@ impl From<s> for Polynomial {
 impl_poly_ops!(s);
 
 impl Display for Polynomial {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         let degree = self.degree();
         let string = self
             .coeff()
@@ -188,7 +188,7 @@ impl Display for Polynomial {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "std"))]
 mod test_f32_impl {
     use super::*;
 
@@ -263,7 +263,7 @@ mod test_f32_impl {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "std"))]
 mod test_s_impl {
     use super::*;
 

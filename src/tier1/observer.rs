@@ -1,9 +1,5 @@
-use crate::{
-    block::Block,
-    prelude::{Solver, StateEstimation},
-    signal::Signal,
-    time::TimeType,
-};
+use crate::prelude::{Solver, StateEstimation};
+use crate::{block::Block, signal::Signal, time::TimeType};
 use core::{
     fmt::{Debug, Display},
     marker::PhantomData,
@@ -152,7 +148,7 @@ where
     I: Solver + Debug,
     D: TimeType,
 {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         write!(
             f,
             "A: {}\n\tB: {}\n\tC: {}\n\tD: {}\n\tL: {}\n\tx: {}",

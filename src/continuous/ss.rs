@@ -4,11 +4,11 @@ use crate::{
 };
 use alloc::vec;
 use alloc::vec::Vec;
-use ndarray::Array2;
-use std::{
+use core::{
     fmt::{Debug, Display},
     marker::PhantomData,
 };
+use ndarray::Array2;
 
 #[derive(Debug, Clone)]
 pub struct SS<I>
@@ -131,7 +131,7 @@ impl<I> Display for SS<I>
 where
     I: Solver + Debug,
 {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         write!(
             f,
             "A: {}\n\tB: {}\n\tC: {}\n\tD: {}\n\tx: {}",
