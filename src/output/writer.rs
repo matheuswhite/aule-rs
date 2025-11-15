@@ -6,6 +6,8 @@ use alloc::string::String;
 use alloc::string::ToString;
 use alloc::vec::Vec;
 use core::marker::PhantomData;
+use std::fs;
+use std::path::Path;
 use std::{
     fs::OpenOptions,
     io::{self, Write},
@@ -40,6 +42,8 @@ where
     }
 
     fn write_header(&self, variable_names: &[&str]) -> Result<(), io::Error> {
+        fs::create_dir_all(Path::new(&self.filename).parent().unwrap_or(Path::new(""))).ok();
+
         OpenOptions::new()
             .write(true)
             .create(true)
