@@ -1,3 +1,4 @@
+pub mod bridge;
 #[cfg(feature = "alloc")]
 pub mod delay;
 #[cfg(feature = "alloc")]

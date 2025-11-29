@@ -177,21 +177,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "embedded"
-version = "0.1.0"
-dependencies = [
- "aule",
- "cortex-m",
- "cortex-m-rt",
- "defmt 0.3.100",
- "defmt-rtt",
- "embedded-alloc",
- "embedded-hal 1.0.0",
- "microbit-v2",
- "panic-probe",
-]
-
-[[package]]
 name = "embedded-alloc"
 version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -239,6 +224,21 @@ name = "embedded-storage"
 version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a21dea9854beb860f3062d10228ce9b976da520a73474aed3171ec276bc0c032"
+
+[[package]]
+name = "embedded_side"
+version = "0.1.0"
+dependencies = [
+ "aule",
+ "cortex-m",
+ "cortex-m-rt",
+ "defmt 0.3.100",
+ "defmt-rtt",
+ "embedded-alloc",
+ "embedded-hal 1.0.0",
+ "microbit-v2",
+ "panic-probe",
+]
 
 [[package]]
 name = "fixed"
@@ -499,9 +499,9 @@ dependencies = [
 
 [[package]]
 name = "quote"
-version = "1.0.42"
+version = "1.0.40"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a338cc41d27e6cc6dce6cefc13a0729dfbb81c262b1f519331575dd80ef3067f"
+checksum = "1885c039570dc00dcb4ff087a89e185fd56bae234ddc7f056a945bf36467248d"
 dependencies = [
  "proc-macro2",
 ]

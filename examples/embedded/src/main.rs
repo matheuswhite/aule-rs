@@ -19,7 +19,7 @@ const HEAP_SIZE: usize = 1024;
 fn main() -> ! {
     init_heap();
 
-    let time = Time::continuous(1e-2, 1.0);
+    let time = Time::continuous(1e-3, 10.0);
 
     let mut step = Step::default();
     let mut pid = PID::new(40.0, 10.0, 10.00);

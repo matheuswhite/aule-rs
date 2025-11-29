@@ -65,6 +65,8 @@ pub mod prelude {
     #[cfg(feature = "std")]
     pub use crate::output::writer::Writter;
     pub use crate::signal::{IgnoreOutput, Signal};
+    #[cfg(all(feature = "alloc", feature = "swd"))]
+    pub use crate::tier1::bridge::{BridgeSwdDown, BridgeSwdUp, RemoteSwd, SwdConnection};
     #[cfg(feature = "alloc")]
     pub use crate::tier1::delay::Delay;
     #[cfg(feature = "alloc")]
