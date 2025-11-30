@@ -1,3 +1,4 @@
+#[cfg(feature = "swd")]
 type BridgeId = [u8; 6];
 
 #[cfg(all(feature = "std", feature = "swd"))]
