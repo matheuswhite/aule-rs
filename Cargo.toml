@@ -20,8 +20,7 @@ swd = []
 version = "0.16.0"
 default-features = false
 optional = true
-# TODO: make this only for no_std targets with thumbv6m-none-eabi
-# features = ["portable-atomic-critical-section"]
+features = ["portable-atomic-critical-section"]
 
 [dependencies.probe-rs]
 version = "0.30.0"
