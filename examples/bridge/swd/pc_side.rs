@@ -11,7 +11,7 @@ fn main() {
     let mut ise = ISE::default();
     let mut itae = ITAE::default();
     let mut good_hart = GoodHart::new(0.3, 0.3, 0.4);
-    let mut plotter = Plotter::new("Third Order System".to_string(), 1.0, 0.25);
+    let mut plotter = Plotter::new("Third Order System".to_string());
 
     for dt in time {
         let input = dt * step.as_block();

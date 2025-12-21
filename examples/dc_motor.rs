@@ -1,5 +1,6 @@
 use aule::prelude::*;
 use aule::s;
+use std::thread::sleep;
 use std::time::Duration;
 
 fn main() {
@@ -27,7 +28,7 @@ fn test_rt_dc_motor() -> RTPlotter<2, Continuous> {
     let mut pid = PID::new(10.0, 1.0, 0.1);
     let mut plant: SS<RK4> = ((k * s) / (s * s + a * k * s)).into();
     let mut writer = Writter::new("output/dc_motor.csv", ["output"]);
-    let mut plotter = RTPlotter::new("Real Time DC Motor".to_string(), 1.0, 1.0);
+    let mut plotter = RTPlotter::new("Real Time DC Motor".to_string());
 
     for dt in time {
         let signal = dt * input.as_block();
@@ -35,6 +36,8 @@ fn test_rt_dc_motor() -> RTPlotter<2, Continuous> {
         let output = output * writer.as_block();
 
         signal.zip(output).map(|(sig, o)| [sig, o]) * plotter.as_block() * IgnoreOutput;
+
+        sleep(dt.delta.dt());
     }
 
     let res = plotter
@@ -60,7 +63,7 @@ fn test_dc_motor() -> Plotter<2, Continuous> {
     let mut plant: SS<RK4> = ((k * s) / (s * s + a * k * s)).into();
 
     let mut writer = Writter::new("output/dc_motor.csv", ["output"]);
-    let mut plotter = Plotter::new("DC Motor".to_string(), 1.0, 1.0);
+    let mut plotter = Plotter::new("DC Motor".to_string());
 
     for dt in time {
         let signal = dt * input.as_block();

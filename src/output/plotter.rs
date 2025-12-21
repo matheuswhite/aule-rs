@@ -9,7 +9,6 @@ use std::io::{Read, Write};
 use std::process::{Child, Command, Stdio};
 use std::string::String;
 use std::string::ToString;
-use std::time::{Duration, Instant};
 
 #[derive(Debug)]
 pub struct Plotter<const N: usize, T>
@@ -18,7 +17,6 @@ where
 {
     data: Vec<[Signal<f32, T>; N]>,
     child: Option<Child>,
-    grid: (f32, f32),
     title: String,
 }
 
@@ -27,9 +25,7 @@ pub struct RTPlotter<const N: usize, T>
 where
     T: TimeType,
 {
-    last_update: Instant,
     child: Option<Child>,
-    grid: (f32, f32),
     title: String,
     _marker: PhantomData<[T; N]>,
 }
@@ -46,25 +42,20 @@ impl<const N: usize, T> Plotter<N, T>
 where
     T: TimeType,
 {
-    pub fn new(title: String, x_grid: f32, y_grid: f32) -> Self {
+    pub fn new(title: String) -> Self {
         Self {
             data: Vec::new(),
             child: None,
-            grid: (x_grid, y_grid),
             title,
         }
     }
 
     pub fn display(&mut self) {
         self.child = Some(
-            Command::new("rtgraph")
+            Command::new("iris")
                 .stdin(Stdio::piped())
                 .stdout(Stdio::piped())
                 .stderr(Stdio::piped())
-                .arg("-xs")
-                .arg(self.grid.0.to_string())
-                .arg("-ys")
-                .arg(self.grid.1.to_string())
                 .arg("-t")
                 .arg(&self.title)
                 .spawn()
@@ -101,11 +92,9 @@ impl<const N: usize, T> RTPlotter<N, T>
 where
     T: TimeType,
 {
-    pub fn new(title: String, x_grid: f32, y_grid: f32) -> Self {
+    pub fn new(title: String) -> Self {
         Self {
-            last_update: Instant::now(),
             child: None,
-            grid: (x_grid, y_grid),
             title,
             _marker: PhantomData,
         }
@@ -152,24 +141,15 @@ where
         &mut self,
         input: Signal<Self::Input, Self::TimeType>,
     ) -> Signal<Self::Output, Self::TimeType> {
-        if Instant::now().duration_since(self.last_update) < Duration::from_millis(17) {
-            return input;
-        }
-        self.last_update = Instant::now();
-
         if self.child.is_none() {
-            let command = Command::new("rtgraph")
+            let command = Command::new("iris")
                 .stdin(Stdio::piped())
                 .stdout(Stdio::piped())
                 .stderr(Stdio::piped())
-                .arg("-xs")
-                .arg(self.grid.0.to_string())
-                .arg("-ys")
-                .arg(self.grid.1.to_string())
                 .arg("-t")
                 .arg(&self.title)
                 .spawn()
-                .expect("Failed to start rtgraph process");
+                .expect("Failed to start iris process");
             self.child = Some(command);
         }
 
