@@ -4,14 +4,14 @@ use ndarray::Array2;
 pub mod euler;
 pub mod runge_kutta;
 
-pub trait StateEstimation {
-    fn estimate(&self, state: Array2<f32>) -> Array2<f32>;
+pub trait StateEstimation<T> {
+    fn estimate(&self, state: Array2<T>) -> Array2<T>;
 }
 
-pub trait Solver {
+pub trait Solver<T> {
     fn integrate(
-        old_value: Array2<f32>,
+        old_value: Array2<T>,
         dt: Duration,
-        state_estimation: &impl StateEstimation,
-    ) -> Array2<f32>;
+        state_estimation: &impl StateEstimation<T>,
+    ) -> Array2<T>;
 }

@@ -1,21 +1,23 @@
-use core::marker::PhantomData;
-
 use crate::{block::Block, signal::Signal, time::TimeType};
+use core::{marker::PhantomData, ops::Mul};
+use num_traits::One;
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct Ramp<T>
+pub struct Ramp<T, K>
 where
-    T: TimeType,
+    T: One + Copy + Mul<f64, Output = T>,
+    K: TimeType,
 {
-    value: f32,
-    _marker: PhantomData<T>,
+    value: T,
+    _marker: PhantomData<K>,
 }
 
-impl<T> Ramp<T>
+impl<T, K> Ramp<T, K>
 where
-    T: TimeType,
+    T: One + Copy + Mul<f64, Output = T>,
+    K: TimeType,
 {
-    pub fn new(value: f32) -> Self {
+    pub fn new(value: T) -> Self {
         Ramp {
             value,
             _marker: PhantomData,
@@ -23,31 +25,33 @@ where
     }
 }
 
-impl<T> Default for Ramp<T>
+impl<T, K> Default for Ramp<T, K>
 where
-    T: TimeType,
+    T: One + Copy + Mul<f64, Output = T>,
+    K: TimeType,
 {
     fn default() -> Self {
         Self {
-            value: 1.0,
+            value: T::one(),
             _marker: PhantomData,
         }
     }
 }
 
-impl<T> Block for Ramp<T>
+impl<T, K> Block for Ramp<T, K>
 where
-    T: TimeType,
+    T: One + Copy + Mul<f64, Output = T>,
+    K: TimeType,
 {
     type Input = ();
-    type Output = f32;
-    type TimeType = T;
+    type Output = T;
+    type TimeType = K;
 
     fn output(
         &mut self,
         input: Signal<Self::Input, Self::TimeType>,
     ) -> Signal<Self::Output, Self::TimeType> {
-        let value = self.value * input.delta.sim_time().as_secs_f32();
+        let value = self.value * input.delta.sim_time().as_secs_f64();
         Signal {
             value,
             delta: input.delta,

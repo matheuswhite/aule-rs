@@ -4,17 +4,24 @@ use alloc::vec;
 use alloc::vec::Vec;
 use core::{
     fmt::Display,
-    ops::{Add, Mul, Neg, Sub},
+    ops::{Add, AddAssign, Mul, Neg, Sub},
 };
 use ndarray::Array2;
+use num_traits::Float;
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct Polynomial {
-    coeff: Vec<f32>,
+pub struct Polynomial<T>
+where
+    T: Float + Default,
+{
+    coeff: Vec<T>,
 }
 
-impl Polynomial {
-    pub fn new(coeff: &[f32]) -> Self {
+impl<T> Polynomial<T>
+where
+    T: Float + Default + AddAssign<T>,
+{
+    pub fn new(coeff: &[T]) -> Self {
         let output = Polynomial {
             coeff: coeff.to_vec(),
         };
@@ -28,7 +35,7 @@ impl Polynomial {
 
     fn simplify(self) -> Self {
         let mut coeff = self.coeff;
-        while !coeff.is_empty() && coeff.first() == Some(&0.0) {
+        while !coeff.is_empty() && coeff.first() == Some(&T::zero()) {
             coeff.remove(0);
         }
         Polynomial { coeff }
@@ -36,7 +43,7 @@ impl Polynomial {
 
     pub fn pow(self, exp: usize) -> Self {
         match exp {
-            0 => Polynomial::new(&[1.0]),
+            0 => Polynomial::new(&[T::one()]),
             1 => self,
             _ => {
                 let mut result = self.clone();
@@ -56,17 +63,17 @@ impl Polynomial {
         self.coeff.len() - 1
     }
 
-    pub fn coeff(&self) -> &[f32] {
+    pub fn coeff(&self) -> &[T] {
         &self.coeff
     }
 
-    pub fn lead_coeff(&self) -> f32 {
-        self.coeff.first().copied().unwrap_or(0.0)
+    pub fn lead_coeff(&self) -> T {
+        self.coeff.first().copied().unwrap_or(T::zero())
     }
 
-    pub fn companion_matrix(self) -> Array2<f32> {
+    pub fn companion_matrix(self) -> Array2<T> {
         if self.degree() < 1 {
-            return Array2::<f32>::default((0, 0));
+            return Array2::<T>::default((0, 0));
         }
 
         let n = self.positive_degree();
@@ -74,8 +81,8 @@ impl Polynomial {
 
         for i in 0..(n - 1) {
             let one_col = i + 1;
-            let mut line = vec![0.0; n];
-            line[one_col] = 1.0;
+            let mut line = vec![T::zero(); n];
+            line[one_col] = T::one();
             lines.extend(line);
         }
 
@@ -91,10 +98,13 @@ impl Polynomial {
     }
 }
 
-impl Add for Polynomial {
-    type Output = Polynomial;
+impl<T> Add for Polynomial<T>
+where
+    T: Float + Default + AddAssign<T>,
+{
+    type Output = Polynomial<T>;
 
-    fn add(self, rhs: Polynomial) -> Self::Output {
+    fn add(self, rhs: Polynomial<T>) -> Self::Output {
         if self.degree() < 0 {
             return rhs;
         }
@@ -104,7 +114,7 @@ impl Add for Polynomial {
         }
 
         let max_degree = self.positive_degree().max(rhs.positive_degree());
-        let mut coeff = vec![0.0; max_degree + 1];
+        let mut coeff = vec![T::zero(); max_degree + 1];
         let mut self_coeff = self.coeff.iter().rev();
         let mut rhs_coeff = rhs.coeff.iter().rev();
 
@@ -127,10 +137,13 @@ impl Add for Polynomial {
     }
 }
 
-impl Sub for Polynomial {
-    type Output = Polynomial;
+impl<T> Sub for Polynomial<T>
+where
+    T: Float + Default + AddAssign<T>,
+{
+    type Output = Polynomial<T>;
 
-    fn sub(self, rhs: Polynomial) -> Self::Output {
+    fn sub(self, rhs: Polynomial<T>) -> Self::Output {
         if self.degree() < 0 {
             return -rhs;
         }
@@ -140,7 +153,7 @@ impl Sub for Polynomial {
         }
 
         let max_degree = self.positive_degree().max(rhs.positive_degree());
-        let mut coeff = vec![0.0; max_degree + 1];
+        let mut coeff = vec![T::zero(); max_degree + 1];
         let mut self_coeff = self.coeff.iter().rev();
         let mut rhs_coeff = rhs.coeff.iter().rev();
 
@@ -163,15 +176,18 @@ impl Sub for Polynomial {
     }
 }
 
-impl Mul for Polynomial {
-    type Output = Polynomial;
+impl<T> Mul for Polynomial<T>
+where
+    T: Float + Default + AddAssign<T>,
+{
+    type Output = Polynomial<T>;
 
-    fn mul(self, rhs: Polynomial) -> Self::Output {
+    fn mul(self, rhs: Polynomial<T>) -> Self::Output {
         if self.degree() < 0 || rhs.degree() < 0 {
             return Polynomial::empty();
         }
 
-        let mut coeff = vec![0.0; self.positive_degree() + rhs.positive_degree() + 1];
+        let mut coeff = vec![T::zero(); self.positive_degree() + rhs.positive_degree() + 1];
 
         for (i, &a) in self.coeff.iter().enumerate() {
             for (j, &b) in rhs.coeff.iter().enumerate() {
@@ -185,8 +201,11 @@ impl Mul for Polynomial {
     }
 }
 
-impl Neg for Polynomial {
-    type Output = Polynomial;
+impl<T> Neg for Polynomial<T>
+where
+    T: Float + Default,
+{
+    type Output = Polynomial<T>;
 
     fn neg(self) -> Self::Output {
         Polynomial {
@@ -195,7 +214,10 @@ impl Neg for Polynomial {
     }
 }
 
-impl Display for Polynomial {
+impl<T> Display for Polynomial<T>
+where
+    T: Float + Default + AddAssign<T> + Display,
+{
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         let degree = self.degree();
         let string = self

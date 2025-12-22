@@ -3,22 +3,26 @@ use crate::signal::Signal;
 use crate::time::TimeType;
 use alloc::vec;
 use alloc::vec::Vec;
+use core::ops::Mul;
 use core::time::Duration;
+use num_traits::Zero;
 
 #[derive(Clone, Debug)]
-pub struct Delay<TT>
+pub struct Delay<T, K>
 where
-    TT: TimeType,
+    T: Zero + Copy + Mul<f64, Output = T>,
+    K: TimeType,
 {
     delay: Duration,
-    initial_value: f32,
-    input_buffer: Vec<Signal<f32, TT>>,
-    last_output: Option<f32>,
+    initial_value: T,
+    input_buffer: Vec<Signal<T, K>>,
+    last_output: Option<T>,
 }
 
-impl<TT> Delay<TT>
+impl<T, K> Delay<T, K>
 where
-    TT: TimeType,
+    T: Zero + Copy + Mul<f64, Output = T>,
+    K: TimeType,
 {
     pub fn new(delay: Duration) -> Self {
         assert!(
@@ -28,13 +32,13 @@ where
 
         Delay {
             delay,
-            initial_value: 0.0,
+            initial_value: T::zero(),
             input_buffer: vec![],
             last_output: None,
         }
     }
 
-    pub fn with_initial_signal(mut self, initial_signal: Signal<f32, TT>) -> Self {
+    pub fn with_initial_signal(mut self, initial_signal: Signal<T, K>) -> Self {
         self.initial_value = initial_signal.value;
 
         if self.input_buffer.is_empty() {
@@ -58,13 +62,14 @@ where
     }
 }
 
-impl<TT> Block for Delay<TT>
+impl<T, K> Block for Delay<T, K>
 where
-    TT: TimeType,
+    T: Zero + Copy + Mul<f64, Output = T>,
+    K: TimeType,
 {
-    type Input = f32;
-    type Output = f32;
-    type TimeType = TT;
+    type Input = T;
+    type Output = T;
+    type TimeType = K;
 
     fn output(
         &mut self,
@@ -73,7 +78,7 @@ where
         let current_time = input.delta.sim_time();
 
         if self.input_buffer.is_empty() {
-            let mut initial_signal = input.replace(0.0);
+            let mut initial_signal = input.replace(T::zero());
             initial_signal.delta.reset_dt();
             initial_signal.delta.reset_sim_time();
             initial_signal.delta += (self.delay, self.delay);
@@ -103,12 +108,12 @@ where
             first_input = &input;
         }
 
-        let gama = if first_input.delta.sim_time().as_secs_f32()
-            != second_input.delta.sim_time().as_secs_f32()
+        let gama = if first_input.delta.sim_time().as_secs_f64()
+            != second_input.delta.sim_time().as_secs_f64()
         {
-            let num = current_time.as_secs_f32() - first_input.delta.sim_time().as_secs_f32();
-            let dem = second_input.delta.sim_time().as_secs_f32()
-                - first_input.delta.sim_time().as_secs_f32();
+            let num = current_time.as_secs_f64() - first_input.delta.sim_time().as_secs_f64();
+            let dem = second_input.delta.sim_time().as_secs_f64()
+                - first_input.delta.sim_time().as_secs_f64();
             num / dem
         } else {
             0.0
@@ -169,7 +174,7 @@ mod tests {
     #[test]
     #[should_panic(expected = "Delay duration must be greater than zero")]
     fn test_delay_zero_duration() {
-        let _delay = Delay::<Continuous>::new(Duration::from_secs(0));
+        let _delay = Delay::<f64, Continuous>::new(Duration::from_secs(0));
     }
 
     #[test]
@@ -180,12 +185,12 @@ mod tests {
         let mut input_signals = Vec::new();
         for i in 0..3 {
             let dt = time.next().unwrap();
-            input_signals.push(dt.map(|_| (i + 1) as f32));
+            input_signals.push(dt.map(|_| (i + 1) as f64));
         }
         time.set_dt(0.5);
         for i in 0..6 {
             let dt = time.next().unwrap();
-            input_signals.push(dt.map(|_| 3.0 + (i + 1) as f32));
+            input_signals.push(dt.map(|_| 3.0 + (i + 1) as f64));
         }
         let mut output_signals = Vec::new();
         for input in input_signals {
@@ -230,7 +235,7 @@ mod tests {
 
         time.set_dt(0.5);
         for i in 0..6 {
-            let half_input_signal = time.next().unwrap().map(|_| 2.0 + i as f32);
+            let half_input_signal = time.next().unwrap().map(|_| 2.0 + i as f64);
             input_signals.push(half_input_signal);
         }
 
@@ -266,13 +271,13 @@ mod tests {
         let mut delay = Delay::new(Duration::from_secs(2));
 
         let large_input_signal =
-            |v, time: &mut Time<Continuous>| time.next().unwrap().map(|_| v as f32);
+            |v, time: &mut Time<Continuous>| time.next().unwrap().map(|_| v as f64);
 
         time.set_dt(1.0);
-        let input_signal = |v, time: &mut Time<Continuous>| time.next().unwrap().map(|_| v as f32);
+        let input_signal = |v, time: &mut Time<Continuous>| time.next().unwrap().map(|_| v as f64);
 
         time.set_dt(0.5);
-        let half_signal = |v, time: &mut Time<Continuous>| time.next().unwrap().map(|_| v as f32);
+        let half_signal = |v, time: &mut Time<Continuous>| time.next().unwrap().map(|_| v as f64);
 
         let mut output_signals = Vec::new();
         for i in 0..3 {

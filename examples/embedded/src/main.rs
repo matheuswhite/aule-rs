@@ -23,7 +23,7 @@ fn main() -> ! {
 
     let mut step = Step::default();
     let mut pid = PID::new(40.0, 10.0, 10.00);
-    let mut plant: SS<RK4> = Tf::new(&[1.0], &[1.0, 6.0, 11.0, 6.0]).into();
+    let mut plant: SS<RK4, f64> = Tf::new(&[1.0], &[1.0, 6.0, 11.0, 6.0]).into();
     let mut iae = IAE::default();
     let mut ise = ISE::default();
     let mut itae = ITAE::default();
@@ -33,12 +33,16 @@ fn main() -> ! {
 
     for dt in time {
         let input = dt * step.as_block();
-        let error =
-            (input - plant.last_output()) * iae.as_block() * ise.as_block() * itae.as_block();
-        let control_signal = error * pid.as_block();
-        let output = control_signal * plant.as_block();
+        let error = input - plant.last_output();
+        iae.output(error);
+        ise.output(error);
+        itae.output(error);
 
-        let _ = input.map(|i| [i, output.value]) * printer.as_block();
+        let control_signal = error * pid.as_block();
+        let output = plant.output(control_signal);
+
+        let printer_input = input.map(|i| [i, output.value]);
+        let _ = printer.output(printer_input);
     }
 
     println!("IAE Value: {}", iae.value());
@@ -53,8 +57,8 @@ fn main() -> ! {
 struct DefmtPrinter;
 
 impl Block for DefmtPrinter {
-    type Input = [f32; 2];
-    type Output = [f32; 2];
+    type Input = [f64; 2];
+    type Output = [f64; 2];
     type TimeType = Continuous;
 
     fn output(
@@ -63,7 +67,7 @@ impl Block for DefmtPrinter {
     ) -> Signal<Self::Output, Self::TimeType> {
         println!(
             "Time: {}, Input: {}, Output: {}",
-            input.delta.sim_time().as_secs_f32(),
+            input.delta.sim_time().as_secs_f64(),
             input.value[0],
             input.value[1]
         );

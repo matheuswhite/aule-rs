@@ -1,18 +1,26 @@
 use crate::{block::Block, discrete::PolynomialInverse, signal::Signal, time::Discrete};
 use alloc::vec;
 use alloc::vec::Vec;
+use core::ops::AddAssign;
+use num_traits::Float;
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct DTf {
-    numerator: PolynomialInverse,
-    denominator: PolynomialInverse,
-    initial_conditions: Option<(Vec<f32>, Vec<f32>)>,
-    last_inputs: Vec<f32>,
-    last_outputs: Vec<f32>,
+pub struct DTf<T>
+where
+    T: Float + Default + AddAssign<T>,
+{
+    numerator: PolynomialInverse<T>,
+    denominator: PolynomialInverse<T>,
+    initial_conditions: Option<(Vec<T>, Vec<T>)>,
+    last_inputs: Vec<T>,
+    last_outputs: Vec<T>,
 }
 
-impl DTf {
-    pub fn new(numerator: &[f32], denominator: &[f32]) -> Self {
+impl<T> DTf<T>
+where
+    T: Float + Default + AddAssign<T>,
+{
+    pub fn new(numerator: &[T], denominator: &[T]) -> Self {
         assert!(!denominator.is_empty(), "Denominator cannot be empty.");
         assert!(
             denominator.len() >= numerator.len(),
@@ -22,16 +30,16 @@ impl DTf {
         Self {
             numerator: PolynomialInverse::new(numerator),
             denominator: PolynomialInverse::new(denominator),
-            last_inputs: vec![0.0; numerator.len()],
-            last_outputs: vec![0.0; denominator.len() - 1],
+            last_inputs: vec![T::zero(); numerator.len()],
+            last_outputs: vec![T::zero(); denominator.len() - 1],
             initial_conditions: None,
         }
     }
 
     pub fn with_initial_conditions(
         mut self,
-        initial_inputs: Vec<f32>,
-        initial_outputs: Vec<f32>,
+        initial_inputs: Vec<T>,
+        initial_outputs: Vec<T>,
     ) -> Self {
         assert_eq!(
             initial_inputs.len(),
@@ -51,9 +59,12 @@ impl DTf {
     }
 }
 
-impl Block for DTf {
-    type Input = f32;
-    type Output = f32;
+impl<T> Block for DTf<T>
+where
+    T: Float + Default + AddAssign<T>,
+{
+    type Input = T;
+    type Output = T;
     type TimeType = Discrete;
 
     fn output(
@@ -65,15 +76,18 @@ impl Block for DTf {
 
         let coeff = self.denominator.coeff();
         let leading_coeff = coeff[0];
-        let mut den = coeff.iter().map(|c| -c / leading_coeff).collect::<Vec<_>>();
+        let mut den = coeff
+            .iter()
+            .map(|c| -*c / leading_coeff)
+            .collect::<Vec<_>>();
         den.remove(0);
 
-        let mut output_value = 0.0;
+        let mut output_value = T::zero();
         for (num, last_input) in self.numerator.coeff().iter().zip(self.last_inputs.iter()) {
-            output_value += num * last_input;
+            output_value += *num * *last_input;
         }
         for (den, last_output) in den.iter().zip(self.last_outputs.iter()) {
-            output_value += den * last_output;
+            output_value += *den * *last_output;
         }
 
         self.last_outputs.insert(0, output_value);
@@ -91,8 +105,8 @@ impl Block for DTf {
             self.last_inputs = initial_inputs.clone();
             self.last_outputs = initial_outputs.clone();
         } else {
-            self.last_inputs.fill(0.0);
-            self.last_outputs.fill(0.0);
+            self.last_inputs.fill(T::zero());
+            self.last_outputs.fill(T::zero());
         }
     }
 }

@@ -18,34 +18,34 @@ pub struct Discrete;
 impl TimeType for Discrete {}
 
 #[derive(Debug, Clone, Copy, PartialEq)]
-pub struct Delta<T>
+pub struct Delta<K>
 where
-    T: TimeType,
+    K: TimeType,
 {
     dt: Duration,
     sim_time: Duration,
-    _marker: PhantomData<T>,
+    _marker: PhantomData<K>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct Time<T>
+pub struct Time<K>
 where
-    T: TimeType,
+    K: TimeType,
 {
     dt: Duration,
     sim_time: Duration,
     max_time: Duration,
-    _marker: PhantomData<T>,
+    _marker: PhantomData<K>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct EndlessTime<T>
+pub struct EndlessTime<K>
 where
-    T: TimeType,
+    K: TimeType,
 {
     dt: Duration,
     sim_time: Duration,
-    _marker: PhantomData<T>,
+    _marker: PhantomData<K>,
 }
 
 impl Time<Continuous> {
@@ -78,9 +78,9 @@ impl Time<Discrete> {
     }
 }
 
-impl<T> Time<T>
+impl<K> Time<K>
 where
-    T: TimeType,
+    K: TimeType,
 {
     pub fn max_time(&self) -> Duration {
         self.max_time
@@ -111,18 +111,18 @@ impl EndlessTime<Discrete> {
     }
 }
 
-impl<T> EndlessTime<T>
+impl<K> EndlessTime<K>
 where
-    T: TimeType,
+    K: TimeType,
 {
     pub fn set_dt(&mut self, dt: f32) {
         self.dt = Duration::from_secs_f32(dt);
     }
 }
 
-impl<T> Delta<T>
+impl<K> Delta<K>
 where
-    T: TimeType,
+    K: TimeType,
 {
     pub fn dt(&self) -> Duration {
         self.dt
@@ -149,9 +149,9 @@ where
     }
 }
 
-impl<T> Add<(Duration, Duration)> for Delta<T>
+impl<K> Add<(Duration, Duration)> for Delta<K>
 where
-    T: TimeType,
+    K: TimeType,
 {
     type Output = Self;
 
@@ -164,9 +164,9 @@ where
     }
 }
 
-impl<T> AddAssign<(Duration, Duration)> for Delta<T>
+impl<K> AddAssign<(Duration, Duration)> for Delta<K>
 where
-    T: TimeType,
+    K: TimeType,
 {
     fn add_assign(&mut self, rhs: (Duration, Duration)) {
         self.dt += rhs.0;
@@ -174,9 +174,9 @@ where
     }
 }
 
-impl<T> Add<Duration> for Delta<T>
+impl<K> Add<Duration> for Delta<K>
 where
-    T: TimeType,
+    K: TimeType,
 {
     type Output = Self;
 
@@ -189,18 +189,18 @@ where
     }
 }
 
-impl<T> AddAssign<Duration> for Delta<T>
+impl<K> AddAssign<Duration> for Delta<K>
 where
-    T: TimeType,
+    K: TimeType,
 {
     fn add_assign(&mut self, rhs: Duration) {
         self.sim_time += rhs;
     }
 }
 
-impl<T> Default for Time<T>
+impl<K> Default for Time<K>
 where
-    T: TimeType,
+    K: TimeType,
 {
     fn default() -> Self {
         Self {
@@ -212,9 +212,9 @@ where
     }
 }
 
-impl<T> Default for EndlessTime<T>
+impl<K> Default for EndlessTime<K>
 where
-    T: TimeType,
+    K: TimeType,
 {
     fn default() -> Self {
         Self {
@@ -225,11 +225,11 @@ where
     }
 }
 
-impl<T> From<(Duration, T)> for EndlessTime<T>
+impl<K> From<(Duration, K)> for EndlessTime<K>
 where
-    T: TimeType,
+    K: TimeType,
 {
-    fn from((dt, _time_type): (Duration, T)) -> Self {
+    fn from((dt, _time_type): (Duration, K)) -> Self {
         Self {
             dt,
             sim_time: Duration::default(),
@@ -238,11 +238,11 @@ where
     }
 }
 
-impl<T> From<(Duration, Duration, T)> for Time<T>
+impl<K> From<(Duration, Duration, K)> for Time<K>
 where
-    T: TimeType,
+    K: TimeType,
 {
-    fn from((dt, max_time, _time_type): (Duration, Duration, T)) -> Self {
+    fn from((dt, max_time, _time_type): (Duration, Duration, K)) -> Self {
         Self {
             dt,
             sim_time: Duration::default(),
@@ -252,11 +252,11 @@ where
     }
 }
 
-impl<T> Iterator for Time<T>
+impl<K> Iterator for Time<K>
 where
-    T: TimeType,
+    K: TimeType,
 {
-    type Item = Signal<(), T>;
+    type Item = Signal<(), K>;
 
     fn next(&mut self) -> Option<Self::Item> {
         self.sim_time += self.dt;
@@ -276,11 +276,11 @@ where
     }
 }
 
-impl<T> Iterator for EndlessTime<T>
+impl<K> Iterator for EndlessTime<K>
 where
-    T: TimeType,
+    K: TimeType,
 {
-    type Item = Signal<(), T>;
+    type Item = Signal<(), K>;
 
     fn next(&mut self) -> Option<Self::Item> {
         self.sim_time += self.dt;

@@ -2,12 +2,12 @@ use aule::prelude::*;
 use aule::s;
 
 pub struct RlCircuit {
-    last_output: Option<f32>,
-    integrator: SS<RK4>,
+    last_output: Option<f64>,
+    integrator: SS<RK4, f64>,
 }
 
 impl RlCircuit {
-    pub fn new(r: f32, l: f32) -> Self {
+    pub fn new(r: f64, l: f64) -> Self {
         RlCircuit {
             last_output: None,
             integrator: (1.0 / (l * s + r)).into(),
@@ -16,8 +16,8 @@ impl RlCircuit {
 }
 
 impl Block for RlCircuit {
-    type Input = f32;
-    type Output = f32;
+    type Input = f64;
+    type Output = f64;
     type TimeType = Continuous;
 
     fn output(

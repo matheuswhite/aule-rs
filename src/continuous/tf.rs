@@ -2,15 +2,23 @@ use crate::{continuous::ss::SS, poly::Polynomial, prelude::Solver};
 use alloc::vec;
 use alloc::vec::Vec;
 use core::fmt::Debug;
+use core::ops::AddAssign;
+use num_traits::Float;
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct Tf {
-    numerator: crate::continuous::poly::Polynomial,
-    denominator: crate::continuous::poly::Polynomial,
+pub struct Tf<T>
+where
+    T: Float + Default + AddAssign<T>,
+{
+    numerator: crate::continuous::poly::Polynomial<T>,
+    denominator: crate::continuous::poly::Polynomial<T>,
 }
 
-impl Tf {
-    pub fn new(numerator: &[f32], denominator: &[f32]) -> Self {
+impl<T> Tf<T>
+where
+    T: Float + Default + AddAssign<T>,
+{
+    pub fn new(numerator: &[T], denominator: &[T]) -> Self {
         assert!(!denominator.is_empty(), "Denominator cannot be empty.");
         assert!(
             denominator.len() >= numerator.len(),
@@ -24,11 +32,12 @@ impl Tf {
     }
 }
 
-impl<I> From<Tf> for SS<I>
+impl<I, T> From<Tf<T>> for SS<I, T>
 where
-    I: Solver + Debug,
+    T: Float + Default + AddAssign<T>,
+    I: Solver<T> + Debug,
 {
-    fn from(tf: Tf) -> Self {
+    fn from(tf: Tf<T>) -> Self {
         // Controllable Canonical Form
 
         // safe because isn't empty
@@ -41,24 +50,24 @@ where
             .denominator
             .coeff()
             .iter()
-            .map(|x| x / a0)
+            .map(|x| *x / a0)
             .collect::<Vec<_>>();
 
         let mut b = tf
             .numerator
             .coeff()
             .iter()
-            .map(|x| x / a0)
+            .map(|x| *x / a0)
             .collect::<Vec<_>>();
         for _ in 0..n - m {
-            b.insert(0, 0.0);
+            b.insert(0, T::zero());
         }
         let b0 = b[0];
 
         let a_mat = Polynomial::new(&a).companion_matrix();
 
-        let mut b_mat = vec![0.0; n];
-        b_mat[n - 1] = 1.0;
+        let mut b_mat = vec![T::zero(); n];
+        b_mat[n - 1] = T::one();
 
         let c_mat = b[1..].iter().rev().copied().collect();
 

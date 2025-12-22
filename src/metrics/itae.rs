@@ -1,49 +1,55 @@
-use core::marker::PhantomData;
-
 use crate::{block::Block, signal::Signal, time::TimeType};
+use core::{
+    marker::PhantomData,
+    ops::{AddAssign, Div, Mul},
+};
+use num_traits::{Signed, Zero};
 
 #[derive(Debug, Clone, Default, PartialEq)]
-pub struct ITAE<T>
+pub struct ITAE<T, K>
 where
-    T: TimeType,
+    T: Zero + Copy + Signed + Div<f64, Output = T> + AddAssign<T>,
+    K: TimeType,
 {
-    acc: f32,
+    acc: T,
     n: usize,
-    _marker: PhantomData<T>,
+    _marker: PhantomData<K>,
 }
 
-impl<T> ITAE<T>
+impl<T, K> ITAE<T, K>
 where
-    T: TimeType,
+    T: Zero + Copy + Signed + Div<f64, Output = T> + AddAssign<T>,
+    K: TimeType,
 {
-    pub fn value(&self) -> f32 {
+    pub fn value(&self) -> T {
         if self.n == 0 {
-            0.0
+            T::zero()
         } else {
-            self.acc / self.n as f32
+            self.acc / self.n as f64
         }
     }
 }
 
-impl<T> Block for ITAE<T>
+impl<T, K> Block for ITAE<T, K>
 where
-    T: TimeType,
+    T: Zero + Copy + Signed + Div<f64, Output = T> + AddAssign<T> + Mul<f64, Output = T>,
+    K: TimeType,
 {
-    type Input = f32;
-    type Output = f32;
-    type TimeType = T;
+    type Input = T;
+    type Output = T;
+    type TimeType = K;
 
     fn output(
         &mut self,
         input: Signal<Self::Input, Self::TimeType>,
     ) -> Signal<Self::Output, Self::TimeType> {
         self.n += 1;
-        self.acc += self.n as f32 * input.value.abs();
+        self.acc += input.value.abs() * self.n as f64;
         input
     }
 
     fn reset(&mut self) {
-        self.acc = 0.0;
+        self.acc = T::zero();
         self.n = 0;
     }
 }

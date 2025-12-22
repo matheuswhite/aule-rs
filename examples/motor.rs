@@ -2,16 +2,16 @@ use aule::prelude::*;
 use aule::s;
 
 struct Motor {
-    kv: f32,
-    km: f32,
-    tau_l: f32,
-    last_output: Option<f32>,
-    eletrical: SS<Euler>,
-    mechanical: SS<Euler>,
+    kv: f64,
+    km: f64,
+    tau_l: f64,
+    last_output: Option<f64>,
+    eletrical: SS<Euler, f64>,
+    mechanical: SS<Euler, f64>,
 }
 
 impl Motor {
-    fn new(kv: f32, km: f32, tau_l: f32, la: f32, ra: f32, jm: f32, fm: f32) -> Self {
+    fn new(kv: f64, km: f64, tau_l: f64, la: f64, ra: f64, jm: f64, fm: f64) -> Self {
         Motor {
             kv,
             km,
@@ -24,8 +24,8 @@ impl Motor {
 }
 
 impl Block for Motor {
-    type Input = f32;
-    type Output = f32;
+    type Input = f64;
+    type Output = f64;
     type TimeType = Continuous;
 
     fn output(
@@ -40,7 +40,7 @@ impl Block for Motor {
         mechanical
     }
 
-    fn last_output(&self) -> Option<f32> {
+    fn last_output(&self) -> Option<Self::Output> {
         self.last_output
     }
 }
@@ -61,7 +61,7 @@ fn main() {
     (plotter1, plotter2).join_all();
 }
 
-fn open_loop_motor() -> Plotter<1, Continuous> {
+fn open_loop_motor() -> Plotter<1, f64, Continuous> {
     let time = Time::continuous(1e-3, 1.0);
     let mut motor = Motor::new(1.0, 1.0, 0.1, 0.01, 1.0, 0.01, 0.01);
     let mut step = Step::default();
@@ -84,7 +84,7 @@ fn open_loop_motor() -> Plotter<1, Continuous> {
     plotter
 }
 
-fn closed_loop_motor() -> Plotter<1, Continuous> {
+fn closed_loop_motor() -> Plotter<1, f64, Continuous> {
     let time = Time::continuous(1e-3, 1.0);
     let mut motor = Motor::new(1.0, 1.0, 0.1, 0.01, 1.0, 0.01, 0.01);
     let mut step = Step::default();

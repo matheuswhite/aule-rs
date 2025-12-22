@@ -19,14 +19,14 @@ fn main() {
     (rt_plotter, plotter).join_all();
 }
 
-fn test_rt_dc_motor() -> RTPlotter<2, Continuous> {
-    let k = 1.0;
-    let a = 1.0;
+fn test_rt_dc_motor() -> RTPlotter<2, f64, Continuous> {
+    let k = 1.0f64;
+    let a = 1.0f64;
     let time = Time::continuous(0.001, 10.0);
 
-    let mut input = Sinusoid::new(1.0, Duration::from_secs_f32(1.0), 0.0);
+    let mut input = Sinusoid::new(1.0f64, Duration::from_secs_f32(1.0), 0.0);
     let mut pid = PID::new(10.0, 1.0, 0.1);
-    let mut plant: SS<RK4> = ((k * s) / (s * s + a * k * s)).into();
+    let mut plant: SS<RK4, f64> = ((k * s) / (s * s + a * k * s)).into();
     let mut writer = Writter::new("output/dc_motor.csv", ["output"]);
     let mut plotter = RTPlotter::new("Real Time DC Motor".to_string());
 
@@ -48,9 +48,9 @@ fn test_rt_dc_motor() -> RTPlotter<2, Continuous> {
     plotter
 }
 
-fn test_dc_motor() -> Plotter<2, Continuous> {
-    let k = 1.0;
-    let a = 1.0;
+fn test_dc_motor() -> Plotter<2, f64, Continuous> {
+    let k = 1.0f64;
+    let a = 1.0f64;
     let time = Time::continuous(0.001, 10.0);
 
     let mut iae = IAE::default();
@@ -60,7 +60,7 @@ fn test_dc_motor() -> Plotter<2, Continuous> {
 
     let mut input = Sinusoid::new(1.0, Duration::from_secs_f32(1.0), 0.0);
     let mut pid = PID::new(10.0, 1.0, 0.1);
-    let mut plant: SS<RK4> = ((k * s) / (s * s + a * k * s)).into();
+    let mut plant: SS<RK4, f64> = ((k * s) / (s * s + a * k * s)).into();
 
     let mut writer = Writter::new("output/dc_motor.csv", ["output"]);
     let mut plotter = Plotter::new("DC Motor".to_string());
@@ -91,14 +91,14 @@ fn test_dc_motor() -> Plotter<2, Continuous> {
     plotter
 }
 
-pub fn error_metrics<T>(
-    iae: &IAE<T>,
-    ise: &ISE<T>,
-    itae: &ITAE<T>,
-    good_hart: &GoodHart<T>,
+pub fn error_metrics<K>(
+    iae: &IAE<f64, K>,
+    ise: &ISE<f64, K>,
+    itae: &ITAE<f64, K>,
+    good_hart: &GoodHart<f64, K>,
 ) -> String
 where
-    T: TimeType,
+    K: TimeType,
 {
     format!(
         "\n  IAE: {}\n  ISE: {}\n  ITAE: {}\n  Good Hart: {}",

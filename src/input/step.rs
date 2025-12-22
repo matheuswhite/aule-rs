@@ -1,21 +1,23 @@
-use core::marker::PhantomData;
-
 use crate::{block::Block, signal::Signal, time::TimeType};
+use core::marker::PhantomData;
+use num_traits::One;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
-pub struct Step<T>
+pub struct Step<T, K>
 where
-    T: TimeType,
+    T: One + Copy,
+    K: TimeType,
 {
-    value: f32,
-    _marker: PhantomData<T>,
+    value: T,
+    _marker: PhantomData<K>,
 }
 
-impl<T> Step<T>
+impl<T, K> Step<T, K>
 where
-    T: TimeType,
+    T: One + Copy,
+    K: TimeType,
 {
-    pub fn new(value: f32) -> Self {
+    pub fn new(value: T) -> Self {
         Step {
             value,
             _marker: PhantomData,
@@ -23,25 +25,27 @@ where
     }
 }
 
-impl<T> Default for Step<T>
+impl<T, K> Default for Step<T, K>
 where
-    T: TimeType,
+    T: One + Copy,
+    K: TimeType,
 {
     fn default() -> Self {
         Step {
-            value: 1.0,
+            value: T::one(),
             _marker: PhantomData,
         }
     }
 }
 
-impl<T> Block for Step<T>
+impl<T, K> Block for Step<T, K>
 where
-    T: TimeType,
+    T: One + Copy,
+    K: TimeType,
 {
     type Input = ();
-    type Output = f32;
-    type TimeType = T;
+    type Output = T;
+    type TimeType = K;
 
     fn output(
         &mut self,

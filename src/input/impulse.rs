@@ -1,21 +1,25 @@
 use core::marker::PhantomData;
 
+use num_traits::{Bounded, Zero};
+
 use crate::{block::Block, signal::Signal, time::TimeType};
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct Impulse<T>
+pub struct Impulse<T, K>
 where
-    T: TimeType,
+    T: Zero + Bounded,
+    K: TimeType,
 {
-    value: Option<f32>,
-    _marker: PhantomData<T>,
+    value: Option<T>,
+    _marker: PhantomData<K>,
 }
 
-impl<T> Impulse<T>
+impl<T, K> Impulse<T, K>
 where
-    T: TimeType,
+    T: Zero + Bounded,
+    K: TimeType,
 {
-    pub fn new(value: f32) -> Self {
+    pub fn new(value: T) -> Self {
         Impulse {
             value: Some(value),
             _marker: PhantomData,
@@ -23,42 +27,43 @@ where
     }
 }
 
-impl<T> Default for Impulse<T>
+impl<T, K> Default for Impulse<T, K>
 where
-    T: TimeType,
+    T: Zero + Bounded,
+    K: TimeType,
 {
     fn default() -> Self {
         Self {
-            value: Some(f32::MAX),
+            value: Some(T::max_value()),
             _marker: PhantomData,
         }
     }
 }
 
-impl<T> Block for Impulse<T>
+impl<T, K> Block for Impulse<T, K>
 where
-    T: TimeType,
+    T: Zero + Bounded,
+    K: TimeType,
 {
     type Input = ();
-    type Output = f32;
-    type TimeType = T;
+    type Output = T;
+    type TimeType = K;
 
     fn output(
         &mut self,
         input: Signal<Self::Input, Self::TimeType>,
     ) -> Signal<Self::Output, Self::TimeType> {
-        match self.value.take() {
-            Some(value) => {
-                self.value = None; // Reset value after output
-                Signal {
-                    value,
-                    delta: input.delta,
-                }
-            }
-            None => Signal {
-                value: 0.0,
+        let Some(value) = self.value.take() else {
+            return Signal {
+                value: T::zero(),
                 delta: input.delta,
-            }, // If no value is set, return 0.0
+            };
+        };
+
+        self.value = None;
+        Signal {
+            value,
+            delta: input.delta,
         }
     }
 }

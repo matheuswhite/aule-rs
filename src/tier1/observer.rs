@@ -4,33 +4,35 @@ use core::{
     fmt::{Debug, Display},
     marker::PhantomData,
 };
-use ndarray::Array2;
+use ndarray::{Array2, LinalgScalar};
+use num_traits::Zero;
 
 #[derive(Debug, Clone)]
-pub struct Observer<I, const N: usize, D>
+pub struct Observer<I, const N: usize, T, K>
 where
-    I: Solver + Debug,
-    D: TimeType,
+    T: Zero + Copy,
+    I: Solver<T> + Debug,
+    K: TimeType,
 {
-    a: Array2<f32>,
-    b: Array2<f32>,
-    c: Array2<f32>,
-    d: Array2<f32>,
-    l: Array2<f32>,
-    initial_state: Option<[f32; N]>,
-    current_input: (f32, f32), // (u, y)
-    state: Array2<f32>,
-    last_output: Option<(f32, [f32; N])>, // (y, x_hat)
-    _marker: PhantomData<I>,
-    _marker_time: PhantomData<D>,
+    a: Array2<T>,
+    b: Array2<T>,
+    c: Array2<T>,
+    d: Array2<T>,
+    l: Array2<T>,
+    initial_state: Option<[T; N]>,
+    current_input: (T, T), // (u, y)
+    state: Array2<T>,
+    last_output: Option<(T, [T; N])>, // (y, x_hat)
+    _marker: PhantomData<(I, K)>,
 }
 
-impl<I, const N: usize, D> Observer<I, N, D>
+impl<I, const N: usize, T, K> Observer<I, N, T, K>
 where
-    I: Solver + Debug,
-    D: TimeType,
+    T: Zero + Copy,
+    I: Solver<T> + Debug,
+    K: TimeType,
 {
-    pub fn new(a: Array2<f32>, b: [f32; N], c: [f32; N], d: f32, l: [f32; N]) -> Self {
+    pub fn new(a: Array2<T>, b: [T; N], c: [T; N], d: T, l: [T; N]) -> Self {
         let an = a.shape()[0];
         let am = a.shape()[1];
 
@@ -52,13 +54,12 @@ where
             state: Array2::zeros((N, 1)),
             initial_state: None,
             last_output: None,
-            current_input: (0.0, 0.0),
+            current_input: (T::zero(), T::zero()),
             _marker: PhantomData,
-            _marker_time: PhantomData,
         }
     }
 
-    pub fn with_initial_state(mut self, initial_state: [f32; N]) -> Self {
+    pub fn with_initial_state(mut self, initial_state: [T; N]) -> Self {
         let an = self.a.shape()[0];
         let xn = initial_state.len();
 
@@ -77,12 +78,13 @@ where
     }
 }
 
-impl<I, const N: usize, D> StateEstimation for Observer<I, N, D>
+impl<I, const N: usize, T, K> StateEstimation<T> for Observer<I, N, T, K>
 where
-    I: Solver + Debug,
-    D: TimeType,
+    T: Zero + Copy + LinalgScalar,
+    I: Solver<T> + Debug,
+    K: TimeType,
 {
-    fn estimate(&self, state: Array2<f32>) -> Array2<f32> {
+    fn estimate(&self, state: Array2<T>) -> Array2<T> {
         let input_matrix = Array2::from_elem((1, 1), self.current_input.0);
         let y_hat = self.c.dot(&state) + self.d.dot(&input_matrix);
         let y = Array2::from_elem((1, 1), self.current_input.1);
@@ -92,15 +94,15 @@ where
     }
 }
 
-impl<I, const N: usize, D> Block for Observer<I, N, D>
+impl<I, const N: usize, T, K> Block for Observer<I, N, T, K>
 where
-    I: Solver + Debug,
-    D: TimeType,
+    T: Zero + Copy + LinalgScalar,
+    I: Solver<T> + Debug,
+    K: TimeType,
 {
-    type Input = (f32, f32); // (u, y)
-    type Output = (f32, [f32; N]); // (y, x_hat)
-    type TimeType = D;
-
+    type Input = (T, T); // (u, y)
+    type Output = (T, [T; N]); // (y, x_hat)
+    type TimeType = K;
     fn output(
         &mut self,
         input: Signal<Self::Input, Self::TimeType>,
@@ -113,7 +115,7 @@ where
         let u = Array2::from_elem((1, 1), input.value.0);
         let y = self.c.dot(&self.state) + self.d.dot(&u);
         let output = (y[[0, 0]], {
-            let mut x_hat = [0.0; N];
+            let mut x_hat = [T::zero(); N];
             for (i, x) in x_hat.iter_mut().enumerate() {
                 *x = self.state[[i, 0]];
             }
@@ -139,14 +141,15 @@ where
             self.state = Array2::zeros((N, 1));
         }
         self.last_output = None;
-        self.current_input = (0.0, 0.0);
+        self.current_input = (T::zero(), T::zero());
     }
 }
 
-impl<I, const N: usize, D> Display for Observer<I, N, D>
+impl<I, const N: usize, T, K> Display for Observer<I, N, T, K>
 where
-    I: Solver + Debug,
-    D: TimeType,
+    T: Zero + Copy + Display,
+    I: Solver<T> + Debug,
+    K: TimeType,
 {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         write!(

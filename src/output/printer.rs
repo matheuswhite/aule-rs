@@ -5,22 +5,25 @@ use alloc::format;
 use alloc::string::String;
 use alloc::string::ToString;
 use alloc::vec::Vec;
+use core::fmt::Display;
 use core::marker::PhantomData;
 use std::println;
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct Printer<const N: usize, T>
+pub struct Printer<const N: usize, T, K>
 where
-    T: TimeType,
+    T: Display,
+    K: TimeType,
 {
     title: String,
     units: [String; N],
-    _marker: PhantomData<T>,
+    _marker: PhantomData<(T, K)>,
 }
 
-impl<const N: usize, T> Printer<N, T>
+impl<const N: usize, T, K> Printer<N, T, K>
 where
-    T: TimeType,
+    T: Display,
+    K: TimeType,
 {
     pub fn new(title: &str, units: [&str; N]) -> Self {
         Self {
@@ -31,13 +34,14 @@ where
     }
 }
 
-impl<const N: usize, T> Block for Printer<N, T>
+impl<const N: usize, T, K> Block for Printer<N, T, K>
 where
-    T: TimeType,
+    T: Display,
+    K: TimeType,
 {
-    type Input = [f32; N];
-    type Output = [f32; N];
-    type TimeType = T;
+    type Input = [T; N];
+    type Output = [T; N];
+    type TimeType = K;
 
     fn output(
         &mut self,

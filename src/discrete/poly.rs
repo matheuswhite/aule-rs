@@ -1,17 +1,23 @@
-use crate::discrete::{DTf, PolynomialInverse, z};
+use crate::discrete::{DTf, z};
 use alloc::format;
 use alloc::string::String;
 use alloc::vec::Vec;
 use core::{
     fmt::Display,
-    ops::{Add, Div, Mul, Neg, Sub},
+    ops::{Add, AddAssign, Div, Mul, Neg, Sub},
 };
+use num_traits::Float;
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct Polynomial(crate::poly::Polynomial);
+pub struct Polynomial<T>(crate::poly::Polynomial<T>)
+where
+    T: Float + Default + AddAssign<T>;
 
-impl Polynomial {
-    pub fn new(coeff: &[f32]) -> Self {
+impl<T> Polynomial<T>
+where
+    T: Float + Default + AddAssign<T>,
+{
+    pub fn new(coeff: &[T]) -> Self {
         Polynomial(crate::poly::Polynomial::new(coeff))
     }
 
@@ -27,151 +33,237 @@ impl Polynomial {
         self.0.degree()
     }
 
-    pub fn coeff(&self) -> &[f32] {
+    pub fn coeff(&self) -> &[T] {
         self.0.coeff()
     }
 
-    pub fn lead_coeff(&self) -> f32 {
+    pub fn lead_coeff(&self) -> T {
         self.0.lead_coeff()
     }
 
-    pub fn inner(&self) -> &crate::poly::Polynomial {
+    pub fn inner(&self) -> &crate::poly::Polynomial<T> {
         &self.0
     }
 }
 
-impl Add for Polynomial {
-    type Output = Polynomial;
+impl<T> Add for Polynomial<T>
+where
+    T: Float + Default + AddAssign<T>,
+{
+    type Output = Polynomial<T>;
 
     fn add(self, rhs: Self) -> Self::Output {
         Polynomial(self.0 + rhs.0)
     }
 }
 
-impl Sub for Polynomial {
-    type Output = Polynomial;
+impl<T> Sub for Polynomial<T>
+where
+    T: Float + Default + AddAssign<T>,
+{
+    type Output = Polynomial<T>;
 
     fn sub(self, rhs: Self) -> Self::Output {
         Polynomial(self.0 - rhs.0)
     }
 }
 
-impl Mul for Polynomial {
-    type Output = Polynomial;
+impl<T> Mul for Polynomial<T>
+where
+    T: Float + Default + AddAssign<T>,
+{
+    type Output = Polynomial<T>;
 
     fn mul(self, rhs: Self) -> Self::Output {
         Polynomial(self.0 * rhs.0)
     }
 }
 
-impl Div for Polynomial {
-    type Output = DTf;
+impl<T> Div for Polynomial<T>
+where
+    T: Float + Default + AddAssign<T>,
+{
+    type Output = DTf<T>;
 
     fn div(self, rhs: Self) -> Self::Output {
         DTf::new(self.coeff(), rhs.coeff())
     }
 }
 
-impl Neg for Polynomial {
-    type Output = Polynomial;
+impl<T> Neg for Polynomial<T>
+where
+    T: Float + Default + AddAssign<T>,
+{
+    type Output = Polynomial<T>;
 
     fn neg(self) -> Self::Output {
         Polynomial(-self.0)
     }
 }
 
+impl<T> Add<T> for Polynomial<T>
+where
+    T: Float + Default + AddAssign<T>,
+{
+    type Output = Polynomial<T>;
+
+    fn add(self, rhs: T) -> Self::Output {
+        self + Polynomial::from(rhs)
+    }
+}
+
+impl<T> Sub<T> for Polynomial<T>
+where
+    T: Float + Default + AddAssign<T>,
+{
+    type Output = Polynomial<T>;
+
+    fn sub(self, rhs: T) -> Self::Output {
+        self - Polynomial::from(rhs)
+    }
+}
+
+impl<T> Mul<T> for Polynomial<T>
+where
+    T: Float + Default + AddAssign<T>,
+{
+    type Output = Polynomial<T>;
+
+    fn mul(self, rhs: T) -> Self::Output {
+        self * Polynomial::from(rhs)
+    }
+}
+
+impl<T> Div<T> for Polynomial<T>
+where
+    T: Float + Default + AddAssign<T>,
+{
+    type Output = DTf<T>;
+
+    fn div(self, rhs: T) -> Self::Output {
+        self / Polynomial::from(rhs)
+    }
+}
+
+impl<T> Add<z> for Polynomial<T>
+where
+    T: Float + Default + AddAssign<T>,
+{
+    type Output = Polynomial<T>;
+
+    fn add(self, rhs: z) -> Self::Output {
+        self + Polynomial::from(rhs)
+    }
+}
+
+impl<T> Sub<z> for Polynomial<T>
+where
+    T: Float + Default + AddAssign<T>,
+{
+    type Output = Polynomial<T>;
+
+    fn sub(self, rhs: z) -> Self::Output {
+        self - Polynomial::from(rhs)
+    }
+}
+
+impl<T> Mul<z> for Polynomial<T>
+where
+    T: Float + Default + AddAssign<T>,
+{
+    type Output = Polynomial<T>;
+
+    fn mul(self, rhs: z) -> Self::Output {
+        self * Polynomial::from(rhs)
+    }
+}
+
+impl<T> Div<z> for Polynomial<T>
+where
+    T: Float + Default + AddAssign<T>,
+{
+    type Output = DTf<T>;
+
+    fn div(self, rhs: z) -> Self::Output {
+        self / Polynomial::from(rhs)
+    }
+}
+
 macro_rules! impl_poly_ops {
-    ($type:ty) => {
-        impl Add<$type> for Polynomial {
-            type Output = Polynomial;
+    ($type:ty, $poly_type:ty) => {
+        impl Add<Polynomial<$poly_type>> for $type {
+            type Output = Polynomial<$poly_type>;
 
-            fn add(self, rhs: $type) -> Self::Output {
-                self + Polynomial::from(rhs)
+            fn add(self, rhs: Polynomial<$poly_type>) -> Self::Output {
+                Polynomial::from(self as $poly_type) + rhs
             }
         }
 
-        impl Add<Polynomial> for $type {
-            type Output = Polynomial;
+        impl Sub<Polynomial<$poly_type>> for $type {
+            type Output = Polynomial<$poly_type>;
 
-            fn add(self, rhs: Polynomial) -> Self::Output {
-                Polynomial::from(self) + rhs
+            fn sub(self, rhs: Polynomial<$poly_type>) -> Self::Output {
+                Polynomial::from(self as $poly_type) - rhs
             }
         }
 
-        impl Sub<$type> for Polynomial {
-            type Output = Polynomial;
+        impl Mul<Polynomial<$poly_type>> for $type {
+            type Output = Polynomial<$poly_type>;
 
-            fn sub(self, rhs: $type) -> Self::Output {
-                self - Polynomial::from(rhs)
+            fn mul(self, rhs: Polynomial<$poly_type>) -> Self::Output {
+                Polynomial::from(self as $poly_type) * rhs
             }
         }
 
-        impl Sub<Polynomial> for $type {
-            type Output = Polynomial;
+        impl Div<Polynomial<$poly_type>> for $type {
+            type Output = DTf<$poly_type>;
 
-            fn sub(self, rhs: Polynomial) -> Self::Output {
-                Polynomial::from(self) - rhs
-            }
-        }
-
-        impl Mul<$type> for Polynomial {
-            type Output = Polynomial;
-
-            fn mul(self, rhs: $type) -> Self::Output {
-                self * Polynomial::from(rhs)
-            }
-        }
-
-        impl Mul<Polynomial> for $type {
-            type Output = Polynomial;
-
-            fn mul(self, rhs: Polynomial) -> Self::Output {
-                Polynomial::from(self) * rhs
-            }
-        }
-
-        impl Div<$type> for Polynomial {
-            type Output = DTf;
-
-            fn div(self, rhs: $type) -> Self::Output {
-                self / Polynomial::from(rhs)
-            }
-        }
-
-        impl Div<Polynomial> for $type {
-            type Output = DTf;
-
-            fn div(self, rhs: Polynomial) -> Self::Output {
-                Polynomial::from(self) / rhs
+            fn div(self, rhs: Polynomial<$poly_type>) -> Self::Output {
+                Polynomial::from(self as $poly_type) / rhs
             }
         }
     };
 }
 
-impl From<PolynomialInverse> for Polynomial {
-    fn from(value: PolynomialInverse) -> Self {
-        let coeff = value.coeff().iter().rev().cloned().collect::<Vec<f32>>();
-        Polynomial(crate::poly::Polynomial::new(coeff.as_slice()))
-    }
-}
+impl_poly_ops!(f32, f32);
+impl_poly_ops!(f64, f64);
 
-impl From<f32> for Polynomial {
-    fn from(value: f32) -> Self {
+impl_poly_ops!(u8, f64);
+impl_poly_ops!(u16, f64);
+impl_poly_ops!(u32, f64);
+impl_poly_ops!(u64, f64);
+impl_poly_ops!(usize, f64);
+impl_poly_ops!(u128, f64);
+
+impl_poly_ops!(i8, f64);
+impl_poly_ops!(i16, f64);
+impl_poly_ops!(i32, f64);
+impl_poly_ops!(i64, f64);
+impl_poly_ops!(isize, f64);
+impl_poly_ops!(i128, f64);
+
+impl<T> From<T> for Polynomial<T>
+where
+    T: Float + Default + AddAssign<T>,
+{
+    fn from(value: T) -> Self {
         Polynomial(crate::poly::Polynomial::new(&[value]))
     }
 }
 
-impl_poly_ops!(f32);
-
-impl From<z> for Polynomial {
+impl<T> From<z> for Polynomial<T>
+where
+    T: Float + Default + AddAssign<T>,
+{
     fn from(_value: z) -> Self {
-        Polynomial(crate::poly::Polynomial::new(&[1.0, 0.0]))
+        Polynomial(crate::poly::Polynomial::new(&[T::one(), T::zero()]))
     }
 }
 
-impl_poly_ops!(z);
-
-impl Display for Polynomial {
+impl<T> Display for Polynomial<T>
+where
+    T: Float + Default + AddAssign<T> + Display,
+{
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         let degree = self.degree();
         let string = self
@@ -203,7 +295,7 @@ mod test_f32_impl {
     fn test_f32_add() {
         let p1 = 5.0;
         let p2 = Polynomial::new(&[1.0, 2.0]);
-        let result = p1 + p2;
+        let result: Polynomial<f64> = p1 + p2;
         assert_eq!(result.coeff(), &[1.0, 7.0]);
         assert_eq!(result.degree(), 1);
     }
@@ -212,7 +304,7 @@ mod test_f32_impl {
     fn test_add_f32() {
         let p1 = Polynomial::new(&[1.0, 2.0]);
         let p2 = 5.0;
-        let result = p1 + p2;
+        let result: Polynomial<f64> = p1 + p2;
         assert_eq!(result.coeff(), &[1.0, 7.0]);
         assert_eq!(result.degree(), 1);
     }
@@ -221,7 +313,7 @@ mod test_f32_impl {
     fn test_f32_sub() {
         let p1 = 5.0;
         let p2 = Polynomial::new(&[1.0, 2.0]);
-        let result = p1 - p2;
+        let result: Polynomial<f64> = p1 - p2;
         assert_eq!(result.coeff(), &[-1.0, 3.0]);
         assert_eq!(result.degree(), 1);
     }
@@ -230,7 +322,7 @@ mod test_f32_impl {
     fn test_sub_f32() {
         let p1 = Polynomial::new(&[1.0, 2.0]);
         let p2 = 5.0;
-        let result = p1 - p2;
+        let result: Polynomial<f64> = p1 - p2;
         assert_eq!(result.coeff(), &[1.0, -3.0]);
         assert_eq!(result.degree(), 1);
     }
@@ -239,7 +331,7 @@ mod test_f32_impl {
     fn test_f32_mul() {
         let p1 = 2.0;
         let p2 = Polynomial::new(&[1.0, 2.0]);
-        let result = p1 * p2;
+        let result: Polynomial<f64> = p1 * p2;
         assert_eq!(result.coeff(), &[2.0, 4.0]);
         assert_eq!(result.degree(), 1);
     }

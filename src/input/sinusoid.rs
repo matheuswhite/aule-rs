@@ -1,22 +1,25 @@
 use crate::{block::Block, signal::Signal, time::TimeType};
-use core::{f32::consts::PI, marker::PhantomData, time::Duration};
+use core::{f32::consts::PI, marker::PhantomData, ops::Add, time::Duration};
+use num_traits::Float;
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct Sinusoid<T>
+pub struct Sinusoid<T, K>
 where
-    T: TimeType,
+    T: Float + Add<f64, Output = T>,
+    K: TimeType,
 {
-    amplitude: f32,
+    amplitude: T,
     period: Duration,
-    phase: f32,
-    _marker: PhantomData<T>,
+    phase: T,
+    _marker: PhantomData<K>,
 }
 
-impl<T> Sinusoid<T>
+impl<T, K> Sinusoid<T, K>
 where
-    T: TimeType,
+    T: Float + Add<f64, Output = T>,
+    K: TimeType,
 {
-    pub fn new(amplitude: f32, period: Duration, phase: f32) -> Self {
+    pub fn new(amplitude: T, period: Duration, phase: T) -> Self {
         Sinusoid {
             amplitude,
             period,
@@ -26,38 +29,39 @@ where
     }
 }
 
-impl<T> Default for Sinusoid<T>
+impl<T, K> Default for Sinusoid<T, K>
 where
-    T: TimeType,
+    T: Float + Add<f64, Output = T>,
+    K: TimeType,
 {
     fn default() -> Self {
         Self {
-            amplitude: 1.0,
+            amplitude: T::one(),
             period: Duration::from_secs_f32(2.0 * PI),
-            phase: 0.0,
+            phase: T::zero(),
             _marker: PhantomData,
         }
     }
 }
 
-impl<T> Block for Sinusoid<T>
+impl<T, K> Block for Sinusoid<T, K>
 where
-    T: TimeType,
+    T: Float + Add<f64, Output = T>,
+    K: TimeType,
 {
     type Input = ();
-    type Output = f32;
-    type TimeType = T;
+    type Output = T;
+    type TimeType = K;
 
     fn output(
         &mut self,
         input: Signal<Self::Input, Self::TimeType>,
     ) -> Signal<Self::Output, Self::TimeType> {
-        let t = input.delta.sim_time().as_secs_f32();
-        let value = self.amplitude * (t / self.period.as_secs_f32() + self.phase);
-        #[cfg(feature = "std")]
-        let value = value.sin();
-        #[cfg(not(feature = "std"))]
-        let value = libm::sin(value as f64) as f32;
+        let t = input.delta.sim_time().as_secs_f64();
+        let value = self.amplitude * (self.phase + t / self.period.as_secs_f64());
+        let value = libm::sin(value.to_f64().unwrap_or(0.0));
+        let value = T::from(value).unwrap_or(T::zero());
+
         Signal {
             value,
             delta: input.delta,

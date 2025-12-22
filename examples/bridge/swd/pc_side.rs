@@ -6,7 +6,7 @@ fn main() {
 
     let mut step = Step::default();
     let mut remote_pid = swd_conn.new_remote_block("pid1").unwrap();
-    let mut plant: SS<RK4> = Tf::new(&[1.0], &[1.0, 6.0, 11.0, 6.0]).into();
+    let mut plant: SS<RK4, f64> = Tf::new(&[1.0], &[1.0, 6.0, 11.0, 6.0]).into();
     let mut iae = IAE::default();
     let mut ise = ISE::default();
     let mut itae = ITAE::default();
@@ -15,14 +15,16 @@ fn main() {
 
     for dt in time {
         let input = dt * step.as_block();
-        let error =
-            (input - plant.last_output()) * iae.as_block() * ise.as_block() * itae.as_block();
+        let error = input - plant.last_output();
+        iae.output(error);
+        ise.output(error);
+        itae.output(error);
 
         let control_signal = remote_pid.output(error);
         let output = control_signal * plant.as_block();
 
         let _ = error.map(|e| (e, control_signal.value)) * good_hart.as_block();
-        let _ = input.map(|i| [i, output.value]) * plotter.as_block();
+        let _ = plotter.output(input.map(|i| [i, output.value]));
     }
 
     println!("IAE Value: {}", iae.value());

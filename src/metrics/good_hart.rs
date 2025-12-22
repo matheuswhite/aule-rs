@@ -1,24 +1,42 @@
-use core::marker::PhantomData;
-
 use crate::{block::Block, signal::Signal, time::TimeType};
 use alloc::vec::Vec;
+use core::{
+    iter::Sum,
+    marker::PhantomData,
+    ops::{Div, Mul, Sub},
+};
+use num_traits::{Signed, Zero};
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct GoodHart<T>
+pub struct GoodHart<T, K>
 where
-    T: TimeType,
+    T: Zero
+        + Signed
+        + Copy
+        + Div<f64, Output = T>
+        + Sub<Output = T>
+        + Mul<f64, Output = T>
+        + Sum<T>,
+    K: TimeType,
 {
-    error: Vec<f32>,
-    control_signal: Vec<f32>,
-    alphas: (f32, f32, f32),
-    _marker: PhantomData<T>,
+    error: Vec<T>,
+    control_signal: Vec<T>,
+    alphas: (f64, f64, f64),
+    _marker: PhantomData<K>,
 }
 
-impl<T> GoodHart<T>
+impl<T, K> GoodHart<T, K>
 where
-    T: TimeType,
+    T: Zero
+        + Signed
+        + Copy
+        + Div<f64, Output = T>
+        + Sub<Output = T>
+        + Mul<f64, Output = T>
+        + Sum<T>,
+    K: TimeType,
 {
-    pub fn new(alpha1: f32, alpha2: f32, alpha3: f32) -> Self {
+    pub fn new(alpha1: f64, alpha2: f64, alpha3: f64) -> Self {
         Self {
             error: Vec::new(),
             control_signal: Vec::new(),
@@ -27,28 +45,35 @@ where
         }
     }
 
-    pub fn value(&self) -> f32 {
+    pub fn value(&self) -> T {
         if self.error.is_empty() || self.control_signal.is_empty() {
-            return 0.0;
+            return T::zero();
         }
 
-        let n = self.error.len() as f32;
+        let n = self.error.len() as f64;
 
-        let e1 = self.control_signal.iter().sum::<f32>() / n;
-        let e2 = self.control_signal.iter().map(|u| u - e1).sum::<f32>() / n;
-        let e3 = self.error.iter().map(|e| e.abs()).sum::<f32>() / n;
+        let e1 = self.control_signal.iter().cloned().sum::<T>() / n;
+        let e2 = self.control_signal.iter().map(|u| *u - e1).sum::<T>() / n;
+        let e3 = self.error.iter().map(|e| e.abs()).sum::<T>() / n;
 
-        self.alphas.0 * e1 + self.alphas.1 * e2 + self.alphas.2 * e3
+        e1 * self.alphas.0 + e2 * self.alphas.1 + e3 * self.alphas.2
     }
 }
 
-impl<T> Block for GoodHart<T>
+impl<T, K> Block for GoodHart<T, K>
 where
-    T: TimeType,
+    T: Zero
+        + Signed
+        + Copy
+        + Div<f64, Output = T>
+        + Sub<Output = T>
+        + Mul<f64, Output = T>
+        + Sum<T>,
+    K: TimeType,
 {
-    type Input = (f32, f32);
-    type Output = (f32, f32);
-    type TimeType = T;
+    type Input = (T, T);
+    type Output = (T, T);
+    type TimeType = K;
 
     fn output(
         &mut self,

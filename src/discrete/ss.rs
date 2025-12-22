@@ -4,20 +4,27 @@ use crate::time::Discrete;
 use alloc::vec;
 use alloc::vec::Vec;
 use core::fmt::Display;
-use ndarray::Array2;
+use ndarray::{Array2, LinalgScalar};
+use num_traits::Zero;
 
-pub struct DSS {
-    a: Array2<f32>,
-    b: Array2<f32>,
-    c: Array2<f32>,
-    d: Array2<f32>,
-    initial_state: Option<Vec<f32>>,
-    state: Array2<f32>,
-    last_output: Option<f32>,
+pub struct DSS<T>
+where
+    T: Copy + Zero,
+{
+    a: Array2<T>,
+    b: Array2<T>,
+    c: Array2<T>,
+    d: Array2<T>,
+    initial_state: Option<Vec<T>>,
+    state: Array2<T>,
+    last_output: Option<T>,
 }
 
-impl DSS {
-    pub fn new(a: Array2<f32>, b: Vec<f32>, c: Vec<f32>, d: f32) -> Self {
+impl<T> DSS<T>
+where
+    T: Copy + Zero,
+{
+    pub fn new(a: Array2<T>, b: Vec<T>, c: Vec<T>, d: T) -> Self {
         let an = a.shape()[0];
         let am = a.shape()[1];
         let bn = b.len();
@@ -44,7 +51,7 @@ impl DSS {
         }
     }
 
-    pub fn with_initial_state(mut self, initial_state: Vec<f32>) -> Self {
+    pub fn with_initial_state(mut self, initial_state: Vec<T>) -> Self {
         let an = self.a.shape()[0];
         let xn = initial_state.len();
 
@@ -59,9 +66,12 @@ impl DSS {
     }
 }
 
-impl Block for DSS {
-    type Input = f32;
-    type Output = f32;
+impl<T> Block for DSS<T>
+where
+    T: Copy + Zero + LinalgScalar,
+{
+    type Input = T;
+    type Output = T;
     type TimeType = Discrete;
 
     fn output(
@@ -86,13 +96,16 @@ impl Block for DSS {
             let xn = initial_state.len();
             self.state = Array2::from_shape_vec((xn, 1), initial_state.clone()).unwrap();
         } else {
-            self.state.fill(0.0);
+            self.state.fill(T::zero());
         }
         self.last_output = None;
     }
 }
 
-impl Display for DSS {
+impl<T> Display for DSS<T>
+where
+    T: Copy + Zero + Display,
+{
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         write!(
             f,

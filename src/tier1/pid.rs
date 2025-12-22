@@ -2,89 +2,112 @@ use crate::block::Block;
 use crate::signal::Signal;
 use crate::time::TimeType;
 use core::marker::PhantomData;
+use core::ops::{Div, Mul, Sub};
+use num_traits::{Zero, clamp};
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct PID<TT>
+pub struct PID<T, K>
 where
-    TT: TimeType,
+    T: Zero
+        + Copy
+        + Mul<f64, Output = T>
+        + Mul<Output = T>
+        + Sub<Output = T>
+        + Div<f64, Output = T>
+        + PartialOrd,
+    K: TimeType,
 {
-    kp: f32,
-    ki: f32,
-    kd: f32,
-    last_input: f32,
-    last_integral: f32,
-    last_output: Option<f32>,
-    anti_windup: Option<(f32, f32)>,
-    _marker: PhantomData<TT>,
+    kp: T,
+    ki: T,
+    kd: T,
+    last_input: T,
+    last_integral: T,
+    last_output: Option<T>,
+    anti_windup: Option<(T, T)>,
+    _marker: PhantomData<K>,
 }
 
-impl<TT> PID<TT>
+impl<T, K> PID<T, K>
 where
-    TT: TimeType + Default,
+    T: Zero
+        + Copy
+        + Mul<f64, Output = T>
+        + Mul<Output = T>
+        + Sub<Output = T>
+        + Div<f64, Output = T>
+        + PartialOrd,
+    K: TimeType + Default,
 {
-    pub fn new(kp: f32, ki: f32, kd: f32) -> Self {
+    pub fn new(kp: T, ki: T, kd: T) -> Self {
         PID {
             kp,
             ki,
             kd,
-            last_input: 0.0,
-            last_integral: 0.0,
+            last_input: T::zero(),
+            last_integral: T::zero(),
             last_output: None,
             anti_windup: None,
             _marker: PhantomData,
         }
     }
 
-    pub fn with_anti_windup(mut self, min: f32, max: f32) -> Self {
+    pub fn with_anti_windup(mut self, min: T, max: T) -> Self {
         self.anti_windup = Some((min, max));
         self
     }
 
     pub fn clear_integral(&mut self) {
-        self.last_integral = 0.0;
+        self.last_integral = T::zero();
     }
 
-    pub fn integral(&self) -> f32 {
-        self.last_integral
+    pub fn integral(&self) -> &T {
+        &self.last_integral
     }
 
-    pub fn error(&self) -> f32 {
-        self.last_input
+    pub fn error(&self) -> &T {
+        &self.last_input
     }
 
-    pub fn kp_mut(&mut self) -> &mut f32 {
+    pub fn kp_mut(&mut self) -> &mut T {
         &mut self.kp
     }
 
-    pub fn ki_mut(&mut self) -> &mut f32 {
+    pub fn ki_mut(&mut self) -> &mut T {
         &mut self.ki
     }
 
-    pub fn kd_mut(&mut self) -> &mut f32 {
+    pub fn kd_mut(&mut self) -> &mut T {
         &mut self.kd
     }
 }
 
-impl<TT> Block for PID<TT>
+impl<T, K> Block for PID<T, K>
 where
-    TT: TimeType + 'static,
+    T: Zero
+        + Copy
+        + Mul<f64, Output = T>
+        + Mul<Output = T>
+        + Sub<Output = T>
+        + Div<f64, Output = T>
+        + PartialOrd,
+    K: TimeType + 'static,
 {
-    type Input = f32;
-    type Output = f32;
-    type TimeType = TT;
+    type Input = T;
+    type Output = T;
+    type TimeType = K;
 
     fn output(
         &mut self,
         input: Signal<Self::Input, Self::TimeType>,
     ) -> Signal<Self::Output, Self::TimeType> {
         let proportional = input.value;
-        let integral = self.last_integral + input.value * input.delta.dt().as_secs_f32();
-        let derivative = (input.value - self.last_input) / input.delta.dt().as_secs_f32();
+        let integral = self.last_integral + input.value * input.delta.dt().as_secs_f64();
+        let derivative = (input.value - self.last_input) / input.delta.dt().as_secs_f64();
 
         let output = self.kp * proportional + self.ki * integral + self.kd * derivative;
         let (output, integral) = if let Some((min, max)) = self.anti_windup {
             if output < min || output > max {
-                (output.clamp(min, max), self.last_integral)
+                (clamp(output, min, max), self.last_integral)
             } else {
                 (output, integral)
             }
@@ -106,8 +129,8 @@ where
     }
 
     fn reset(&mut self) {
-        self.last_input = 0.0;
-        self.last_integral = 0.0;
+        self.last_input = T::zero();
+        self.last_integral = T::zero();
         self.last_output = None;
     }
 }

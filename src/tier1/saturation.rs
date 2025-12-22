@@ -5,25 +5,25 @@ use crate::signal::Signal;
 use crate::time::TimeType;
 
 #[derive(Debug, Clone)]
-pub struct Saturation<T, D>
+pub struct Saturation<T, K>
 where
     T: Ord + Clone,
-    D: TimeType,
+    K: TimeType,
 {
     min: T,
     max: T,
     last_output: Option<T>,
-    _marker: PhantomData<D>,
+    _marker: PhantomData<K>,
 }
 
-impl<T, D> Block for Saturation<T, D>
+impl<T, K> Block for Saturation<T, K>
 where
     T: Ord + Clone,
-    D: TimeType,
+    K: TimeType,
 {
     type Input = T;
     type Output = T;
-    type TimeType = D;
+    type TimeType = K;
 
     fn output(
         &mut self,

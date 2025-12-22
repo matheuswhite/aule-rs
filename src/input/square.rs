@@ -1,22 +1,26 @@
+use num_traits::{One, Zero};
+
 use crate::{block::Block, signal::Signal, time::TimeType};
 use core::{f32::consts::PI, marker::PhantomData, time::Duration};
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct Square<T>
+pub struct Square<T, K>
 where
-    T: TimeType,
+    T: Zero + One + Copy,
+    K: TimeType,
 {
-    amplitude: f32,
+    amplitude: T,
     period: Duration,
-    offset: f32,
-    _marker: PhantomData<T>,
+    offset: T,
+    _marker: PhantomData<K>,
 }
 
-impl<T> Square<T>
+impl<T, K> Square<T, K>
 where
-    T: TimeType,
+    T: Zero + One + Copy,
+    K: TimeType,
 {
-    pub fn new(amplitude: f32, period: Duration, offset: f32) -> Self {
+    pub fn new(amplitude: T, period: Duration, offset: T) -> Self {
         Square {
             amplitude,
             period,
@@ -26,27 +30,29 @@ where
     }
 }
 
-impl<T> Default for Square<T>
+impl<T, K> Default for Square<T, K>
 where
-    T: TimeType,
+    T: Zero + One + Copy,
+    K: TimeType,
 {
     fn default() -> Self {
         Self {
-            amplitude: 1.0,
+            amplitude: T::one(),
             period: Duration::from_secs_f32(2.0 * PI),
-            offset: 0.0,
+            offset: T::zero(),
             _marker: PhantomData,
         }
     }
 }
 
-impl<T> Block for Square<T>
+impl<T, K> Block for Square<T, K>
 where
-    T: TimeType,
+    T: Zero + One + Copy,
+    K: TimeType,
 {
     type Input = ();
-    type Output = f32;
-    type TimeType = T;
+    type Output = T;
+    type TimeType = K;
 
     fn output(
         &mut self,
@@ -58,7 +64,7 @@ where
         let value = if (t % period_secs) < (period_secs / 2.0) {
             self.amplitude
         } else {
-            0.0
+            T::zero()
         } + self.offset;
 
         Signal {
