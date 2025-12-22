@@ -64,7 +64,7 @@ pub mod prelude {
     pub use crate::output::printer::Printer;
     #[cfg(feature = "std")]
     pub use crate::output::writer::Writter;
-    pub use crate::signal::{IgnoreOutput, Signal};
+    pub use crate::signal::Signal;
     #[cfg(all(feature = "alloc", feature = "swd"))]
     pub use crate::tier1::bridge::{BridgeSwdDown, BridgeSwdUp, RemoteSwd, SwdConnection};
     #[cfg(feature = "alloc")]
@@ -88,8 +88,7 @@ mod tests {
 
         for dt in time {
             let r = step.output(dt);
-            let y = pid.output(r);
-            let _ = (r, y);
+            let _y = pid.output(r);
         }
     }
 }

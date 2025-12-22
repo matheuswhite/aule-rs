@@ -24,7 +24,7 @@ fn main() {
         let output = control_signal * plant.as_block();
 
         let _ = error.map(|e| (e, control_signal.value)) * good_hart.as_block();
-        let _ = plotter.output(input.map(|i| [i, output.value]));
+        plotter.output(input.map(|i| [i, output.value]));
     }
 
     println!("IAE Value: {}", iae.value());

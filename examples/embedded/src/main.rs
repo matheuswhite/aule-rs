@@ -42,7 +42,7 @@ fn main() -> ! {
         let output = plant.output(control_signal);
 
         let printer_input = input.map(|i| [i, output.value]);
-        let _ = printer.output(printer_input);
+        printer.output(printer_input);
     }
 
     println!("IAE Value: {}", iae.value());

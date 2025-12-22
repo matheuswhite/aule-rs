@@ -47,8 +47,8 @@ impl Block for Motor {
 
 fn main() {
     println!("Cleaning up previous output files...");
-    let _ = std::fs::remove_dir_all("output");
-    let _ = std::fs::create_dir_all("output");
+    std::fs::remove_dir_all("output").ok();
+    std::fs::create_dir_all("output").ok();
 
     println!("Running Open Loop Motor Simulation...");
     let plotter1 = open_loop_motor();
@@ -72,7 +72,7 @@ fn open_loop_motor() -> Plotter<1, f64, Continuous> {
         let input = dt * step.as_block();
         let output = input * motor.as_block() * writer.as_block();
 
-        output * plotter.as_block() * IgnoreOutput;
+        let _ = output * plotter.as_block();
     }
 
     plotter.display();
@@ -98,7 +98,7 @@ fn closed_loop_motor() -> Plotter<1, f64, Continuous> {
         let control_signal = error * pid.as_block();
         let output = control_signal * motor.as_block() * writer.as_block();
 
-        output * plotter.as_block() * IgnoreOutput;
+        let _ = output * plotter.as_block();
     }
 
     plotter.display();

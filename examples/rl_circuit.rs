@@ -38,8 +38,8 @@ impl Block for RlCircuit {
 
 fn main() {
     println!("Cleaning up previous output files...");
-    let _ = std::fs::remove_dir_all("output");
-    let _ = std::fs::create_dir_all("output");
+    std::fs::remove_dir_all("output").ok();
+    std::fs::create_dir_all("output").ok();
 
     println!("Running Open Loop RL Circuit Simulation...");
     open_loop_rl_circuit();
@@ -58,7 +58,7 @@ fn open_loop_rl_circuit() {
 
     for dt in time {
         let input = dt * step.as_block();
-        input * rl_circuit.as_block() * writer.as_block() * IgnoreOutput;
+        let _ = input * rl_circuit.as_block() * writer.as_block();
     }
 }
 
@@ -72,10 +72,9 @@ fn closed_loop_rl_circuit() {
 
     for dt in time {
         let input = dt * step.as_block();
-        (input - rl_circuit.last_output())
+        let _ = (input - rl_circuit.last_output())
             * pid.as_block()
             * rl_circuit.as_block()
-            * writer.as_block()
-            * IgnoreOutput;
+            * writer.as_block();
     }
 }

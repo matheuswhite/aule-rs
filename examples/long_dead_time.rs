@@ -22,7 +22,7 @@ fn open_loop() {
         let plant_output = reference * plant.as_block();
         let delayed_output = delay.output(plant_output);
 
-        delayed_output * plotter.as_block() * IgnoreOutput;
+        let _ = delayed_output * plotter.as_block();
     }
 
     plotter.display();
@@ -61,7 +61,7 @@ fn pi_controller() {
                     acc.delta = acc.delta.merge(v.delta);
                     acc
                 });
-        plotter.output(output) * IgnoreOutput;
+        plotter.output(output);
     }
 
     plotter.display();
@@ -106,7 +106,7 @@ fn smith_predictor() {
             .zip(without_predictor_output)
             .map(|(with, without)| [with, without]);
 
-        plotter.output(plotter_input) * IgnoreOutput;
+        plotter.output(plotter_input);
     }
 
     plotter.display();

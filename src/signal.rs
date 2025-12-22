@@ -2,8 +2,6 @@ use crate::time::Delta;
 use crate::{block::Block, time::TimeType};
 use core::ops::{Add, Div, Mul, Neg, Sub};
 
-pub struct IgnoreOutput;
-
 #[derive(Debug, Clone, PartialEq)]
 pub struct Signal<T, K>
 where
@@ -319,13 +317,4 @@ where
             .output(self.map(|value| [value]))
             .map(|arr| arr[0].clone())
     }
-}
-
-impl<I, K> Mul<IgnoreOutput> for Signal<I, K>
-where
-    K: TimeType,
-{
-    type Output = ();
-
-    fn mul(self, _rhs: IgnoreOutput) -> Self::Output {}
 }

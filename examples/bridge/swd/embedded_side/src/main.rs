@@ -32,7 +32,7 @@ fn main() -> ! {
     for dt in time {
         let error_signal = error.output(dt);
         let control_signal = error_signal * pid.as_block();
-        let _ = plant.output(control_signal);
+        plant.output(control_signal);
     }
 
     unreachable!();

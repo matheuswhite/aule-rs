@@ -129,7 +129,7 @@ where
     fn reset(&mut self) {
         self.data.clear();
         if let Some(child) = &mut self.child {
-            let _ = child.kill();
+            child.kill().ok();
             self.child = None;
         }
     }
@@ -186,7 +186,7 @@ where
 
     fn reset(&mut self) {
         if let Some(child) = &mut self.child {
-            let _ = child.kill();
+            child.kill().ok();
             self.child = None;
         }
     }
@@ -223,7 +223,7 @@ where
 {
     fn join(&mut self) {
         if let Some(child) = &mut self.child {
-            let _ = child.wait();
+            child.wait().ok();
         }
     }
 }
@@ -235,7 +235,7 @@ where
 {
     fn join(&mut self) {
         if let Some(child) = &mut self.child {
-            let _ = child.wait();
+            child.wait().ok();
         }
     }
 }
@@ -258,13 +258,23 @@ where
             .unwrap();
 
         let mut error = String::new();
-        let _ = child.stderr.as_mut().unwrap().read_to_string(&mut error);
+        child
+            .stderr
+            .as_mut()
+            .unwrap()
+            .read_to_string(&mut error)
+            .ok();
         if !error.is_empty() {
             return Err(error);
         }
 
         let mut output = String::new();
-        let _ = child.stdout.as_mut().unwrap().read_to_string(&mut output);
+        child
+            .stdout
+            .as_mut()
+            .unwrap()
+            .read_to_string(&mut output)
+            .ok();
         Ok(output)
     }
 }
@@ -287,13 +297,23 @@ where
             .unwrap();
 
         let mut error = String::new();
-        let _ = child.stderr.as_mut().unwrap().read_to_string(&mut error);
+        child
+            .stderr
+            .as_mut()
+            .unwrap()
+            .read_to_string(&mut error)
+            .ok();
         if !error.is_empty() {
             return Err(error);
         }
 
         let mut output = String::new();
-        let _ = child.stdout.as_mut().unwrap().read_to_string(&mut output);
+        child
+            .stdout
+            .as_mut()
+            .unwrap()
+            .read_to_string(&mut output)
+            .ok();
         Ok(output)
     }
 }
