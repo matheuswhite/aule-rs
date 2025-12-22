@@ -10,7 +10,7 @@ impl RlCircuit {
     pub fn new(r: f64, l: f64) -> Self {
         RlCircuit {
             last_output: None,
-            integrator: (1.0 / (l * s + r)).into(),
+            integrator: (1.0 / (l * s + r)).to_ss_controllable(RK4),
         }
     }
 }

@@ -30,30 +30,25 @@ where
             denominator: crate::continuous::poly::Polynomial::new(denominator),
         }
     }
-}
 
-impl<I, T> From<Tf<T>> for SS<I, T>
-where
-    T: Float + Default + AddAssign<T>,
-    I: Solver<T> + Debug,
-{
-    fn from(tf: Tf<T>) -> Self {
-        // Controllable Canonical Form
-
+    pub fn to_ss_controllable<I>(self, _integrator: I) -> SS<I, T>
+    where
+        I: Solver<T> + Debug,
+    {
         // safe because isn't empty
-        let n = tf.denominator.degree() as usize;
+        let n = self.denominator.degree() as usize;
         // safe because isn't empty
-        let m = tf.numerator.degree() as usize;
+        let m = self.numerator.degree() as usize;
 
-        let a0 = tf.denominator.lead_coeff();
-        let a = tf
+        let a0 = self.denominator.lead_coeff();
+        let a = self
             .denominator
             .coeff()
             .iter()
             .map(|x| *x / a0)
             .collect::<Vec<_>>();
 
-        let mut b = tf
+        let mut b = self
             .numerator
             .coeff()
             .iter()

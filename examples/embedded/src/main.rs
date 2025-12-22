@@ -23,7 +23,7 @@ fn main() -> ! {
 
     let mut step = Step::default();
     let mut pid = PID::new(40.0, 10.0, 10.00);
-    let mut plant: SS<RK4, f64> = Tf::new(&[1.0], &[1.0, 6.0, 11.0, 6.0]).into();
+    let mut plant = Tf::new(&[1.0], &[1.0, 6.0, 11.0, 6.0]).to_ss_controllable(RK4);
     let mut iae = IAE::default();
     let mut ise = ISE::default();
     let mut itae = ITAE::default();

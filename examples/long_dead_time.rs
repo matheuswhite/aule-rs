@@ -12,7 +12,7 @@ fn main() {
 fn open_loop() {
     let time = Time::continuous(1e-2, 400.0);
     let mut step = Step::default();
-    let mut plant: SS<RK4, f64> = (5.6 / (40.2f64 * s + 1.0)).into();
+    let mut plant = (5.6 / (40.2f64 * s + 1.0)).to_ss_controllable(RK4);
     let mut delay = Delay::new(Duration::from_secs_f32(93.9));
     let mut plotter = Plotter::new("[Long Dead Time] Open Loop".to_string());
 
@@ -36,7 +36,7 @@ fn pi_controller() {
     let kp = [0.06, 0.08, 0.1];
     let ti = 47.3;
     let mut controller = kp.map(|kp| PID::new(kp, kp / ti, 0.0));
-    let mut plant = kp.map(|_| SS::<RK4, f64>::from(5.6 / (40.2f64 * s + 1.0)));
+    let mut plant = kp.map(|_| (5.6 / (40.2f64 * s + 1.0)).to_ss_controllable(RK4));
     let mut delay = kp.map(|_| Delay::new(Duration::from_secs_f32(93.9)));
     let mut plotter = Plotter::new(format!("[Long Dead Time] PI {:?}", kp));
 
@@ -78,11 +78,11 @@ fn smith_predictor() {
     let ti = 40.2;
     let mut with_predictor = BlockCollection {
         controller: PID::new(kp, kp / ti, 0.0),
-        plant: SS::<RK4, f64>::from(5.6 / (40.2f64 * s + 1.0)),
+        plant: (5.6 / (40.2f64 * s + 1.0)).to_ss_controllable(RK4),
         delay: Delay::new(delay_value),
         smith_predictor: Some(SmithPredictorFiltered::new(
-            SS::<RK4, f64>::from(5.6 / (40.2f64 * s + 1.0)),
-            SS::<RK4, f64>::from(1.0 / (2.0f64 * s + 1.0)),
+            (5.6 / (40.2f64 * s + 1.0)).to_ss_controllable(RK4),
+            (1.0 / (2.0f64 * s + 1.0)).to_ss_controllable(RK4),
             delay_value,
         )),
     };
@@ -91,7 +91,7 @@ fn smith_predictor() {
     let ti = 47.3;
     let mut without_predictor = BlockCollection {
         controller: PID::new(kp, kp / ti, 0.0),
-        plant: SS::<RK4, f64>::from(5.6 / (40.2f64 * s + 1.0)),
+        plant: (5.6 / (40.2f64 * s + 1.0)).to_ss_controllable(RK4),
         delay: Delay::new(delay_value),
         smith_predictor: None,
     };

@@ -17,8 +17,8 @@ impl Motor {
             km,
             tau_l,
             last_output: None,
-            eletrical: (1.0 / (la * s + ra)).into(),
-            mechanical: (1.0 / (jm * s + fm)).into(),
+            eletrical: (1.0 / (la * s + ra)).to_ss_controllable(Euler),
+            mechanical: (1.0 / (jm * s + fm)).to_ss_controllable(Euler),
         }
     }
 }
