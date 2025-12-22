@@ -64,7 +64,7 @@ pub mod prelude {
     pub use crate::output::printer::Printer;
     #[cfg(feature = "std")]
     pub use crate::output::writer::Writter;
-    pub use crate::signal::Signal;
+    pub use crate::signal::{Pack, Signal, Unpack};
     #[cfg(all(feature = "alloc", feature = "swd"))]
     pub use crate::tier1::bridge::{BridgeSwdDown, BridgeSwdUp, RemoteSwd, SwdConnection};
     #[cfg(feature = "alloc")]

@@ -23,8 +23,8 @@ fn main() {
         let control_signal = error * pid.as_block();
         let output = control_signal * plant.as_block();
 
-        let _ = error.zip(control_signal) * good_hart.as_block();
-        let _ = input.zip(output).map(|(i, o)| [i, o]) * plotter.as_block() * writer.as_block();
+        let _ = (error, control_signal).pack() * good_hart.as_block();
+        let _ = [input, output].pack() * plotter.as_block() * writer.as_block();
     }
 
     println!("IAE Value: {}", iae.value());

@@ -1,6 +1,7 @@
 use num_traits::Zero;
 
 use crate::block::Block;
+use crate::signal::Unpack;
 use crate::time::TimeType;
 use crate::{prelude::Delay, signal::Signal};
 use core::ops::{Mul, Sub};
@@ -76,7 +77,7 @@ where
         &mut self,
         input: Signal<Self::Input, Self::TimeType>,
     ) -> Signal<Self::Output, Self::TimeType> {
-        let (control_signal, measured_output) = input.unzip();
+        let (control_signal, measured_output) = input.unpack();
 
         let predicted_output = self.process.output(control_signal);
         let delayed_predicted_output = self.delay.output(measured_output);
@@ -114,7 +115,7 @@ where
         &mut self,
         input: Signal<Self::Input, Self::TimeType>,
     ) -> Signal<Self::Output, Self::TimeType> {
-        let (control_signal, measured_output) = input.unzip();
+        let (control_signal, measured_output) = input.unpack();
 
         let predicted_output = self.process.output(control_signal);
         let delayed_predicted_output = self.delay.output(predicted_output);

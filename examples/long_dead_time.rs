@@ -102,10 +102,7 @@ fn smith_predictor() {
         let with_predictor_output = reference * with_predictor.as_block();
         let without_predictor_output = reference * without_predictor.as_block();
 
-        let plotter_input = with_predictor_output
-            .zip(without_predictor_output)
-            .map(|(with, without)| [with, without]);
-
+        let plotter_input = [with_predictor_output, without_predictor_output].pack();
         plotter.output(plotter_input);
     }
 
@@ -139,7 +136,8 @@ impl Block for BlockCollection {
 
             let plant_output = control_signal * self.plant.as_block();
             let delayed_output = plant_output * self.delay.as_block();
-            let _predicted_output = control_signal.zip(delayed_output) * smith_predictor.as_block();
+            let _predicted_output =
+                (control_signal, delayed_output).pack() * smith_predictor.as_block();
 
             delayed_output
         } else {

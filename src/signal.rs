@@ -49,32 +49,6 @@ where
             None
         }
     }
-
-    pub fn zip<U>(self, other: Signal<U, K>) -> Signal<(T, U), K> {
-        Signal {
-            value: (self.value, other.value),
-            delta: self.delta.merge(other.delta),
-        }
-    }
-}
-
-impl<U, V, K> Signal<(U, V), K>
-where
-    K: TimeType,
-{
-    pub fn unzip(self) -> (Signal<U, K>, Signal<V, K>) {
-        let (u, v) = self.value;
-        (
-            Signal {
-                value: u,
-                delta: self.delta,
-            },
-            Signal {
-                value: v,
-                delta: self.delta,
-            },
-        )
-    }
 }
 
 impl<T, K> Signal<Signal<T, K>, K>
@@ -316,5 +290,129 @@ where
         block
             .output(self.map(|value| [value]))
             .map(|arr| arr[0].clone())
+    }
+}
+
+pub trait Pack {
+    type Packed;
+    type TimeType: TimeType;
+
+    fn pack(self) -> Signal<Self::Packed, Self::TimeType>;
+}
+
+impl<T, K, const N: usize> Pack for [Signal<T, K>; N]
+where
+    T: Copy,
+    K: TimeType,
+{
+    type Packed = [T; N];
+    type TimeType = K;
+
+    fn pack(self) -> Signal<Self::Packed, Self::TimeType> {
+        let values = self.map(|signal| signal.value);
+        let deltas = self.map(|signal| signal.delta);
+        let merged_delta = deltas
+            .into_iter()
+            .fold(deltas[0], |acc, delta| acc.merge(delta));
+
+        Signal {
+            value: values,
+            delta: merged_delta,
+        }
+    }
+}
+
+impl<T, K> Pack for (Signal<T, K>, Signal<T, K>)
+where
+    T: Copy,
+    K: TimeType,
+{
+    type Packed = (T, T);
+    type TimeType = K;
+
+    fn pack(self) -> Signal<Self::Packed, Self::TimeType> {
+        let (signal_a, signal_b) = self;
+        let packed_value = (signal_a.value, signal_b.value);
+        let packed_delta = signal_a.delta.merge(signal_b.delta);
+
+        Signal {
+            value: packed_value,
+            delta: packed_delta,
+        }
+    }
+}
+
+impl<T, K> Pack for (Signal<T, K>, Signal<T, K>, Signal<T, K>)
+where
+    T: Copy,
+    K: TimeType,
+{
+    type Packed = (T, T, T);
+    type TimeType = K;
+
+    fn pack(self) -> Signal<Self::Packed, Self::TimeType> {
+        let (signal_a, signal_b, signal_c) = self;
+        let packed_value = (signal_a.value, signal_b.value, signal_c.value);
+        let packed_delta = signal_a.delta.merge(signal_b.delta).merge(signal_c.delta);
+
+        Signal {
+            value: packed_value,
+            delta: packed_delta,
+        }
+    }
+}
+
+pub trait Unpack {
+    type Unpacked;
+    type TimeType: TimeType;
+
+    fn unpack(self) -> Self::Unpacked;
+}
+
+impl<T, K> Unpack for Signal<(T, T), K>
+where
+    T: Copy,
+    K: TimeType,
+{
+    type Unpacked = (Signal<T, K>, Signal<T, K>);
+    type TimeType = K;
+
+    fn unpack(self) -> Self::Unpacked {
+        let Signal { value, delta } = self;
+        let (v1, v2) = value;
+        (Signal { value: v1, delta }, Signal { value: v2, delta })
+    }
+}
+
+impl<T, K> Unpack for Signal<(T, T, T), K>
+where
+    T: Copy,
+    K: TimeType,
+{
+    type Unpacked = (Signal<T, K>, Signal<T, K>, Signal<T, K>);
+    type TimeType = K;
+
+    fn unpack(self) -> Self::Unpacked {
+        let Signal { value, delta } = self;
+        let (v1, v2, v3) = value;
+        (
+            Signal { value: v1, delta },
+            Signal { value: v2, delta },
+            Signal { value: v3, delta },
+        )
+    }
+}
+
+impl<T, K, const N: usize> Unpack for Signal<[T; N], K>
+where
+    T: Copy,
+    K: TimeType,
+{
+    type Unpacked = [Signal<T, K>; N];
+    type TimeType = K;
+
+    fn unpack(self) -> Self::Unpacked {
+        let Signal { value, delta } = self;
+        value.map(|v| Signal { value: v, delta })
     }
 }

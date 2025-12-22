@@ -35,7 +35,7 @@ fn test_rt_dc_motor() -> RTPlotter<2, f64, Continuous> {
         let output = (signal - plant.last_output()) * pid.as_block() * plant.as_block();
         let output = output * writer.as_block();
 
-        let _ = signal.zip(output).map(|(sig, o)| [sig, o]) * plotter.as_block();
+        let _ = [signal, output].pack() * plotter.as_block();
 
         sleep(dt.delta.dt());
     }
@@ -72,10 +72,10 @@ fn test_dc_motor() -> Plotter<2, f64, Continuous> {
         let output = control_signal * plant.as_block();
 
         let _ = error * iae.as_block() * ise.as_block() * itae.as_block();
-        let _ = error.zip(control_signal) * good_hart.as_block();
+        let _ = (error, control_signal).pack() * good_hart.as_block();
 
         let _ = output * writer.as_block();
-        let _ = signal.zip(output).map(|(sig, o)| [sig, o]) * plotter.as_block();
+        let _ = [signal, output].pack() * plotter.as_block();
     }
 
     println!(
