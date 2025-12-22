@@ -1,11 +1,10 @@
-use num_traits::Zero;
-
 use crate::block::Block;
-use crate::signal::Unpack;
+use crate::signal::Pack;
 use crate::time::TimeType;
 use crate::{prelude::Delay, signal::Signal};
 use core::ops::{Mul, Sub};
 use core::time::Duration;
+use num_traits::Zero;
 
 pub struct SmithPredictor<T, P, K>
 where
@@ -29,6 +28,15 @@ where
     filter: F,
     delay: Delay<T, K>,
     last_output: Option<T>,
+}
+
+pub struct SmithPredictorInput<T, K>
+where
+    T: Zero + Copy + Mul<f64, Output = T> + Sub<Output = T>,
+    K: TimeType,
+{
+    pub control_signal: Signal<T, K>,
+    pub measured_output: Signal<T, K>,
 }
 
 impl<T, P, K> SmithPredictor<T, P, K>
@@ -69,7 +77,7 @@ where
     P: Block<Input = T, Output = T, TimeType = K>,
     K: TimeType,
 {
-    type Input = (T, T); // (u, y)
+    type Input = SmithPredictorInput<T, K>;
     type Output = T;
     type TimeType = K;
 
@@ -77,12 +85,10 @@ where
         &mut self,
         input: Signal<Self::Input, Self::TimeType>,
     ) -> Signal<Self::Output, Self::TimeType> {
-        let (control_signal, measured_output) = input.unpack();
+        let predicted_output = self.process.output(input.value.control_signal);
+        let delayed_predicted_output = self.delay.output(input.value.measured_output);
 
-        let predicted_output = self.process.output(control_signal);
-        let delayed_predicted_output = self.delay.output(measured_output);
-
-        let output_diff = measured_output - delayed_predicted_output;
+        let output_diff = input.value.measured_output - delayed_predicted_output;
 
         let output = predicted_output + output_diff;
         self.last_output = Some(output.value);
@@ -107,7 +113,7 @@ where
     F: Block<Input = T, Output = T, TimeType = K>,
     K: TimeType,
 {
-    type Input = (T, T); // (u, y)
+    type Input = SmithPredictorInput<T, K>;
     type Output = T;
     type TimeType = K;
 
@@ -115,12 +121,10 @@ where
         &mut self,
         input: Signal<Self::Input, Self::TimeType>,
     ) -> Signal<Self::Output, Self::TimeType> {
-        let (control_signal, measured_output) = input.unpack();
-
-        let predicted_output = self.process.output(control_signal);
+        let predicted_output = self.process.output(input.value.control_signal);
         let delayed_predicted_output = self.delay.output(predicted_output);
 
-        let output_diff = measured_output - delayed_predicted_output;
+        let output_diff = input.value.measured_output - delayed_predicted_output;
         let output_diff_filtered = self.filter.output(output_diff);
 
         let output = predicted_output + output_diff_filtered;
@@ -137,5 +141,27 @@ where
         self.filter.reset();
         self.delay.reset();
         self.last_output = None;
+    }
+}
+
+impl<T, K> Pack<SmithPredictorInput<T, K>> for (Signal<T, K>, Signal<T, K>)
+where
+    T: Zero + Copy + Mul<f64, Output = T> + Sub<Output = T>,
+    K: TimeType,
+{
+    type TimeType = K;
+
+    fn pack(self) -> Signal<SmithPredictorInput<T, K>, Self::TimeType> {
+        let control_signal = self.0;
+        let measured_output = self.1;
+        let delta = self.0.delta.merge(self.1.delta);
+
+        Signal {
+            value: SmithPredictorInput {
+                control_signal,
+                measured_output,
+            },
+            delta,
+        }
     }
 }

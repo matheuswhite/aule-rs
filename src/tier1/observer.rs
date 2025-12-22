@@ -1,4 +1,5 @@
 use crate::prelude::{Solver, StateEstimation};
+use crate::signal::{Pack, Unpack};
 use crate::{block::Block, signal::Signal, time::TimeType};
 use core::{
     fmt::{Debug, Display},
@@ -20,9 +21,9 @@ where
     d: Array2<T>,
     l: Array2<T>,
     initial_state: Option<[T; N]>,
-    current_input: (T, T), // (u, y)
+    current_input: ObserverInput<T, K>,
     state: Array2<T>,
-    last_output: Option<(T, [T; N])>, // (y, x_hat)
+    last_output: Option<ObserverOutput<T, N, K>>,
     _marker: PhantomData<(I, K)>,
 }
 
@@ -54,7 +55,7 @@ where
             state: Array2::zeros((N, 1)),
             initial_state: None,
             last_output: None,
-            current_input: (T::zero(), T::zero()),
+            current_input: ObserverInput::default(),
             _marker: PhantomData,
         }
     }
@@ -85,9 +86,9 @@ where
     K: TimeType,
 {
     fn estimate(&self, state: Array2<T>) -> Array2<T> {
-        let input_matrix = Array2::from_elem((1, 1), self.current_input.0);
+        let input_matrix = Array2::from_elem((1, 1), self.current_input.control_input);
         let y_hat = self.c.dot(&state) + self.d.dot(&input_matrix);
-        let y = Array2::from_elem((1, 1), self.current_input.1);
+        let y = Array2::from_elem((1, 1), self.current_input.measured_output);
         let y_err = y - y_hat;
 
         self.a.dot(&state) + self.b.dot(&input_matrix) + self.l.dot(&y_err)
@@ -100,8 +101,8 @@ where
     I: Solver<T> + Debug,
     K: TimeType,
 {
-    type Input = (T, T); // (u, y)
-    type Output = (T, [T; N]); // (y, x_hat)
+    type Input = ObserverInput<T, K>;
+    type Output = ObserverOutput<T, N, K>;
     type TimeType = K;
     fn output(
         &mut self,
@@ -109,29 +110,27 @@ where
     ) -> Signal<Self::Output, Self::TimeType> {
         let dt = input.delta.dt();
 
-        self.current_input = (input.value.0, input.value.1); // (u, y)
+        self.current_input = input.value.clone();
         self.state = I::integrate(self.state.clone(), dt, self);
 
-        let u = Array2::from_elem((1, 1), input.value.0);
+        let u = Array2::from_elem((1, 1), input.value.control_input);
         let y = self.c.dot(&self.state) + self.d.dot(&u);
-        let output = (y[[0, 0]], {
+
+        let output = ObserverOutput::new(y[[0, 0]], {
             let mut x_hat = [T::zero(); N];
             for (i, x) in x_hat.iter_mut().enumerate() {
                 *x = self.state[[i, 0]];
             }
             x_hat
         });
-        let output = Signal {
-            value: output,
-            delta: input.delta,
-        };
-        self.last_output = Some(output.value);
 
-        output
+        self.last_output = Some(output.clone());
+
+        input.map(|_| output)
     }
 
     fn last_output(&self) -> Option<Self::Output> {
-        self.last_output
+        self.last_output.clone()
     }
 
     fn reset(&mut self) {
@@ -141,7 +140,7 @@ where
             self.state = Array2::zeros((N, 1));
         }
         self.last_output = None;
-        self.current_input = (T::zero(), T::zero());
+        self.current_input = ObserverInput::default();
     }
 }
 
@@ -157,5 +156,100 @@ where
             "A: {}\n\tB: {}\n\tC: {}\n\tD: {}\n\tL: {}\n\tx: {}",
             self.a, self.b, self.c, self.d, self.l, self.state
         )
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct ObserverInput<T, K>
+where
+    T: Zero + Copy,
+    K: TimeType,
+{
+    pub control_input: T,
+    pub measured_output: T,
+    _marker: PhantomData<K>,
+}
+
+impl<T, K> Default for ObserverInput<T, K>
+where
+    T: Zero + Copy,
+    K: TimeType,
+{
+    fn default() -> Self {
+        ObserverInput {
+            control_input: T::zero(),
+            measured_output: T::zero(),
+            _marker: PhantomData,
+        }
+    }
+}
+
+impl<T, K> Pack<ObserverInput<T, K>> for (Signal<T, K>, Signal<T, K>)
+where
+    T: Zero + Copy,
+    K: TimeType,
+{
+    type TimeType = K;
+
+    fn pack(self) -> Signal<ObserverInput<T, K>, Self::TimeType> {
+        let control_input = self.0.value;
+        let measured_output = self.1.value;
+        let delta = self.0.delta.merge(self.1.delta);
+
+        Signal {
+            value: ObserverInput {
+                control_input,
+                measured_output,
+                _marker: PhantomData,
+            },
+            delta,
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct ObserverOutput<T, const N: usize, K>
+where
+    T: Zero + Copy,
+    K: TimeType,
+{
+    pub measured_output: T,
+    pub state_estimate: [T; N],
+    _marker: PhantomData<K>,
+}
+
+impl<T, const N: usize, K> ObserverOutput<T, N, K>
+where
+    T: Zero + Copy,
+    K: TimeType,
+{
+    pub fn new(measured_output: T, state_estimate: [T; N]) -> Self {
+        ObserverOutput {
+            measured_output,
+            state_estimate,
+            _marker: PhantomData,
+        }
+    }
+}
+
+impl<T, const N: usize, K> Unpack<(Signal<T, K>, Signal<[T; N], K>)>
+    for Signal<ObserverOutput<T, N, K>, K>
+where
+    T: Zero + Copy,
+    K: TimeType,
+{
+    type TimeType = K;
+
+    fn unpack(self) -> (Signal<T, K>, Signal<[T; N], K>) {
+        let measured_output_signal = Signal {
+            value: self.value.measured_output,
+            delta: self.delta,
+        };
+        let state_estimate_signal = Signal {
+            value: self.value.state_estimate,
+            delta: self.delta,
+        };
+
+        (measured_output_signal, state_estimate_signal)
     }
 }

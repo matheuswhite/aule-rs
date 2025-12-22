@@ -293,22 +293,20 @@ where
     }
 }
 
-pub trait Pack {
-    type Packed;
+pub trait Pack<P> {
     type TimeType: TimeType;
 
-    fn pack(self) -> Signal<Self::Packed, Self::TimeType>;
+    fn pack(self) -> Signal<P, Self::TimeType>;
 }
 
-impl<T, K, const N: usize> Pack for [Signal<T, K>; N]
+impl<T, K, const N: usize> Pack<[T; N]> for [Signal<T, K>; N]
 where
     T: Copy,
     K: TimeType,
 {
-    type Packed = [T; N];
     type TimeType = K;
 
-    fn pack(self) -> Signal<Self::Packed, Self::TimeType> {
+    fn pack(self) -> Signal<[T; N], Self::TimeType> {
         let values = self.map(|signal| signal.value);
         let deltas = self.map(|signal| signal.delta);
         let merged_delta = deltas
@@ -322,15 +320,14 @@ where
     }
 }
 
-impl<T, K> Pack for (Signal<T, K>, Signal<T, K>)
+impl<T, K> Pack<(T, T)> for (Signal<T, K>, Signal<T, K>)
 where
     T: Copy,
     K: TimeType,
 {
-    type Packed = (T, T);
     type TimeType = K;
 
-    fn pack(self) -> Signal<Self::Packed, Self::TimeType> {
+    fn pack(self) -> Signal<(T, T), Self::TimeType> {
         let (signal_a, signal_b) = self;
         let packed_value = (signal_a.value, signal_b.value);
         let packed_delta = signal_a.delta.merge(signal_b.delta);
@@ -342,15 +339,14 @@ where
     }
 }
 
-impl<T, K> Pack for (Signal<T, K>, Signal<T, K>, Signal<T, K>)
+impl<T, K> Pack<(T, T, T)> for (Signal<T, K>, Signal<T, K>, Signal<T, K>)
 where
     T: Copy,
     K: TimeType,
 {
-    type Packed = (T, T, T);
     type TimeType = K;
 
-    fn pack(self) -> Signal<Self::Packed, Self::TimeType> {
+    fn pack(self) -> Signal<(T, T, T), Self::TimeType> {
         let (signal_a, signal_b, signal_c) = self;
         let packed_value = (signal_a.value, signal_b.value, signal_c.value);
         let packed_delta = signal_a.delta.merge(signal_b.delta).merge(signal_c.delta);
@@ -362,37 +358,34 @@ where
     }
 }
 
-pub trait Unpack {
-    type Unpacked;
+pub trait Unpack<U> {
     type TimeType: TimeType;
 
-    fn unpack(self) -> Self::Unpacked;
+    fn unpack(self) -> U;
 }
 
-impl<T, K> Unpack for Signal<(T, T), K>
+impl<T, K> Unpack<(Signal<T, K>, Signal<T, K>)> for Signal<(T, T), K>
 where
     T: Copy,
     K: TimeType,
 {
-    type Unpacked = (Signal<T, K>, Signal<T, K>);
     type TimeType = K;
 
-    fn unpack(self) -> Self::Unpacked {
+    fn unpack(self) -> (Signal<T, K>, Signal<T, K>) {
         let Signal { value, delta } = self;
         let (v1, v2) = value;
         (Signal { value: v1, delta }, Signal { value: v2, delta })
     }
 }
 
-impl<T, K> Unpack for Signal<(T, T, T), K>
+impl<T, K> Unpack<(Signal<T, K>, Signal<T, K>, Signal<T, K>)> for Signal<(T, T, T), K>
 where
     T: Copy,
     K: TimeType,
 {
-    type Unpacked = (Signal<T, K>, Signal<T, K>, Signal<T, K>);
     type TimeType = K;
 
-    fn unpack(self) -> Self::Unpacked {
+    fn unpack(self) -> (Signal<T, K>, Signal<T, K>, Signal<T, K>) {
         let Signal { value, delta } = self;
         let (v1, v2, v3) = value;
         (
@@ -403,15 +396,14 @@ where
     }
 }
 
-impl<T, K, const N: usize> Unpack for Signal<[T; N], K>
+impl<T, K, const N: usize> Unpack<[Signal<T, K>; N]> for Signal<[T; N], K>
 where
     T: Copy,
     K: TimeType,
 {
-    type Unpacked = [Signal<T, K>; N];
     type TimeType = K;
 
-    fn unpack(self) -> Self::Unpacked {
+    fn unpack(self) -> [Signal<T, K>; N] {
         let Signal { value, delta } = self;
         value.map(|v| Signal { value: v, delta })
     }
