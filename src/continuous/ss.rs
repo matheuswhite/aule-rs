@@ -1,5 +1,5 @@
 use crate::{
-    block::Block, discrete::solver::StateEstimation, prelude::Solver, signal::Signal,
+    block::Block, continuous::solver::StateEstimation, prelude::Solver, signal::Signal,
     time::Continuous,
 };
 use alloc::vec;

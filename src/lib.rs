@@ -34,15 +34,15 @@ pub mod prelude {
     #[cfg(feature = "alloc")]
     pub use crate::continuous::Tf;
     #[cfg(feature = "alloc")]
+    pub use crate::continuous::solver::Solver;
+    #[cfg(feature = "alloc")]
+    pub use crate::continuous::solver::StateEstimation;
+    #[cfg(feature = "alloc")]
+    pub use crate::continuous::solver::euler::Euler;
+    #[cfg(feature = "alloc")]
+    pub use crate::continuous::solver::runge_kutta::RK4;
+    #[cfg(feature = "alloc")]
     pub use crate::continuous::ss::SS;
-    #[cfg(feature = "alloc")]
-    pub use crate::discrete::solver::Solver;
-    #[cfg(feature = "alloc")]
-    pub use crate::discrete::solver::StateEstimation;
-    #[cfg(feature = "alloc")]
-    pub use crate::discrete::solver::euler::Euler;
-    #[cfg(feature = "alloc")]
-    pub use crate::discrete::solver::runge_kutta::RK4;
     #[cfg(feature = "alloc")]
     pub use crate::discrete::ss::DSS;
     #[cfg(feature = "alloc")]

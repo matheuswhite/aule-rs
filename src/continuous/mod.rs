@@ -1,5 +1,6 @@
 pub mod poly;
 pub mod s_var;
+pub mod solver;
 pub mod ss;
 pub mod tf;
 

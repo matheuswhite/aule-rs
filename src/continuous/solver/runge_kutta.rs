@@ -1,4 +1,4 @@
-use crate::{discrete::solver::StateEstimation, prelude::Solver};
+use crate::{continuous::solver::StateEstimation, prelude::Solver};
 use core::time::Duration;
 use ndarray::Array2;
 
