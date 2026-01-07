@@ -1,13 +1,13 @@
-use core::marker::PhantomData;
-
 use crate::block::Block;
 use crate::signal::Signal;
 use crate::time::TimeType;
+use core::marker::PhantomData;
+use num_traits::Float;
 
 #[derive(Debug, Clone)]
 pub struct Saturation<T, K>
 where
-    T: Ord + Clone,
+    T: Float,
     K: TimeType,
 {
     min: T,
@@ -16,9 +16,24 @@ where
     _marker: PhantomData<K>,
 }
 
+impl<T, K> Saturation<T, K>
+where
+    T: Float,
+    K: TimeType,
+{
+    pub fn new(min: T, max: T) -> Self {
+        Self {
+            min,
+            max,
+            last_output: None,
+            _marker: PhantomData,
+        }
+    }
+}
+
 impl<T, K> Block for Saturation<T, K>
 where
-    T: Ord + Clone,
+    T: Float,
     K: TimeType,
 {
     type Input = T;

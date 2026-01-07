@@ -5,6 +5,7 @@ fn main() {
 
     let mut step = Step::default();
     let mut pid = PID::new(40.0, 10.0, 10.00);
+    let mut saturation = Saturation::new(0.0, 15.0);
     let mut plant = Tf::new(&[1.0], &[1.0, 6.0, 11.0, 6.0]).to_ss_controllable(RK4);
     let mut writer = Writter::new("output/third_order_system.csv", ["input", "output"]);
     let mut iae = IAE::default();
@@ -21,6 +22,7 @@ fn main() {
         itae.output(error);
 
         let control_signal = error * pid.as_block();
+        let control_signal = control_signal * saturation.as_block();
         let output = control_signal * plant.as_block();
 
         let _ = (error, control_signal).pack() * good_hart.as_block();
