@@ -1,4 +1,4 @@
-use crate::{block::Block, discrete::PolynomialInverse, signal::Signal, time::Discrete};
+use crate::{block::Block, discrete::PolynomialInverse, signal::Signal};
 use alloc::vec;
 use alloc::vec::Vec;
 use core::ops::AddAssign;
@@ -65,12 +65,8 @@ where
 {
     type Input = T;
     type Output = T;
-    type TimeType = Discrete;
 
-    fn output(
-        &mut self,
-        input: Signal<Self::Input, Self::TimeType>,
-    ) -> Signal<Self::Output, Self::TimeType> {
+    fn output(&mut self, input: Signal<Self::Input>) -> Signal<Self::Output> {
         self.last_inputs.insert(0, input.value);
         self.last_inputs.pop();
 

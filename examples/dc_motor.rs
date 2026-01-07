@@ -19,10 +19,10 @@ fn main() {
     (rt_plotter, plotter).join_all();
 }
 
-fn test_rt_dc_motor() -> RTPlotter<2, f64, Continuous> {
+fn test_rt_dc_motor() -> RTPlotter<2, f64> {
     let k = 1.0f64;
     let a = 1.0f64;
-    let time = Time::continuous(0.001, 10.0);
+    let time = Time::new(0.001, 10.0);
 
     let mut input = Sinusoid::new(1.0f64, Duration::from_secs_f32(1.0), 0.0);
     let mut pid = PID::new(10.0, 1.0, 0.1);
@@ -48,10 +48,10 @@ fn test_rt_dc_motor() -> RTPlotter<2, f64, Continuous> {
     plotter
 }
 
-fn test_dc_motor() -> Plotter<2, f64, Continuous> {
+fn test_dc_motor() -> Plotter<2, f64> {
     let k = 1.0f64;
     let a = 1.0f64;
-    let time = Time::continuous(0.001, 10.0);
+    let time = Time::new(0.001, 10.0);
 
     let mut iae = IAE::default();
     let mut ise = ISE::default();
@@ -91,15 +91,12 @@ fn test_dc_motor() -> Plotter<2, f64, Continuous> {
     plotter
 }
 
-pub fn error_metrics<K>(
-    iae: &IAE<f64, K>,
-    ise: &ISE<f64, K>,
-    itae: &ITAE<f64, K>,
-    good_hart: &GoodHart<f64, K>,
-) -> String
-where
-    K: TimeType,
-{
+pub fn error_metrics(
+    iae: &IAE<f64>,
+    ise: &ISE<f64>,
+    itae: &ITAE<f64>,
+    good_hart: &GoodHart<f64>,
+) -> String {
     format!(
         "\n  IAE: {}\n  ISE: {}\n  ITAE: {}\n  Good Hart: {}",
         iae.value(),

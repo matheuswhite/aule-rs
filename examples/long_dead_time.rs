@@ -10,7 +10,7 @@ fn main() {
 }
 
 fn open_loop() {
-    let time = Time::continuous(1e-2, 400.0);
+    let time = Time::new(1e-2, 400.0);
     let mut step = Step::default();
     let mut plant = (5.6 / (40.2f64 * s + 1.0)).to_ss_controllable(RK4);
     let mut delay = Delay::new(Duration::from_secs_f32(93.9));
@@ -30,7 +30,7 @@ fn open_loop() {
 }
 
 fn pi_controller() {
-    let time = Time::continuous(1e-2, 2000.0);
+    let time = Time::new(1e-2, 2000.0);
     let mut step = Step::default();
 
     let kp = [0.06, 0.08, 0.1];
@@ -69,7 +69,7 @@ fn pi_controller() {
 }
 
 fn smith_predictor() {
-    let time = Time::continuous(1e-2, 700.0);
+    let time = Time::new(1e-2, 700.0);
     let mut step = Step::default();
     let mut plotter = Plotter::new("[Long Dead Time] Smith Predictor vs Pure PI".to_string());
     let delay_value = Duration::from_secs_f32(93.9);
@@ -110,25 +110,20 @@ fn smith_predictor() {
     plotter.join();
 }
 
-type SmithPredictorFilteredRK4 =
-    SmithPredictorFiltered<f64, SS<RK4, f64>, SS<RK4, f64>, Continuous>;
+type SmithPredictorFilteredRK4 = SmithPredictorFiltered<f64, SS<RK4, f64>, SS<RK4, f64>>;
 
 struct BlockCollection {
-    controller: PID<f64, Continuous>,
+    controller: PID<f64>,
     plant: SS<RK4, f64>,
-    delay: Delay<f64, Continuous>,
+    delay: Delay<f64>,
     smith_predictor: Option<SmithPredictorFilteredRK4>,
 }
 
 impl Block for BlockCollection {
     type Input = f64;
     type Output = f64;
-    type TimeType = Continuous;
 
-    fn output(
-        &mut self,
-        input: Signal<Self::Input, Self::TimeType>,
-    ) -> Signal<Self::Output, Self::TimeType> {
+    fn output(&mut self, input: Signal<Self::Input>) -> Signal<Self::Output> {
         if let Some(smith_predictor) = &mut self.smith_predictor {
             let preditor_last_output = smith_predictor.last_output();
             let error = input - preditor_last_output;

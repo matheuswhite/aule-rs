@@ -1,6 +1,5 @@
 use crate::block::Block;
 use crate::signal::Signal;
-use crate::time::TimeType;
 use alloc::format;
 use alloc::string::String;
 use alloc::string::ToString;
@@ -10,20 +9,18 @@ use core::marker::PhantomData;
 use std::println;
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct Printer<const N: usize, T, K>
+pub struct Printer<const N: usize, T>
 where
     T: Display,
-    K: TimeType,
 {
     title: String,
     units: [String; N],
-    _marker: PhantomData<(T, K)>,
+    _marker: PhantomData<T>,
 }
 
-impl<const N: usize, T, K> Printer<N, T, K>
+impl<const N: usize, T> Printer<N, T>
 where
     T: Display,
-    K: TimeType,
 {
     pub fn new(title: &str, units: [&str; N]) -> Self {
         Self {
@@ -34,19 +31,14 @@ where
     }
 }
 
-impl<const N: usize, T, K> Block for Printer<N, T, K>
+impl<const N: usize, T> Block for Printer<N, T>
 where
     T: Display,
-    K: TimeType,
 {
     type Input = [T; N];
     type Output = [T; N];
-    type TimeType = K;
 
-    fn output(
-        &mut self,
-        input: Signal<Self::Input, Self::TimeType>,
-    ) -> Signal<Self::Output, Self::TimeType> {
+    fn output(&mut self, input: Signal<Self::Input>) -> Signal<Self::Output> {
         let values = input
             .value
             .iter()

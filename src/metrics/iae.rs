@@ -1,25 +1,19 @@
-use crate::{block::Block, signal::Signal, time::TimeType};
-use core::{
-    marker::PhantomData,
-    ops::{AddAssign, Div},
-};
+use crate::{block::Block, signal::Signal};
+use core::ops::{AddAssign, Div};
 use num_traits::{Signed, Zero};
 
 #[derive(Debug, Clone, Default, PartialEq)]
-pub struct IAE<T, K>
+pub struct IAE<T>
 where
     T: Zero + Copy + Signed + Div<f64, Output = T> + AddAssign<T>,
-    K: TimeType,
 {
     acc: T,
     n: usize,
-    _marker: PhantomData<K>,
 }
 
-impl<T, K> IAE<T, K>
+impl<T> IAE<T>
 where
     T: Zero + Copy + Signed + Div<f64, Output = T> + AddAssign<T>,
-    K: TimeType,
 {
     pub fn value(&self) -> T {
         if self.n == 0 {
@@ -30,19 +24,14 @@ where
     }
 }
 
-impl<T, K> Block for IAE<T, K>
+impl<T> Block for IAE<T>
 where
     T: Zero + Copy + Signed + Div<f64, Output = T> + AddAssign<T>,
-    K: TimeType,
 {
     type Input = T;
     type Output = T;
-    type TimeType = K;
 
-    fn output(
-        &mut self,
-        input: Signal<Self::Input, Self::TimeType>,
-    ) -> Signal<Self::Output, Self::TimeType> {
+    fn output(&mut self, input: Signal<Self::Input>) -> Signal<Self::Output> {
         self.acc += input.value.abs();
         self.n += 1;
         input

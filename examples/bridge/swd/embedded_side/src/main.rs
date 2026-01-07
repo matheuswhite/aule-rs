@@ -18,7 +18,7 @@ fn main() -> ! {
 
     let mut swd_conn = SwdConnection::default();
 
-    let time = EndlessTime::continuous(1e-3);
+    let time = EndlessTime::new(1e-3);
     let mut pid = PID::new(40.0, 10.0, 10.0);
     let mut error = swd_conn.new_bridge_down("pid1").unwrap();
     let mut plant = swd_conn.new_bridge_up("pid1").unwrap();

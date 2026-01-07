@@ -18,12 +18,8 @@ impl RlCircuit {
 impl Block for RlCircuit {
     type Input = f64;
     type Output = f64;
-    type TimeType = Continuous;
 
-    fn output(
-        &mut self,
-        input: Signal<Self::Input, Self::TimeType>,
-    ) -> Signal<Self::Output, Self::TimeType> {
+    fn output(&mut self, input: Signal<Self::Input>) -> Signal<Self::Output> {
         let output = input * self.integrator.as_block();
 
         self.last_output = Some(output.value);
@@ -51,7 +47,7 @@ fn main() {
 }
 
 fn open_loop_rl_circuit() {
-    let time = Time::continuous(0.001, 0.2);
+    let time = Time::new(0.001, 0.2);
     let mut rl_circuit = RlCircuit::new(5.0, 0.05);
     let mut step = Step::default();
     let mut writer = Writter::new("output/open_loop_rl_circuit.csv", ["output"]);
@@ -63,7 +59,7 @@ fn open_loop_rl_circuit() {
 }
 
 fn closed_loop_rl_circuit() {
-    let time = Time::continuous(0.001, 0.2);
+    let time = Time::new(0.001, 0.2);
 
     let mut pid = PID::new(1.0, 0.0, 0.00);
     let mut rl_circuit = RlCircuit::new(5.0, 0.05);

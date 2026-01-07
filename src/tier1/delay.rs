@@ -1,6 +1,5 @@
 use crate::block::Block;
 use crate::signal::Signal;
-use crate::time::TimeType;
 use alloc::vec;
 use alloc::vec::Vec;
 use core::ops::Mul;
@@ -8,21 +7,19 @@ use core::time::Duration;
 use num_traits::Zero;
 
 #[derive(Clone, Debug)]
-pub struct Delay<T, K>
+pub struct Delay<T>
 where
     T: Zero + Copy + Mul<f64, Output = T>,
-    K: TimeType,
 {
     delay: Duration,
     initial_value: T,
-    input_buffer: Vec<Signal<T, K>>,
+    input_buffer: Vec<Signal<T>>,
     last_output: Option<T>,
 }
 
-impl<T, K> Delay<T, K>
+impl<T> Delay<T>
 where
     T: Zero + Copy + Mul<f64, Output = T>,
-    K: TimeType,
 {
     pub fn new(delay: Duration) -> Self {
         assert!(
@@ -38,7 +35,7 @@ where
         }
     }
 
-    pub fn with_initial_signal(mut self, initial_signal: Signal<T, K>) -> Self {
+    pub fn with_initial_signal(mut self, initial_signal: Signal<T>) -> Self {
         self.initial_value = initial_signal.value;
 
         if self.input_buffer.is_empty() {
@@ -62,19 +59,14 @@ where
     }
 }
 
-impl<T, K> Block for Delay<T, K>
+impl<T> Block for Delay<T>
 where
     T: Zero + Copy + Mul<f64, Output = T>,
-    K: TimeType,
 {
     type Input = T;
     type Output = T;
-    type TimeType = K;
 
-    fn output(
-        &mut self,
-        input: Signal<Self::Input, Self::TimeType>,
-    ) -> Signal<Self::Output, Self::TimeType> {
+    fn output(&mut self, input: Signal<Self::Input>) -> Signal<Self::Output> {
         let current_time = input.delta.sim_time();
 
         if self.input_buffer.is_empty() {
@@ -146,13 +138,13 @@ where
 
 #[cfg(all(test, feature = "std"))]
 mod tests {
-    use crate::{prelude::*, time::Continuous};
+    use crate::prelude::*;
     use alloc::vec::Vec;
     use core::time::Duration;
 
     #[test]
     fn test_delay_happy_way() {
-        let time = Time::continuous(1.0, 3.0);
+        let time = Time::new(1.0, 3.0);
         let mut delay = Delay::new(Duration::from_secs(2));
 
         let mut output_signals = Vec::new();
@@ -174,12 +166,12 @@ mod tests {
     #[test]
     #[should_panic(expected = "Delay duration must be greater than zero")]
     fn test_delay_zero_duration() {
-        let _delay = Delay::<f64, Continuous>::new(Duration::from_secs(0));
+        let _delay = Delay::<f64>::new(Duration::from_secs(0));
     }
 
     #[test]
     fn test_delay_half_dt() {
-        let mut time = Time::continuous(1.0, 6.0);
+        let mut time = Time::new(1.0, 6.0);
         let mut delay = Delay::new(Duration::from_secs(2));
 
         let mut input_signals = Vec::new();
@@ -220,7 +212,7 @@ mod tests {
 
     #[test]
     fn test_delay_large_dt() {
-        let mut time = Time::continuous(5.0, 10.0);
+        let mut time = Time::new(5.0, 10.0);
         let mut delay = Delay::new(Duration::from_secs(2));
         let mut input_signals = Vec::new();
 
@@ -267,17 +259,16 @@ mod tests {
 
     #[test]
     fn test_delay_large_dt_in_middle() {
-        let mut time = Time::continuous(5.0, 11.0);
+        let mut time = Time::new(5.0, 11.0);
         let mut delay = Delay::new(Duration::from_secs(2));
 
-        let large_input_signal =
-            |v, time: &mut Time<Continuous>| time.next().unwrap().map(|_| v as f64);
+        let large_input_signal = |v, time: &mut Time| time.next().unwrap().map(|_| v as f64);
 
         time.set_dt(1.0);
-        let input_signal = |v, time: &mut Time<Continuous>| time.next().unwrap().map(|_| v as f64);
+        let input_signal = |v, time: &mut Time| time.next().unwrap().map(|_| v as f64);
 
         time.set_dt(0.5);
-        let half_signal = |v, time: &mut Time<Continuous>| time.next().unwrap().map(|_| v as f64);
+        let half_signal = |v, time: &mut Time| time.next().unwrap().map(|_| v as f64);
 
         let mut output_signals = Vec::new();
         for i in 0..3 {

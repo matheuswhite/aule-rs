@@ -1,6 +1,5 @@
 use crate::block::Block;
 use crate::signal::Signal;
-use crate::time::TimeType;
 use alloc::vec::Vec;
 use core::marker::PhantomData;
 use num_traits::real::Real;
@@ -12,25 +11,23 @@ use std::string::String;
 use std::string::ToString;
 
 #[derive(Debug)]
-pub struct Plotter<const N: usize, T, K>
+pub struct Plotter<const N: usize, T>
 where
     T: Real + ToString,
-    K: TimeType,
 {
-    data: Vec<[Signal<T, K>; N]>,
+    data: Vec<[Signal<T>; N]>,
     child: Option<Child>,
     title: String,
 }
 
 #[derive(Debug)]
-pub struct RTPlotter<const N: usize, T, K>
+pub struct RTPlotter<const N: usize, T>
 where
     T: Real + ToString,
-    K: TimeType,
 {
     child: Option<Child>,
     title: String,
-    _marker: PhantomData<[(T, K); N]>,
+    _marker: PhantomData<[T; N]>,
 }
 
 pub trait Joinable {
@@ -41,10 +38,9 @@ pub trait Savable {
     fn save(&mut self, path: &str) -> Result<String, String>;
 }
 
-impl<const N: usize, T, K> Plotter<N, T, K>
+impl<const N: usize, T> Plotter<N, T>
 where
     T: Real + ToString,
-    K: TimeType,
 {
     pub fn new(title: String) -> Self {
         Self {
@@ -92,10 +88,9 @@ where
     }
 }
 
-impl<const N: usize, T, K> RTPlotter<N, T, K>
+impl<const N: usize, T> RTPlotter<N, T>
 where
     T: Real + ToString,
-    K: TimeType,
 {
     pub fn new(title: String) -> Self {
         Self {
@@ -106,19 +101,14 @@ where
     }
 }
 
-impl<const N: usize, T, K> Block for Plotter<N, T, K>
+impl<const N: usize, T> Block for Plotter<N, T>
 where
     T: Real + ToString,
-    K: TimeType,
 {
     type Input = [T; N];
     type Output = [T; N];
-    type TimeType = K;
 
-    fn output(
-        &mut self,
-        input: Signal<Self::Input, Self::TimeType>,
-    ) -> Signal<Self::Output, Self::TimeType> {
+    fn output(&mut self, input: Signal<Self::Input>) -> Signal<Self::Output> {
         self.data.push(input.value.map(|s| Signal {
             value: s,
             delta: input.delta,
@@ -135,19 +125,14 @@ where
     }
 }
 
-impl<const N: usize, T, K> Block for RTPlotter<N, T, K>
+impl<const N: usize, T> Block for RTPlotter<N, T>
 where
     T: Real + ToString,
-    K: TimeType,
 {
     type Input = [T; N];
     type Output = [T; N];
-    type TimeType = K;
 
-    fn output(
-        &mut self,
-        input: Signal<Self::Input, Self::TimeType>,
-    ) -> Signal<Self::Output, Self::TimeType> {
+    fn output(&mut self, input: Signal<Self::Input>) -> Signal<Self::Output> {
         if self.child.is_none() {
             let command = Command::new("iris")
                 .stdin(Stdio::piped())
@@ -192,10 +177,9 @@ where
     }
 }
 
-impl<const N: usize, T, K> Drop for Plotter<N, T, K>
+impl<const N: usize, T> Drop for Plotter<N, T>
 where
     T: Real + ToString,
-    K: TimeType,
 {
     fn drop(&mut self) {
         if let Some(child) = &mut self.child {
@@ -204,10 +188,9 @@ where
     }
 }
 
-impl<const N: usize, T, K> Drop for RTPlotter<N, T, K>
+impl<const N: usize, T> Drop for RTPlotter<N, T>
 where
     T: Real + ToString,
-    K: TimeType,
 {
     fn drop(&mut self) {
         if let Some(child) = &mut self.child {
@@ -216,10 +199,9 @@ where
     }
 }
 
-impl<const N: usize, T, K> Joinable for Plotter<N, T, K>
+impl<const N: usize, T> Joinable for Plotter<N, T>
 where
     T: Real + ToString,
-    K: TimeType,
 {
     fn join(&mut self) {
         if let Some(child) = &mut self.child {
@@ -228,10 +210,9 @@ where
     }
 }
 
-impl<const N: usize, T, K> Joinable for RTPlotter<N, T, K>
+impl<const N: usize, T> Joinable for RTPlotter<N, T>
 where
     T: Real + ToString,
-    K: TimeType,
 {
     fn join(&mut self) {
         if let Some(child) = &mut self.child {
@@ -240,10 +221,9 @@ where
     }
 }
 
-impl<const N: usize, T, K> Savable for Plotter<N, T, K>
+impl<const N: usize, T> Savable for Plotter<N, T>
 where
     T: Real + ToString,
-    K: TimeType,
 {
     fn save(&mut self, path: &str) -> Result<String, String> {
         let Some(child) = self.child.as_mut() else {
@@ -279,10 +259,9 @@ where
     }
 }
 
-impl<const N: usize, T, K> Savable for RTPlotter<N, T, K>
+impl<const N: usize, T> Savable for RTPlotter<N, T>
 where
     T: Real + ToString,
-    K: TimeType,
 {
     fn save(&mut self, path: &str) -> Result<String, String> {
         let Some(child) = self.child.as_mut() else {

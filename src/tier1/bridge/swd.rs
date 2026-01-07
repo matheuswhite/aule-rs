@@ -4,7 +4,7 @@ type BridgeId = [u8; 6];
 #[cfg(all(feature = "std", feature = "swd"))]
 pub mod std {
     use crate::tier1::bridge::swd::BridgeId;
-    use crate::{block::Block, signal::Signal, time::TimeType};
+    use crate::{block::Block, signal::Signal};
     use core::marker::PhantomData;
     use num_traits::{FromBytes, ToBytes};
     use probe_rs::probe::WireProtocol;
@@ -142,13 +142,12 @@ pub mod std {
             real_name
         }
 
-        pub fn new_bridge_down<T, K, const N: usize>(
+        pub fn new_bridge_down<T, const N: usize>(
             &mut self,
             name: &str,
-        ) -> Result<BridgeSwdDown<T, K, N>, String>
+        ) -> Result<BridgeSwdDown<T, N>, String>
         where
             T: Clone + ToBytes<Bytes = [u8; N]>,
-            K: TimeType,
         {
             let real_name = Self::build_real_name(name, true);
 
@@ -166,13 +165,12 @@ pub mod std {
             Ok(BridgeSwdDown::new(self.req_sender.clone(), real_name))
         }
 
-        pub fn new_bridge_up<T, K, const N: usize>(
+        pub fn new_bridge_up<T, const N: usize>(
             &mut self,
             name: &str,
-        ) -> Result<BridgeSwdUp<T, K, N>, String>
+        ) -> Result<BridgeSwdUp<T, N>, String>
         where
             T: Clone + FromBytes<Bytes = [u8; N]>,
-            K: TimeType,
         {
             let real_name = Self::build_real_name(name, false);
 
@@ -191,13 +189,12 @@ pub mod std {
             Ok(BridgeSwdUp::new(self.req_sender.clone(), rsp, real_name))
         }
 
-        pub fn new_remote_block<T, K, const N: usize>(
+        pub fn new_remote_block<T, const N: usize>(
             &mut self,
             name: &str,
-        ) -> Result<RemoteSwd<T, K, N>, String>
+        ) -> Result<RemoteSwd<T, N>, String>
         where
             T: Clone + ToBytes<Bytes = [u8; N]> + FromBytes<Bytes = [u8; N]>,
-            K: TimeType,
         {
             Ok(RemoteSwd::new(
                 self.new_bridge_down(name)?,
@@ -233,20 +230,18 @@ pub mod std {
         None
     }
 
-    pub struct BridgeSwdDown<T, K, const N: usize>
+    pub struct BridgeSwdDown<T, const N: usize>
     where
         T: Clone + ToBytes<Bytes = [u8; N]>,
-        K: TimeType,
     {
         req: Sender<SwdMessage>,
         name: BridgeId,
-        _marker: PhantomData<(T, K)>,
+        _marker: PhantomData<T>,
     }
 
-    impl<T, K, const N: usize> BridgeSwdDown<T, K, N>
+    impl<T, const N: usize> BridgeSwdDown<T, N>
     where
         T: Clone + ToBytes<Bytes = [u8; N]>,
-        K: TimeType,
     {
         fn new(req: Sender<SwdMessage>, name: BridgeId) -> Self {
             Self {
@@ -257,19 +252,14 @@ pub mod std {
         }
     }
 
-    impl<T, K, const N: usize> Block for BridgeSwdDown<T, K, N>
+    impl<T, const N: usize> Block for BridgeSwdDown<T, N>
     where
         T: Clone + ToBytes<Bytes = [u8; N]>,
-        K: TimeType,
     {
         type Input = T;
         type Output = ();
-        type TimeType = K;
 
-        fn output(
-            &mut self,
-            input: Signal<Self::Input, Self::TimeType>,
-        ) -> Signal<Self::Output, Self::TimeType> {
+        fn output(&mut self, input: Signal<Self::Input>) -> Signal<Self::Output> {
             let slice_data = input.value.to_be_bytes();
 
             self.req
@@ -283,21 +273,19 @@ pub mod std {
         }
     }
 
-    pub struct BridgeSwdUp<T, K, const N: usize>
+    pub struct BridgeSwdUp<T, const N: usize>
     where
         T: Clone + FromBytes<Bytes = [u8; N]>,
-        K: TimeType,
     {
         req: Sender<SwdMessage>,
         rsp: Receiver<SwdMessage>,
         name: BridgeId,
-        _marker: PhantomData<(T, K)>,
+        _marker: PhantomData<T>,
     }
 
-    impl<T, K, const N: usize> BridgeSwdUp<T, K, N>
+    impl<T, const N: usize> BridgeSwdUp<T, N>
     where
         T: Clone + FromBytes<Bytes = [u8; N]>,
-        K: TimeType,
     {
         fn new(req: Sender<SwdMessage>, rsp: Receiver<SwdMessage>, name: BridgeId) -> Self {
             Self {
@@ -309,19 +297,14 @@ pub mod std {
         }
     }
 
-    impl<T, K, const N: usize> Block for BridgeSwdUp<T, K, N>
+    impl<T, const N: usize> Block for BridgeSwdUp<T, N>
     where
         T: Clone + FromBytes<Bytes = [u8; N]>,
-        K: TimeType,
     {
         type Input = ();
         type Output = T;
-        type TimeType = K;
 
-        fn output(
-            &mut self,
-            input: Signal<Self::Input, Self::TimeType>,
-        ) -> Signal<Self::Output, Self::TimeType> {
+        fn output(&mut self, input: Signal<Self::Input>) -> Signal<Self::Output> {
             self.req
                 .send(SwdMessage::UpReq {
                     name: self.name,
@@ -340,38 +323,31 @@ pub mod std {
         }
     }
 
-    pub struct RemoteSwd<T, K, const N: usize>
+    pub struct RemoteSwd<T, const N: usize>
     where
         T: Clone + ToBytes<Bytes = [u8; N]> + FromBytes<Bytes = [u8; N]>,
-        K: TimeType,
     {
-        down: BridgeSwdDown<T, K, N>,
-        up: BridgeSwdUp<T, K, N>,
+        down: BridgeSwdDown<T, N>,
+        up: BridgeSwdUp<T, N>,
     }
 
-    impl<T, K, const N: usize> RemoteSwd<T, K, N>
+    impl<T, const N: usize> RemoteSwd<T, N>
     where
         T: Clone + ToBytes<Bytes = [u8; N]> + FromBytes<Bytes = [u8; N]>,
-        K: TimeType,
     {
-        fn new(down: BridgeSwdDown<T, K, N>, up: BridgeSwdUp<T, K, N>) -> Self {
+        fn new(down: BridgeSwdDown<T, N>, up: BridgeSwdUp<T, N>) -> Self {
             Self { down, up }
         }
     }
 
-    impl<T, K, const N: usize> Block for RemoteSwd<T, K, N>
+    impl<T, const N: usize> Block for RemoteSwd<T, N>
     where
         T: Clone + ToBytes<Bytes = [u8; N]> + FromBytes<Bytes = [u8; N]>,
-        K: TimeType,
     {
         type Input = T;
         type Output = T;
-        type TimeType = K;
 
-        fn output(
-            &mut self,
-            input: Signal<Self::Input, Self::TimeType>,
-        ) -> Signal<Self::Output, Self::TimeType> {
+        fn output(&mut self, input: Signal<Self::Input>) -> Signal<Self::Output> {
             let down_output = self.down.output(input);
             self.up.output(down_output)
         }
@@ -380,9 +356,9 @@ pub mod std {
 
 #[cfg(all(not(feature = "std"), feature = "swd"))]
 pub mod no_std {
-    use crate::{block::Block, signal::Signal, tier1::bridge::swd::BridgeId, time::TimeType};
+    use crate::{block::Block, signal::Signal, tier1::bridge::swd::BridgeId};
     use alloc::vec::Vec;
-    use core::{marker::PhantomData, ptr};
+    use core::ptr;
 
     #[derive(Default)]
     pub struct SwdConnection {
@@ -407,10 +383,9 @@ pub mod no_std {
             real_name
         }
 
-        pub fn new_bridge_down<T, K>(&mut self, name: &str) -> Result<BridgeSwdDown<T, K>, SwdError>
+        pub fn new_bridge_down<T>(&mut self, name: &str) -> Result<BridgeSwdDown<T>, SwdError>
         where
             T: Default,
-            K: TimeType,
         {
             let real_name = Self::build_real_name(name, true);
 
@@ -421,10 +396,9 @@ pub mod no_std {
             Ok(BridgeSwdDown::new(real_name))
         }
 
-        pub fn new_bridge_up<T, K>(&mut self, name: &str) -> Result<BridgeSwdUp<T, K>, SwdError>
+        pub fn new_bridge_up<T>(&mut self, name: &str) -> Result<BridgeSwdUp<T>, SwdError>
         where
             T: Default,
-            K: TimeType,
         {
             let real_name = Self::build_real_name(name, false);
 
@@ -435,10 +409,9 @@ pub mod no_std {
             Ok(BridgeSwdUp::new(real_name))
         }
 
-        pub fn new_remote_block<T, K>(&mut self, name: &str) -> Result<RemoteSwd<T, K>, SwdError>
+        pub fn new_remote_block<T>(&mut self, name: &str) -> Result<RemoteSwd<T>, SwdError>
         where
             T: Default,
-            K: TimeType,
         {
             Ok(RemoteSwd::new(
                 self.new_bridge_down(name)?,
@@ -449,28 +422,24 @@ pub mod no_std {
 
     #[repr(C)]
     #[repr(align(1))]
-    pub struct BridgeSwdDown<T, K>
+    pub struct BridgeSwdDown<T>
     where
         T: Default,
-        K: TimeType,
     {
         id: BridgeId,
         ready: bool,
         data: T,
-        _marker: PhantomData<K>,
     }
 
-    impl<T, K> BridgeSwdDown<T, K>
+    impl<T> BridgeSwdDown<T>
     where
         T: Default,
-        K: TimeType,
     {
         pub fn new(name: BridgeId) -> Self {
             Self {
                 id: name,
                 ready: false,
                 data: T::default(),
-                _marker: PhantomData,
             }
         }
 
@@ -483,19 +452,14 @@ pub mod no_std {
         }
     }
 
-    impl<T, K> Block for BridgeSwdDown<T, K>
+    impl<T> Block for BridgeSwdDown<T>
     where
         T: Default,
-        K: TimeType,
     {
         type Input = ();
         type Output = T;
-        type TimeType = K;
 
-        fn output(
-            &mut self,
-            input: Signal<Self::Input, Self::TimeType>,
-        ) -> Signal<Self::Output, Self::TimeType> {
+        fn output(&mut self, input: Signal<Self::Input>) -> Signal<Self::Output> {
             let ready_ptr: *mut bool = &mut self.ready;
             let data_ptr: *mut T = &mut self.data;
 
@@ -519,45 +483,36 @@ pub mod no_std {
 
     #[repr(C)]
     #[repr(align(1))]
-    pub struct BridgeSwdUp<T, K>
+    pub struct BridgeSwdUp<T>
     where
         T: Default,
-        K: TimeType,
     {
         id: BridgeId,
         ready: bool,
         data: T,
-        _marker: PhantomData<K>,
     }
 
-    impl<T, K> BridgeSwdUp<T, K>
+    impl<T> BridgeSwdUp<T>
     where
         T: Default,
-        K: TimeType,
     {
         pub fn new(name: BridgeId) -> Self {
             Self {
                 id: name,
                 ready: false,
                 data: T::default(),
-                _marker: PhantomData,
             }
         }
     }
 
-    impl<T, K> Block for BridgeSwdUp<T, K>
+    impl<T> Block for BridgeSwdUp<T>
     where
         T: Default + Clone,
-        K: TimeType,
     {
         type Input = T;
         type Output = ();
-        type TimeType = K;
 
-        fn output(
-            &mut self,
-            input: Signal<Self::Input, Self::TimeType>,
-        ) -> Signal<Self::Output, Self::TimeType> {
+        fn output(&mut self, input: Signal<Self::Input>) -> Signal<Self::Output> {
             self.data = input.value.clone();
             self.ready = true;
 
@@ -566,38 +521,31 @@ pub mod no_std {
     }
 
     #[repr(C)]
-    pub struct RemoteSwd<T, K>
+    pub struct RemoteSwd<T>
     where
         T: Default,
-        K: TimeType,
     {
-        down: BridgeSwdDown<T, K>,
-        up: BridgeSwdUp<T, K>,
+        down: BridgeSwdDown<T>,
+        up: BridgeSwdUp<T>,
     }
 
-    impl<T, K> RemoteSwd<T, K>
+    impl<T> RemoteSwd<T>
     where
         T: Default,
-        K: TimeType,
     {
-        pub fn new(down: BridgeSwdDown<T, K>, up: BridgeSwdUp<T, K>) -> Self {
+        pub fn new(down: BridgeSwdDown<T>, up: BridgeSwdUp<T>) -> Self {
             Self { down, up }
         }
     }
 
-    impl<T, K> Block for RemoteSwd<T, K>
+    impl<T> Block for RemoteSwd<T>
     where
         T: Default + Clone,
-        K: TimeType,
     {
         type Input = T;
         type Output = T;
-        type TimeType = K;
 
-        fn output(
-            &mut self,
-            input: Signal<Self::Input, Self::TimeType>,
-        ) -> Signal<Self::Output, Self::TimeType> {
+        fn output(&mut self, input: Signal<Self::Input>) -> Signal<Self::Output> {
             let up_output = self.up.output(input);
             self.down.output(up_output)
         }

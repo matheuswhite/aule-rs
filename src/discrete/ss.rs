@@ -1,6 +1,5 @@
 use crate::block::Block;
 use crate::signal::Signal;
-use crate::time::Discrete;
 use alloc::vec;
 use alloc::vec::Vec;
 use core::fmt::Display;
@@ -72,12 +71,8 @@ where
 {
     type Input = T;
     type Output = T;
-    type TimeType = Discrete;
 
-    fn output(
-        &mut self,
-        input: Signal<Self::Input, Self::TimeType>,
-    ) -> Signal<Self::Output, Self::TimeType> {
+    fn output(&mut self, input: Signal<Self::Input>) -> Signal<Self::Output> {
         let input_matrix = Array2::from_shape_vec((1, 1), vec![input.value]).unwrap();
         self.state = self.a.dot(&self.state) + self.b.dot(&input_matrix);
 

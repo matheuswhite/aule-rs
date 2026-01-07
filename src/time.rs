@@ -1,87 +1,42 @@
+use crate::signal::Signal;
 use core::{
     fmt::Debug,
-    marker::PhantomData,
     ops::{Add, AddAssign},
     time::Duration,
 };
 
-use crate::signal::Signal;
-
-pub trait TimeType: Debug + Clone + Copy + PartialEq {}
-
-#[derive(Debug, Clone, Copy, PartialEq, Default)]
-pub struct Continuous;
-impl TimeType for Continuous {}
-
-#[derive(Debug, Clone, Copy, PartialEq, Default)]
-pub struct Discrete;
-impl TimeType for Discrete {}
-
 #[derive(Debug, Clone, Copy, PartialEq)]
-pub struct Delta<K>
-where
-    K: TimeType,
-{
+pub struct Delta {
     dt: Duration,
     sim_time: Duration,
-    _marker: PhantomData<K>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct Time<K>
-where
-    K: TimeType,
-{
+pub struct Time {
     dt: Duration,
     sim_time: Duration,
     max_time: Duration,
-    _marker: PhantomData<K>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct EndlessTime<K>
-where
-    K: TimeType,
-{
+pub struct EndlessTime {
     dt: Duration,
     sim_time: Duration,
-    _marker: PhantomData<K>,
 }
 
-impl Time<Continuous> {
-    pub fn continuous(dt: f32, max_time: f32) -> Self {
+impl Time {
+    pub fn new(dt: f32, max_time: f32) -> Self {
         Self {
             dt: Duration::from_secs_f32(dt),
             sim_time: Duration::default(),
             max_time: Duration::from_secs_f32(max_time),
-            _marker: PhantomData,
         }
     }
 
     pub fn reset(&mut self) {
         self.sim_time = Duration::default();
     }
-}
 
-impl Time<Discrete> {
-    pub fn discrete(dt: f32, max_time: f32) -> Self {
-        Self {
-            dt: Duration::from_secs_f32(dt),
-            sim_time: Duration::default(),
-            max_time: Duration::from_secs_f32(max_time),
-            _marker: PhantomData,
-        }
-    }
-
-    pub fn reset(&mut self) {
-        self.sim_time = Duration::default();
-    }
-}
-
-impl<K> Time<K>
-where
-    K: TimeType,
-{
     pub fn max_time(&self) -> Duration {
         self.max_time
     }
@@ -91,39 +46,20 @@ where
     }
 }
 
-impl EndlessTime<Continuous> {
-    pub fn continuous(dt: f32) -> Self {
+impl EndlessTime {
+    pub fn new(dt: f32) -> Self {
         Self {
             dt: Duration::from_secs_f32(dt),
             sim_time: Duration::default(),
-            _marker: PhantomData,
         }
     }
-}
 
-impl EndlessTime<Discrete> {
-    pub fn discrete(dt: f32) -> Self {
-        EndlessTime {
-            dt: Duration::from_secs_f32(dt),
-            sim_time: Duration::default(),
-            _marker: PhantomData,
-        }
-    }
-}
-
-impl<K> EndlessTime<K>
-where
-    K: TimeType,
-{
     pub fn set_dt(&mut self, dt: f32) {
         self.dt = Duration::from_secs_f32(dt);
     }
 }
 
-impl<K> Delta<K>
-where
-    K: TimeType,
-{
+impl Delta {
     pub fn dt(&self) -> Duration {
         self.dt
     }
@@ -136,7 +72,6 @@ where
         Self {
             dt: self.dt.min(other.dt),
             sim_time: self.sim_time.min(other.sim_time),
-            _marker: PhantomData,
         }
     }
 
@@ -149,114 +84,62 @@ where
     }
 }
 
-impl<K> Add<(Duration, Duration)> for Delta<K>
-where
-    K: TimeType,
-{
+impl Add<(Duration, Duration)> for Delta {
     type Output = Self;
 
     fn add(self, rhs: (Duration, Duration)) -> Self::Output {
         Self {
             dt: self.dt + rhs.0,
             sim_time: self.sim_time + rhs.1,
-            _marker: PhantomData,
         }
     }
 }
 
-impl<K> AddAssign<(Duration, Duration)> for Delta<K>
-where
-    K: TimeType,
-{
+impl AddAssign<(Duration, Duration)> for Delta {
     fn add_assign(&mut self, rhs: (Duration, Duration)) {
         self.dt += rhs.0;
         self.sim_time += rhs.1;
     }
 }
 
-impl<K> Add<Duration> for Delta<K>
-where
-    K: TimeType,
-{
+impl Add<Duration> for Delta {
     type Output = Self;
 
     fn add(self, rhs: Duration) -> Self::Output {
         Self {
             dt: self.dt,
             sim_time: self.sim_time + rhs,
-            _marker: PhantomData,
         }
     }
 }
 
-impl<K> AddAssign<Duration> for Delta<K>
-where
-    K: TimeType,
-{
+impl AddAssign<Duration> for Delta {
     fn add_assign(&mut self, rhs: Duration) {
         self.sim_time += rhs;
     }
 }
 
-impl<K> Default for Time<K>
-where
-    K: TimeType,
-{
+impl Default for Time {
     fn default() -> Self {
         Self {
             dt: Duration::from_secs_f32(1e-3),
             sim_time: Duration::default(),
             max_time: Duration::from_secs_f32(10.0),
-            _marker: PhantomData,
         }
     }
 }
 
-impl<K> Default for EndlessTime<K>
-where
-    K: TimeType,
-{
+impl Default for EndlessTime {
     fn default() -> Self {
         Self {
             dt: Duration::from_secs_f32(1e-3),
             sim_time: Duration::default(),
-            _marker: PhantomData,
         }
     }
 }
 
-impl<K> From<(Duration, K)> for EndlessTime<K>
-where
-    K: TimeType,
-{
-    fn from((dt, _time_type): (Duration, K)) -> Self {
-        Self {
-            dt,
-            sim_time: Duration::default(),
-            _marker: PhantomData,
-        }
-    }
-}
-
-impl<K> From<(Duration, Duration, K)> for Time<K>
-where
-    K: TimeType,
-{
-    fn from((dt, max_time, _time_type): (Duration, Duration, K)) -> Self {
-        Self {
-            dt,
-            sim_time: Duration::default(),
-            max_time,
-            _marker: PhantomData,
-        }
-    }
-}
-
-impl<K> Iterator for Time<K>
-where
-    K: TimeType,
-{
-    type Item = Signal<(), K>;
+impl Iterator for Time {
+    type Item = Signal<()>;
 
     fn next(&mut self) -> Option<Self::Item> {
         self.sim_time += self.dt;
@@ -267,7 +150,6 @@ where
                 delta: Delta {
                     dt: self.dt,
                     sim_time: self.sim_time,
-                    _marker: PhantomData,
                 },
             })
         } else {
@@ -276,11 +158,8 @@ where
     }
 }
 
-impl<K> Iterator for EndlessTime<K>
-where
-    K: TimeType,
-{
-    type Item = Signal<(), K>;
+impl Iterator for EndlessTime {
+    type Item = Signal<()>;
 
     fn next(&mut self) -> Option<Self::Item> {
         self.sim_time += self.dt;
@@ -290,7 +169,6 @@ where
             delta: Delta {
                 dt: self.dt,
                 sim_time: self.sim_time,
-                _marker: PhantomData,
             },
         })
     }

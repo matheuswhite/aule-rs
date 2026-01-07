@@ -1,49 +1,44 @@
 use crate::block::Block;
 use crate::signal::Pack;
-use crate::time::TimeType;
 use crate::{prelude::Delay, signal::Signal};
 use core::ops::{Mul, Sub};
 use core::time::Duration;
 use num_traits::Zero;
 
-pub struct SmithPredictor<T, P, K>
+pub struct SmithPredictor<T, P>
 where
     T: Zero + Copy + Mul<f64, Output = T> + Sub<Output = T>,
-    P: Block<Input = T, Output = T, TimeType = K>,
-    K: TimeType,
+    P: Block<Input = T, Output = T>,
 {
     process: P,
-    delay: Delay<T, K>,
+    delay: Delay<T>,
     last_output: Option<T>,
 }
 
-pub struct SmithPredictorFiltered<T, P, F, K>
+pub struct SmithPredictorFiltered<T, P, F>
 where
     T: Zero + Copy + Mul<f64, Output = T> + Sub<Output = T>,
-    P: Block<Input = T, Output = T, TimeType = K>,
-    F: Block<Input = T, Output = T, TimeType = K>,
-    K: TimeType,
+    P: Block<Input = T, Output = T>,
+    F: Block<Input = T, Output = T>,
 {
     process: P,
     filter: F,
-    delay: Delay<T, K>,
+    delay: Delay<T>,
     last_output: Option<T>,
 }
 
-pub struct SmithPredictorInput<T, K>
+pub struct SmithPredictorInput<T>
 where
     T: Zero + Copy + Mul<f64, Output = T> + Sub<Output = T>,
-    K: TimeType,
 {
-    pub control_signal: Signal<T, K>,
-    pub measured_output: Signal<T, K>,
+    pub control_signal: Signal<T>,
+    pub measured_output: Signal<T>,
 }
 
-impl<T, P, K> SmithPredictor<T, P, K>
+impl<T, P> SmithPredictor<T, P>
 where
     T: Zero + Copy + Mul<f64, Output = T> + Sub<Output = T>,
-    P: Block<Input = T, Output = T, TimeType = K>,
-    K: TimeType,
+    P: Block<Input = T, Output = T>,
 {
     pub fn new(process: P, delay: Duration) -> Self {
         SmithPredictor {
@@ -54,12 +49,11 @@ where
     }
 }
 
-impl<T, P, F, K> SmithPredictorFiltered<T, P, F, K>
+impl<T, P, F> SmithPredictorFiltered<T, P, F>
 where
     T: Zero + Copy + Mul<f64, Output = T> + Sub<Output = T>,
-    P: Block<Input = T, Output = T, TimeType = K>,
-    F: Block<Input = T, Output = T, TimeType = K>,
-    K: TimeType,
+    P: Block<Input = T, Output = T>,
+    F: Block<Input = T, Output = T>,
 {
     pub fn new(process: P, filter: F, delay: Duration) -> Self {
         SmithPredictorFiltered {
@@ -71,20 +65,15 @@ where
     }
 }
 
-impl<T, P, K> Block for SmithPredictor<T, P, K>
+impl<T, P> Block for SmithPredictor<T, P>
 where
     T: Zero + Copy + Mul<f64, Output = T> + Sub<Output = T>,
-    P: Block<Input = T, Output = T, TimeType = K>,
-    K: TimeType,
+    P: Block<Input = T, Output = T>,
 {
-    type Input = SmithPredictorInput<T, K>;
+    type Input = SmithPredictorInput<T>;
     type Output = T;
-    type TimeType = K;
 
-    fn output(
-        &mut self,
-        input: Signal<Self::Input, Self::TimeType>,
-    ) -> Signal<Self::Output, Self::TimeType> {
+    fn output(&mut self, input: Signal<Self::Input>) -> Signal<Self::Output> {
         let predicted_output = self.process.output(input.value.control_signal);
         let delayed_predicted_output = self.delay.output(input.value.measured_output);
 
@@ -106,21 +95,16 @@ where
     }
 }
 
-impl<T, P, F, K> Block for SmithPredictorFiltered<T, P, F, K>
+impl<T, P, F> Block for SmithPredictorFiltered<T, P, F>
 where
     T: Zero + Copy + Mul<f64, Output = T> + Sub<Output = T>,
-    P: Block<Input = T, Output = T, TimeType = K>,
-    F: Block<Input = T, Output = T, TimeType = K>,
-    K: TimeType,
+    P: Block<Input = T, Output = T>,
+    F: Block<Input = T, Output = T>,
 {
-    type Input = SmithPredictorInput<T, K>;
+    type Input = SmithPredictorInput<T>;
     type Output = T;
-    type TimeType = K;
 
-    fn output(
-        &mut self,
-        input: Signal<Self::Input, Self::TimeType>,
-    ) -> Signal<Self::Output, Self::TimeType> {
+    fn output(&mut self, input: Signal<Self::Input>) -> Signal<Self::Output> {
         let predicted_output = self.process.output(input.value.control_signal);
         let delayed_predicted_output = self.delay.output(predicted_output);
 
@@ -144,14 +128,11 @@ where
     }
 }
 
-impl<T, K> Pack<SmithPredictorInput<T, K>> for (Signal<T, K>, Signal<T, K>)
+impl<T> Pack<SmithPredictorInput<T>> for (Signal<T>, Signal<T>)
 where
     T: Zero + Copy + Mul<f64, Output = T> + Sub<Output = T>,
-    K: TimeType,
 {
-    type TimeType = K;
-
-    fn pack(self) -> Signal<SmithPredictorInput<T, K>, Self::TimeType> {
+    fn pack(self) -> Signal<SmithPredictorInput<T>> {
         let control_signal = self.0;
         let measured_output = self.1;
         let delta = self.0.delta.merge(self.1.delta);

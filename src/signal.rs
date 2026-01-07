@@ -1,27 +1,16 @@
+use crate::block::Block;
 use crate::time::Delta;
-use crate::{block::Block, time::TimeType};
 use core::ops::{Add, Div, Mul, Neg, Sub};
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct Signal<T, K>
-where
-    K: TimeType,
-{
+pub struct Signal<T> {
     pub value: T,
-    pub delta: Delta<K>,
+    pub delta: Delta,
 }
 
-impl<T, K> Copy for Signal<T, K>
-where
-    T: Copy,
-    K: TimeType,
-{
-}
+impl<T> Copy for Signal<T> where T: Copy {}
 
-impl<T, K> Signal<T, K>
-where
-    K: TimeType,
-{
+impl<T> Signal<T> {
     pub fn replace(self, value: T) -> Self {
         Signal {
             value,
@@ -29,7 +18,7 @@ where
         }
     }
 
-    pub fn map<U, F>(self, f: F) -> Signal<U, K>
+    pub fn map<U, F>(self, f: F) -> Signal<U>
     where
         F: FnOnce(T) -> U,
     {
@@ -41,7 +30,7 @@ where
 
     pub fn filter<P>(self, predicate: P) -> Option<Self>
     where
-        P: FnOnce(&T, &Delta<K>) -> bool,
+        P: FnOnce(&T, &Delta) -> bool,
     {
         if predicate(&self.value, &self.delta) {
             Some(self)
@@ -51,11 +40,8 @@ where
     }
 }
 
-impl<T, K> Signal<Signal<T, K>, K>
-where
-    K: TimeType,
-{
-    pub fn flatten(self) -> Signal<T, K> {
+impl<T> Signal<Signal<T>> {
+    pub fn flatten(self) -> Signal<T> {
         Signal {
             value: self.value.value,
             delta: self.value.delta.merge(self.delta),
@@ -63,12 +49,11 @@ where
     }
 }
 
-impl<T, K> From<Delta<K>> for Signal<T, K>
+impl<T> From<Delta> for Signal<T>
 where
     T: Default,
-    K: TimeType,
 {
-    fn from(delta: Delta<K>) -> Self {
+    fn from(delta: Delta) -> Self {
         Signal {
             value: T::default(),
             delta,
@@ -76,19 +61,15 @@ where
     }
 }
 
-impl<T, K> From<(T, Delta<K>)> for Signal<T, K>
-where
-    K: TimeType,
-{
-    fn from((value, delta): (T, Delta<K>)) -> Self {
+impl<T> From<(T, Delta)> for Signal<T> {
+    fn from((value, delta): (T, Delta)) -> Self {
         Signal { value, delta }
     }
 }
 
-impl<T, K> Neg for Signal<T, K>
+impl<T> Neg for Signal<T>
 where
     T: Neg<Output = T>,
-    K: TimeType,
 {
     type Output = Self;
 
@@ -100,10 +81,9 @@ where
     }
 }
 
-impl<T, K> Sub for Signal<T, K>
+impl<T> Sub for Signal<T>
 where
     T: Sub<Output = T>,
-    K: TimeType,
 {
     type Output = Self;
 
@@ -115,10 +95,9 @@ where
     }
 }
 
-impl<T, K> Sub<T> for Signal<T, K>
+impl<T> Sub<T> for Signal<T>
 where
     T: Sub<Output = T>,
-    K: TimeType,
 {
     type Output = Self;
 
@@ -130,10 +109,9 @@ where
     }
 }
 
-impl<T, K> Sub<Option<T>> for Signal<T, K>
+impl<T> Sub<Option<T>> for Signal<T>
 where
     T: Sub<Output = T> + Default,
-    K: TimeType,
 {
     type Output = Self;
 
@@ -145,14 +123,13 @@ where
     }
 }
 
-impl<T, K> Sub<Option<Signal<T, K>>> for Signal<T, K>
+impl<T> Sub<Option<Signal<T>>> for Signal<T>
 where
     T: Sub<Output = T>,
-    K: TimeType,
 {
     type Output = Self;
 
-    fn sub(self, rhs: Option<Signal<T, K>>) -> Self::Output {
+    fn sub(self, rhs: Option<Signal<T>>) -> Self::Output {
         match rhs {
             Some(signal) => self - signal,
             None => self,
@@ -160,10 +137,9 @@ where
     }
 }
 
-impl<T, K> Add for Signal<T, K>
+impl<T> Add for Signal<T>
 where
     T: Add<Output = T>,
-    K: TimeType,
 {
     type Output = Self;
 
@@ -175,10 +151,9 @@ where
     }
 }
 
-impl<T, K> Add<T> for Signal<T, K>
+impl<T> Add<T> for Signal<T>
 where
     T: Add<Output = T>,
-    K: TimeType,
 {
     type Output = Self;
 
@@ -190,14 +165,13 @@ where
     }
 }
 
-impl<T, K> Add<Option<Signal<T, K>>> for Signal<T, K>
+impl<T> Add<Option<Signal<T>>> for Signal<T>
 where
     T: Add<Output = T>,
-    K: TimeType,
 {
     type Output = Self;
 
-    fn add(self, rhs: Option<Signal<T, K>>) -> Self::Output {
+    fn add(self, rhs: Option<Signal<T>>) -> Self::Output {
         match rhs {
             Some(signal) => self + signal,
             None => self,
@@ -205,10 +179,9 @@ where
     }
 }
 
-impl<T, K> Div for Signal<T, K>
+impl<T> Div for Signal<T>
 where
     T: Div<Output = T>,
-    K: TimeType,
 {
     type Output = Self;
 
@@ -220,10 +193,9 @@ where
     }
 }
 
-impl<T, K> Div<T> for Signal<T, K>
+impl<T> Div<T> for Signal<T>
 where
     T: Div<Output = T>,
-    K: TimeType,
 {
     type Output = Self;
 
@@ -235,10 +207,9 @@ where
     }
 }
 
-impl<T, K> Mul for Signal<T, K>
+impl<T> Mul for Signal<T>
 where
     T: Mul<Output = T>,
-    K: TimeType,
 {
     type Output = Self;
 
@@ -250,10 +221,9 @@ where
     }
 }
 
-impl<T, K> Mul<T> for Signal<T, K>
+impl<T> Mul<T> for Signal<T>
 where
     T: Mul<Output = T>,
-    K: TimeType,
 {
     type Output = Self;
 
@@ -265,28 +235,21 @@ where
     }
 }
 
-impl<I, O, K> Mul<&mut dyn Block<Input = I, Output = O, TimeType = K>> for Signal<I, K>
-where
-    K: TimeType,
-{
-    type Output = Signal<O, K>;
+impl<I, O> Mul<&mut dyn Block<Input = I, Output = O>> for Signal<I> {
+    type Output = Signal<O>;
 
-    fn mul(self, block: &mut dyn Block<Input = I, Output = O, TimeType = K>) -> Self::Output {
+    fn mul(self, block: &mut dyn Block<Input = I, Output = O>) -> Self::Output {
         block.output(self)
     }
 }
 
-impl<I, O, K> Mul<&mut dyn Block<Input = [I; 1], Output = [O; 1], TimeType = K>> for Signal<I, K>
+impl<I, O> Mul<&mut dyn Block<Input = [I; 1], Output = [O; 1]>> for Signal<I>
 where
     O: Clone,
-    K: TimeType,
 {
-    type Output = Signal<O, K>;
+    type Output = Signal<O>;
 
-    fn mul(
-        self,
-        block: &mut dyn Block<Input = [I; 1], Output = [O; 1], TimeType = K>,
-    ) -> Self::Output {
+    fn mul(self, block: &mut dyn Block<Input = [I; 1], Output = [O; 1]>) -> Self::Output {
         block
             .output(self.map(|value| [value]))
             .map(|arr| arr[0].clone())
@@ -294,19 +257,14 @@ where
 }
 
 pub trait Pack<P> {
-    type TimeType: TimeType;
-
-    fn pack(self) -> Signal<P, Self::TimeType>;
+    fn pack(self) -> Signal<P>;
 }
 
-impl<T, K, const N: usize> Pack<[T; N]> for [Signal<T, K>; N]
+impl<T, const N: usize> Pack<[T; N]> for [Signal<T>; N]
 where
     T: Copy,
-    K: TimeType,
 {
-    type TimeType = K;
-
-    fn pack(self) -> Signal<[T; N], Self::TimeType> {
+    fn pack(self) -> Signal<[T; N]> {
         let values = self.map(|signal| signal.value);
         let deltas = self.map(|signal| signal.delta);
         let merged_delta = deltas
@@ -320,14 +278,11 @@ where
     }
 }
 
-impl<T, K> Pack<(T, T)> for (Signal<T, K>, Signal<T, K>)
+impl<T> Pack<(T, T)> for (Signal<T>, Signal<T>)
 where
     T: Copy,
-    K: TimeType,
 {
-    type TimeType = K;
-
-    fn pack(self) -> Signal<(T, T), Self::TimeType> {
+    fn pack(self) -> Signal<(T, T)> {
         let (signal_a, signal_b) = self;
         let packed_value = (signal_a.value, signal_b.value);
         let packed_delta = signal_a.delta.merge(signal_b.delta);
@@ -339,14 +294,11 @@ where
     }
 }
 
-impl<T, K> Pack<(T, T, T)> for (Signal<T, K>, Signal<T, K>, Signal<T, K>)
+impl<T> Pack<(T, T, T)> for (Signal<T>, Signal<T>, Signal<T>)
 where
     T: Copy,
-    K: TimeType,
 {
-    type TimeType = K;
-
-    fn pack(self) -> Signal<(T, T, T), Self::TimeType> {
+    fn pack(self) -> Signal<(T, T, T)> {
         let (signal_a, signal_b, signal_c) = self;
         let packed_value = (signal_a.value, signal_b.value, signal_c.value);
         let packed_delta = signal_a.delta.merge(signal_b.delta).merge(signal_c.delta);
@@ -359,33 +311,25 @@ where
 }
 
 pub trait Unpack<U> {
-    type TimeType: TimeType;
-
     fn unpack(self) -> U;
 }
 
-impl<T, K> Unpack<(Signal<T, K>, Signal<T, K>)> for Signal<(T, T), K>
+impl<T> Unpack<(Signal<T>, Signal<T>)> for Signal<(T, T)>
 where
     T: Copy,
-    K: TimeType,
 {
-    type TimeType = K;
-
-    fn unpack(self) -> (Signal<T, K>, Signal<T, K>) {
+    fn unpack(self) -> (Signal<T>, Signal<T>) {
         let Signal { value, delta } = self;
         let (v1, v2) = value;
         (Signal { value: v1, delta }, Signal { value: v2, delta })
     }
 }
 
-impl<T, K> Unpack<(Signal<T, K>, Signal<T, K>, Signal<T, K>)> for Signal<(T, T, T), K>
+impl<T> Unpack<(Signal<T>, Signal<T>, Signal<T>)> for Signal<(T, T, T)>
 where
     T: Copy,
-    K: TimeType,
 {
-    type TimeType = K;
-
-    fn unpack(self) -> (Signal<T, K>, Signal<T, K>, Signal<T, K>) {
+    fn unpack(self) -> (Signal<T>, Signal<T>, Signal<T>) {
         let Signal { value, delta } = self;
         let (v1, v2, v3) = value;
         (
@@ -396,14 +340,11 @@ where
     }
 }
 
-impl<T, K, const N: usize> Unpack<[Signal<T, K>; N]> for Signal<[T; N], K>
+impl<T, const N: usize> Unpack<[Signal<T>; N]> for Signal<[T; N]>
 where
     T: Copy,
-    K: TimeType,
 {
-    type TimeType = K;
-
-    fn unpack(self) -> [Signal<T, K>; N] {
+    fn unpack(self) -> [Signal<T>; N] {
         let Signal { value, delta } = self;
         value.map(|v| Signal { value: v, delta })
     }

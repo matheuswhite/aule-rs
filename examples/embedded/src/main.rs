@@ -19,7 +19,7 @@ const HEAP_SIZE: usize = 1024;
 fn main() -> ! {
     init_heap();
 
-    let time = Time::continuous(1e-3, 10.0);
+    let time = Time::new(1e-3, 10.0);
 
     let mut step = Step::default();
     let mut pid = PID::new(40.0, 10.0, 10.00);
@@ -59,12 +59,8 @@ struct DefmtPrinter;
 impl Block for DefmtPrinter {
     type Input = [f64; 2];
     type Output = [f64; 2];
-    type TimeType = Continuous;
 
-    fn output(
-        &mut self,
-        input: Signal<Self::Input, Self::TimeType>,
-    ) -> Signal<Self::Output, Self::TimeType> {
+    fn output(&mut self, input: Signal<Self::Input>) -> Signal<Self::Output> {
         println!(
             "Time: {}, Input: {}, Output: {}",
             input.delta.sim_time().as_secs_f64(),

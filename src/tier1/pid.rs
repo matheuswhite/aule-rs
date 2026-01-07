@@ -1,12 +1,10 @@
 use crate::block::Block;
 use crate::signal::Signal;
-use crate::time::TimeType;
-use core::marker::PhantomData;
 use core::ops::{Div, Mul, Sub};
 use num_traits::{Zero, clamp};
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct PID<T, K>
+pub struct PID<T>
 where
     T: Zero
         + Copy
@@ -15,7 +13,6 @@ where
         + Sub<Output = T>
         + Div<f64, Output = T>
         + PartialOrd,
-    K: TimeType,
 {
     kp: T,
     ki: T,
@@ -24,10 +21,9 @@ where
     last_integral: T,
     last_output: Option<T>,
     anti_windup: Option<(T, T)>,
-    _marker: PhantomData<K>,
 }
 
-impl<T, K> PID<T, K>
+impl<T> PID<T>
 where
     T: Zero
         + Copy
@@ -36,7 +32,6 @@ where
         + Sub<Output = T>
         + Div<f64, Output = T>
         + PartialOrd,
-    K: TimeType + Default,
 {
     pub fn new(kp: T, ki: T, kd: T) -> Self {
         PID {
@@ -47,7 +42,6 @@ where
             last_integral: T::zero(),
             last_output: None,
             anti_windup: None,
-            _marker: PhantomData,
         }
     }
 
@@ -81,7 +75,7 @@ where
     }
 }
 
-impl<T, K> Block for PID<T, K>
+impl<T> Block for PID<T>
 where
     T: Zero
         + Copy
@@ -90,16 +84,11 @@ where
         + Sub<Output = T>
         + Div<f64, Output = T>
         + PartialOrd,
-    K: TimeType + 'static,
 {
     type Input = T;
     type Output = T;
-    type TimeType = K;
 
-    fn output(
-        &mut self,
-        input: Signal<Self::Input, Self::TimeType>,
-    ) -> Signal<Self::Output, Self::TimeType> {
+    fn output(&mut self, input: Signal<Self::Input>) -> Signal<Self::Output> {
         let proportional = input.value;
         let integral = self.last_integral + input.value * input.delta.dt().as_secs_f64();
         let derivative = (input.value - self.last_input) / input.delta.dt().as_secs_f64();

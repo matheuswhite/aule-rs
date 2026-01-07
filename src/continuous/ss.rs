@@ -1,7 +1,4 @@
-use crate::{
-    block::Block, continuous::solver::StateEstimation, prelude::Solver, signal::Signal,
-    time::Continuous,
-};
+use crate::{block::Block, continuous::solver::StateEstimation, prelude::Solver, signal::Signal};
 use alloc::vec;
 use alloc::vec::Vec;
 use core::{
@@ -99,12 +96,8 @@ where
 {
     type Input = T;
     type Output = T;
-    type TimeType = Continuous;
 
-    fn output(
-        &mut self,
-        input: Signal<Self::Input, Self::TimeType>,
-    ) -> Signal<Self::Output, Self::TimeType> {
+    fn output(&mut self, input: Signal<Self::Input>) -> Signal<Self::Output> {
         self.current_input = input.value;
         self.state = I::integrate(self.state.clone(), input.delta.dt(), self);
 

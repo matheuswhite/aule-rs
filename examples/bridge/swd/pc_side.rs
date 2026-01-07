@@ -2,7 +2,7 @@ use aule::prelude::*;
 
 fn main() {
     let mut swd_conn = SwdConnection::new("nRF52833_xxAA", 0, 0x2000_0000, 128 * 1024);
-    let time = Time::continuous(1e-3, 10.0);
+    let time = Time::new(1e-3, 10.0);
 
     let mut step = Step::default();
     let mut remote_pid = swd_conn.new_remote_block("pid1").unwrap();

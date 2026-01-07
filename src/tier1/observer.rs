@@ -1,6 +1,6 @@
 use crate::prelude::{Solver, StateEstimation};
 use crate::signal::{Pack, Unpack};
-use crate::{block::Block, signal::Signal, time::TimeType};
+use crate::{block::Block, signal::Signal};
 use core::{
     fmt::{Debug, Display},
     marker::PhantomData,
@@ -9,11 +9,10 @@ use ndarray::{Array2, LinalgScalar};
 use num_traits::Zero;
 
 #[derive(Debug, Clone)]
-pub struct Observer<I, const N: usize, T, K>
+pub struct Observer<I, const N: usize, T>
 where
     T: Zero + Copy,
     I: Solver<T> + Debug,
-    K: TimeType,
 {
     a: Array2<T>,
     b: Array2<T>,
@@ -21,17 +20,16 @@ where
     d: Array2<T>,
     l: Array2<T>,
     initial_state: Option<[T; N]>,
-    current_input: ObserverInput<T, K>,
+    current_input: ObserverInput<T>,
     state: Array2<T>,
-    last_output: Option<ObserverOutput<T, N, K>>,
-    _marker: PhantomData<(I, K)>,
+    last_output: Option<ObserverOutput<T, N>>,
+    _marker: PhantomData<I>,
 }
 
-impl<I, const N: usize, T, K> Observer<I, N, T, K>
+impl<I, const N: usize, T> Observer<I, N, T>
 where
     T: Zero + Copy,
     I: Solver<T> + Debug,
-    K: TimeType,
 {
     pub fn new(a: Array2<T>, b: [T; N], c: [T; N], d: T, l: [T; N]) -> Self {
         let an = a.shape()[0];
@@ -79,11 +77,10 @@ where
     }
 }
 
-impl<I, const N: usize, T, K> StateEstimation<T> for Observer<I, N, T, K>
+impl<I, const N: usize, T> StateEstimation<T> for Observer<I, N, T>
 where
     T: Zero + Copy + LinalgScalar,
     I: Solver<T> + Debug,
-    K: TimeType,
 {
     fn estimate(&self, state: Array2<T>) -> Array2<T> {
         let input_matrix = Array2::from_elem((1, 1), self.current_input.control_input);
@@ -95,19 +92,15 @@ where
     }
 }
 
-impl<I, const N: usize, T, K> Block for Observer<I, N, T, K>
+impl<I, const N: usize, T> Block for Observer<I, N, T>
 where
     T: Zero + Copy + LinalgScalar,
     I: Solver<T> + Debug,
-    K: TimeType,
 {
-    type Input = ObserverInput<T, K>;
-    type Output = ObserverOutput<T, N, K>;
-    type TimeType = K;
-    fn output(
-        &mut self,
-        input: Signal<Self::Input, Self::TimeType>,
-    ) -> Signal<Self::Output, Self::TimeType> {
+    type Input = ObserverInput<T>;
+    type Output = ObserverOutput<T, N>;
+
+    fn output(&mut self, input: Signal<Self::Input>) -> Signal<Self::Output> {
         let dt = input.delta.dt();
 
         self.current_input = input.value.clone();
@@ -144,11 +137,10 @@ where
     }
 }
 
-impl<I, const N: usize, T, K> Display for Observer<I, N, T, K>
+impl<I, const N: usize, T> Display for Observer<I, N, T>
 where
     T: Zero + Copy + Display,
     I: Solver<T> + Debug,
-    K: TimeType,
 {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         write!(
@@ -160,38 +152,31 @@ where
 }
 
 #[derive(Debug, Clone)]
-pub struct ObserverInput<T, K>
+pub struct ObserverInput<T>
 where
     T: Zero + Copy,
-    K: TimeType,
 {
     pub control_input: T,
     pub measured_output: T,
-    _marker: PhantomData<K>,
 }
 
-impl<T, K> Default for ObserverInput<T, K>
+impl<T> Default for ObserverInput<T>
 where
     T: Zero + Copy,
-    K: TimeType,
 {
     fn default() -> Self {
         ObserverInput {
             control_input: T::zero(),
             measured_output: T::zero(),
-            _marker: PhantomData,
         }
     }
 }
 
-impl<T, K> Pack<ObserverInput<T, K>> for (Signal<T, K>, Signal<T, K>)
+impl<T> Pack<ObserverInput<T>> for (Signal<T>, Signal<T>)
 where
     T: Zero + Copy,
-    K: TimeType,
 {
-    type TimeType = K;
-
-    fn pack(self) -> Signal<ObserverInput<T, K>, Self::TimeType> {
+    fn pack(self) -> Signal<ObserverInput<T>> {
         let control_input = self.0.value;
         let measured_output = self.1.value;
         let delta = self.0.delta.merge(self.1.delta);
@@ -200,7 +185,6 @@ where
             value: ObserverInput {
                 control_input,
                 measured_output,
-                _marker: PhantomData,
             },
             delta,
         }
@@ -208,39 +192,31 @@ where
 }
 
 #[derive(Debug, Clone)]
-pub struct ObserverOutput<T, const N: usize, K>
+pub struct ObserverOutput<T, const N: usize>
 where
     T: Zero + Copy,
-    K: TimeType,
 {
     pub measured_output: T,
     pub state_estimate: [T; N],
-    _marker: PhantomData<K>,
 }
 
-impl<T, const N: usize, K> ObserverOutput<T, N, K>
+impl<T, const N: usize> ObserverOutput<T, N>
 where
     T: Zero + Copy,
-    K: TimeType,
 {
     pub fn new(measured_output: T, state_estimate: [T; N]) -> Self {
         ObserverOutput {
             measured_output,
             state_estimate,
-            _marker: PhantomData,
         }
     }
 }
 
-impl<T, const N: usize, K> Unpack<(Signal<T, K>, Signal<[T; N], K>)>
-    for Signal<ObserverOutput<T, N, K>, K>
+impl<T, const N: usize> Unpack<(Signal<T>, Signal<[T; N]>)> for Signal<ObserverOutput<T, N>>
 where
     T: Zero + Copy,
-    K: TimeType,
 {
-    type TimeType = K;
-
-    fn unpack(self) -> (Signal<T, K>, Signal<[T; N], K>) {
+    fn unpack(self) -> (Signal<T>, Signal<[T; N]>) {
         let measured_output_signal = Signal {
             value: self.value.measured_output,
             delta: self.delta,

@@ -73,7 +73,7 @@ pub mod prelude {
     pub use crate::tier1::observer::Observer;
     pub use crate::tier1::pid::PID;
     pub use crate::tier1::saturation::Saturation;
-    pub use crate::time::{Continuous, Delta, Discrete, EndlessTime, Time, TimeType};
+    pub use crate::time::{Delta, EndlessTime, Time};
 }
 
 #[cfg(all(test, feature = "std"))]
@@ -82,7 +82,7 @@ mod tests {
 
     #[test]
     fn test_no_std_support() {
-        let time = Time::continuous(0.1, 1.0);
+        let time = Time::new(0.1, 1.0);
         let mut step = Step::default();
         let mut pid = PID::new(1.0, 0.1, 0.01);
 

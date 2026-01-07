@@ -1,7 +1,7 @@
 use aule::prelude::*;
 
 fn main() {
-    let time = Time::continuous(1e-3, 10.0);
+    let time = Time::new(1e-3, 10.0);
 
     let mut step = Step::default();
     let mut pid = PID::new(40.0, 10.0, 10.00);
@@ -12,7 +12,7 @@ fn main() {
     let mut ise = ISE::default();
     let mut itae = ITAE::default();
     let mut good_hart = GoodHart::new(0.3, 0.3, 0.4);
-    let mut plotter: Plotter<_, f64, Continuous> = Plotter::new("Third Order System".to_string());
+    let mut plotter: Plotter<_, f64> = Plotter::new("Third Order System".to_string());
 
     for dt in time {
         let input = dt * step.as_block();

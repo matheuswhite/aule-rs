@@ -1,14 +1,13 @@
-use crate::{block::Block, signal::Signal, time::TimeType};
+use crate::{block::Block, signal::Signal};
 use alloc::vec::Vec;
 use core::{
     iter::Sum,
-    marker::PhantomData,
     ops::{Div, Mul, Sub},
 };
 use num_traits::{Signed, Zero};
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct GoodHart<T, K>
+pub struct GoodHart<T>
 where
     T: Zero
         + Signed
@@ -17,15 +16,13 @@ where
         + Sub<Output = T>
         + Mul<f64, Output = T>
         + Sum<T>,
-    K: TimeType,
 {
     error: Vec<T>,
     control_signal: Vec<T>,
     alphas: (f64, f64, f64),
-    _marker: PhantomData<K>,
 }
 
-impl<T, K> GoodHart<T, K>
+impl<T> GoodHart<T>
 where
     T: Zero
         + Signed
@@ -34,14 +31,12 @@ where
         + Sub<Output = T>
         + Mul<f64, Output = T>
         + Sum<T>,
-    K: TimeType,
 {
     pub fn new(alpha1: f64, alpha2: f64, alpha3: f64) -> Self {
         Self {
             error: Vec::new(),
             control_signal: Vec::new(),
             alphas: (alpha1, alpha2, alpha3),
-            _marker: PhantomData,
         }
     }
 
@@ -60,7 +55,7 @@ where
     }
 }
 
-impl<T, K> Block for GoodHart<T, K>
+impl<T> Block for GoodHart<T>
 where
     T: Zero
         + Signed
@@ -69,16 +64,11 @@ where
         + Sub<Output = T>
         + Mul<f64, Output = T>
         + Sum<T>,
-    K: TimeType,
 {
     type Input = (T, T);
     type Output = (T, T);
-    type TimeType = K;
 
-    fn output(
-        &mut self,
-        input: Signal<Self::Input, Self::TimeType>,
-    ) -> Signal<Self::Output, Self::TimeType> {
+    fn output(&mut self, input: Signal<Self::Input>) -> Signal<Self::Output> {
         let error = input.value.0;
         let control_signal = input.value.1;
         self.error.push(error);
