@@ -70,7 +70,7 @@ pub mod prelude {
     #[cfg(feature = "alloc")]
     pub use crate::tier1::delay::Delay;
     #[cfg(feature = "alloc")]
-    pub use crate::tier1::observer::Observer;
+    pub use crate::tier1::observer::{Observer, ObserverInput, ObserverOutput};
     pub use crate::tier1::pid::PID;
     pub use crate::tier1::saturation::Saturation;
     pub use crate::time::{Delta, EndlessTime, Time};

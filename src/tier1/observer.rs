@@ -20,6 +20,7 @@ where
     d: Array2<T>,
     l: Array2<T>,
     initial_state: Option<[T; N]>,
+    saved_state: Option<[T; N]>,
     current_input: ObserverInput<T>,
     state: Array2<T>,
     last_output: Option<ObserverOutput<T, N>>,
@@ -52,6 +53,7 @@ where
             l: Array2::from_shape_vec((N, 1), l.to_vec()).unwrap(),
             state: Array2::zeros((N, 1)),
             initial_state: None,
+            saved_state: None,
             last_output: None,
             current_input: ObserverInput::default(),
             _marker: PhantomData,
@@ -134,6 +136,20 @@ where
         }
         self.last_output = None;
         self.current_input = ObserverInput::default();
+    }
+
+    fn save_state(&mut self) {
+        let mut saved = [T::zero(); N];
+        for i in 0..N {
+            saved[i] = self.state[[i, 0]];
+        }
+        self.saved_state = Some(saved);
+    }
+
+    fn restore_state(&mut self) {
+        if let Some(saved) = self.saved_state {
+            self.state = Array2::from_shape_vec((N, 1), saved.to_vec()).unwrap();
+        }
     }
 }
 

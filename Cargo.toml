@@ -6,7 +6,10 @@ edition = "2024"
 
 [dependencies]
 libm = { version = "0.2" }
-num-traits = { version = "0.2.19", default-features = false, features = ["libm"] }
+num-traits = { version = "0.2.19", default-features = false, features = [
+    "libm",
+] }
+rand = "0.9.2"
 
 [features]
 default = ["std", "swd"]
@@ -47,3 +50,7 @@ path = "examples/third_order_system.rs"
 [[example]]
 name = "bridge_swd"
 path = "examples/bridge/swd/pc_side.rs"
+
+[[example]]
+name = "mpc"
+path = "examples/mpc.rs"

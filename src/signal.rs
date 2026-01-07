@@ -314,11 +314,12 @@ pub trait Unpack<U> {
     fn unpack(self) -> U;
 }
 
-impl<T> Unpack<(Signal<T>, Signal<T>)> for Signal<(T, T)>
+impl<T, U> Unpack<(Signal<T>, Signal<U>)> for Signal<(T, U)>
 where
     T: Copy,
+    U: Copy,
 {
-    fn unpack(self) -> (Signal<T>, Signal<T>) {
+    fn unpack(self) -> (Signal<T>, Signal<U>) {
         let Signal { value, delta } = self;
         let (v1, v2) = value;
         (Signal { value: v1, delta }, Signal { value: v2, delta })

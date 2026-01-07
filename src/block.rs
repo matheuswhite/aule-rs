@@ -18,4 +18,8 @@ pub trait Block {
     }
 
     fn reset(&mut self) {}
+
+    fn save_state(&mut self) {}
+
+    fn restore_state(&mut self) {}
 }
