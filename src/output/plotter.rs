@@ -52,14 +52,14 @@ where
 
     pub fn display(&mut self) {
         self.child = Some(
-            Command::new("iris")
+            Command::new("magmar")
                 .stdin(Stdio::piped())
                 .stdout(Stdio::piped())
                 .stderr(Stdio::piped())
                 .arg("-t")
                 .arg(&self.title)
                 .spawn()
-                .unwrap(),
+                .expect("Failed to start magmar process. Please ensure magmar is installed and in your PATH or install it using `cargo install magmar`."),
         );
 
         for signals in &self.data {
@@ -134,14 +134,14 @@ where
 
     fn output(&mut self, input: Signal<Self::Input>) -> Signal<Self::Output> {
         if self.child.is_none() {
-            let command = Command::new("iris")
+            let command = Command::new("magmar")
                 .stdin(Stdio::piped())
                 .stdout(Stdio::piped())
                 .stderr(Stdio::piped())
                 .arg("-t")
                 .arg(&self.title)
                 .spawn()
-                .expect("Failed to start iris process");
+                .expect("Failed to start magmar process. Please ensure magmar is installed and in your PATH or install it using `cargo install magmar`.");
             self.child = Some(command);
         }
 
