@@ -349,3 +349,10 @@ where
         value.map(|v| Signal { value: v, delta })
     }
 }
+
+impl<T> Unpack<Option<Signal<T>>> for Signal<Option<T>> {
+    fn unpack(self) -> Option<Signal<T>> {
+        let Signal { value, delta } = self;
+        value.map(|v| Signal { value: v, delta })
+    }
+}
