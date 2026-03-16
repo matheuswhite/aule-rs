@@ -69,6 +69,14 @@ pub mod prelude {
     pub use crate::tier1::bridge::{BridgeSwdDown, BridgeSwdUp, RemoteSwd, SwdConnection};
     #[cfg(feature = "alloc")]
     pub use crate::tier1::delay::Delay;
+    pub use crate::tier1::filter::{
+        Filter,
+        first_order::{high_pass::HighPass, low_pass::LowPass},
+        second_order::{
+            band_pass::BandPass, band_stop::BandStop, bessel::Bessel, biquad::Biquad,
+            butterworth::Butterworth, chebyshev1::Chebyshev1, chebyshev2::Chebyshev2,
+        },
+    };
     #[cfg(feature = "alloc")]
     pub use crate::tier1::observer::Observer;
     pub use crate::tier1::pid::PID;
