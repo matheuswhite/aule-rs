@@ -71,7 +71,7 @@ where
         self.coeff.first().copied().unwrap_or(T::zero())
     }
 
-    pub fn companion_matrix(self) -> Array2<T> {
+    pub fn transposed_companion_matrix(self) -> Array2<T> {
         if self.degree() < 1 {
             return Array2::<T>::default((0, 0));
         }
@@ -95,6 +95,35 @@ where
         );
 
         Array2::from_shape_vec((n, n), lines).unwrap()
+    }
+
+    pub fn poly_div(&self, other: &Polynomial<T>) -> (Polynomial<T>, Polynomial<T>) {
+        assert!(!other.coeff.is_empty(), "The divider cannot be empty");
+
+        let mut remainder = self.coeff.clone();
+        let den_lead = other.coeff[0];
+        let q_len = self.coeff.len().saturating_sub(other.coeff.len()) + 1;
+        let mut quotient = Vec::with_capacity(q_len);
+
+        while remainder.len() >= other.coeff.len() {
+            let coeff = remainder[0] / den_lead;
+            quotient.push(coeff);
+
+            for i in 0..other.coeff.len() {
+                remainder[i] = remainder[i] - coeff * other.coeff[i];
+            }
+
+            remainder.remove(0);
+        }
+
+        if remainder.is_empty() {
+            remainder.push(T::default());
+        }
+
+        (
+            Polynomial { coeff: quotient },
+            Polynomial { coeff: remainder },
+        )
     }
 }
 

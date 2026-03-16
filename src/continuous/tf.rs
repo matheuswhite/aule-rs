@@ -19,6 +19,7 @@ where
     T: Float + Default + AddAssign<T>,
 {
     pub fn new(numerator: &[T], denominator: &[T]) -> Self {
+        assert!(!numerator.is_empty(), "Numerator cannot be empty.");
         assert!(!denominator.is_empty(), "Denominator cannot be empty.");
         assert!(
             denominator.len() >= numerator.len(),
@@ -40,32 +41,48 @@ where
         // safe because isn't empty
         let m = self.numerator.degree() as usize;
 
-        let a0 = self.denominator.lead_coeff();
-        let a = self
-            .denominator
+        assert!(
+            m <= n,
+            "The denominator degree must be greater than numerator degree"
+        );
+
+        let (quotient, remainder) = if n == m {
+            self.numerator.inner().poly_div(self.denominator.inner())
+        } else {
+            (
+                Polynomial::new(&[T::zero()]),
+                self.numerator.inner().clone(),
+            )
+        };
+
+        let numerator = remainder;
+        let denominator = self.denominator;
+
+        let d = quotient.coeff().get(0).copied().unwrap_or(T::zero());
+
+        let a0 = denominator.lead_coeff();
+        let a = denominator
             .coeff()
             .iter()
             .map(|x| *x / a0)
             .collect::<Vec<_>>();
 
-        let mut b = self
-            .numerator
+        let mut b = numerator
             .coeff()
             .iter()
             .map(|x| *x / a0)
             .collect::<Vec<_>>();
-        for _ in 0..n - m {
+        while b.len() < n {
             b.insert(0, T::zero());
         }
-        let b0 = b[0];
 
-        let a_mat = Polynomial::new(&a).companion_matrix();
+        let a_mat = Polynomial::new(&a).transposed_companion_matrix();
 
         let mut b_mat = vec![T::zero(); n];
         b_mat[n - 1] = T::one();
 
-        let c_mat = b[1..].iter().rev().copied().collect();
+        let c_mat = b.iter().rev().copied().collect();
 
-        SS::new(a_mat, b_mat, c_mat, b0)
+        SS::new(a_mat, b_mat, c_mat, d)
     }
 }
