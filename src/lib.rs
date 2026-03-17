@@ -11,6 +11,7 @@ pub mod continuous;
 #[cfg(feature = "alloc")]
 mod discrete;
 mod input;
+mod line_equation;
 mod metrics;
 #[cfg(feature = "std")]
 mod output;
@@ -55,6 +56,7 @@ pub mod prelude {
     pub use crate::input::sinusoid::Sinusoid;
     pub use crate::input::square::Square;
     pub use crate::input::step::Step;
+    pub use crate::line_equation::LineEquation;
     #[cfg(feature = "alloc")]
     pub use crate::metrics::good_hart::GoodHart;
     pub use crate::metrics::iae::IAE;
