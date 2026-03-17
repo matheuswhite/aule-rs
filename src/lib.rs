@@ -10,6 +10,8 @@ mod block;
 pub mod continuous;
 #[cfg(feature = "alloc")]
 mod discrete;
+#[cfg(feature = "std")]
+mod identification;
 mod input;
 mod line_equation;
 mod metrics;
@@ -48,6 +50,17 @@ pub mod prelude {
     pub use crate::discrete::ss::DSS;
     #[cfg(feature = "alloc")]
     pub use crate::discrete::tf::DTf;
+    #[cfg(feature = "std")]
+    pub use crate::identification::first_order::{
+        FirstOrderIdentification, FirstOrderModel, FirstOrderModelError, hagglund::Hagglund,
+        smith::Smith1, sundaresan_krishnaswamy::SundaresanKrishnaswamy,
+        ziegler_nichols::ZieglerNichols,
+    };
+    #[cfg(feature = "std")]
+    pub use crate::identification::second_order::{
+        SecondOrderIdentification, SecondOrderModel, SecondOrderModelError, mollenkamp::Mollenkamp,
+        smith::Smith2,
+    };
     #[cfg(feature = "std")]
     pub use crate::input::file_samples::FileSamples;
     pub use crate::input::impulse::Impulse;
