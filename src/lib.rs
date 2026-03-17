@@ -47,6 +47,8 @@ pub mod prelude {
     pub use crate::discrete::ss::DSS;
     #[cfg(feature = "alloc")]
     pub use crate::discrete::tf::DTf;
+    #[cfg(feature = "std")]
+    pub use crate::input::file_samples::FileSamples;
     pub use crate::input::impulse::Impulse;
     pub use crate::input::ramp::Ramp;
     pub use crate::input::sawtooth::Sawtooth;

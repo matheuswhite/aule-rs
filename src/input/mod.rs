@@ -1,3 +1,4 @@
+pub mod file_samples;
 pub mod impulse;
 pub mod ramp;
 pub mod sawtooth;
