@@ -1,14 +1,47 @@
 use crate::block::Block;
 use crate::signal::Signal;
 use alloc::vec::Vec;
+use core::fmt::Display;
 use core::marker::PhantomData;
 use num_traits::real::Real;
 use std::boxed::Box;
-use std::format;
 use std::io::{Read, Write};
 use std::process::{Child, Command, Stdio};
 use std::string::String;
 use std::string::ToString;
+use std::{format, vec};
+
+#[derive(Clone, Copy, Default, Debug)]
+pub enum LegendPosition {
+    TopLeft,
+    Top,
+    #[default]
+    TopRight,
+    Left,
+    Right,
+    BottomLeft,
+    Bottom,
+    BottomRight,
+}
+
+impl Display for LegendPosition {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self {
+                LegendPosition::TopLeft => "top_left",
+                LegendPosition::Top => "top",
+                LegendPosition::TopRight => "top_right",
+                LegendPosition::Left => "left",
+                LegendPosition::Right => "right",
+                LegendPosition::BottomLeft => "bottom_left",
+                LegendPosition::Bottom => "bottom",
+                LegendPosition::BottomRight => "bottom_right",
+            }
+        )
+    }
+}
 
 #[derive(Debug)]
 pub struct Plotter<const N: usize, T>
@@ -20,6 +53,7 @@ where
     child: Option<Child>,
     title: String,
     is_light: bool,
+    legend_pos: Option<LegendPosition>,
 }
 
 #[derive(Debug)]
@@ -31,6 +65,7 @@ where
     child: Option<Child>,
     title: String,
     is_light: bool,
+    legend_pos: Option<LegendPosition>,
     _marker: PhantomData<[T; N]>,
 }
 
@@ -53,6 +88,7 @@ where
             child: None,
             title,
             is_light: false,
+            legend_pos: None,
         }
     }
 
@@ -61,15 +97,23 @@ where
         self
     }
 
+    pub fn with_legend_position(mut self, pos: LegendPosition) -> Self {
+        self.legend_pos = Some(pos);
+        self
+    }
+
     pub fn display(&mut self) {
+        let args = if self.is_light {
+            vec!["-t", self.title.as_str(), "--light"]
+        } else {
+            vec!["-t", self.title.as_str()]
+        };
         self.child = Some(
             Command::new("magmar")
                 .stdin(Stdio::piped())
                 .stdout(Stdio::piped())
                 .stderr(Stdio::piped())
-                .arg("-t")
-                .arg(&self.title)
-                .arg(if self.is_light { "--light" } else { "" })
+                .args(args)
                 .spawn()
                 .expect("Failed to start magmar process. Please ensure magmar is installed and in your PATH or install it using `cargo install magmar`."),
         );
@@ -91,6 +135,15 @@ where
                     .as_bytes(),
                 )
                 .unwrap();
+
+            if let Some(pos) = self.legend_pos {
+                child
+                    .stdin
+                    .as_ref()
+                    .unwrap()
+                    .write_all(format!("!legend,{}\n", pos).as_bytes())
+                    .unwrap();
+            }
         }
 
         for signals in &self.data {
@@ -130,11 +183,17 @@ where
             title,
             _marker: PhantomData,
             is_light: false,
+            legend_pos: None,
         }
     }
 
     pub fn with_light_theme(mut self) -> Self {
         self.is_light = true;
+        self
+    }
+
+    pub fn with_legend_position(mut self, pos: LegendPosition) -> Self {
+        self.legend_pos = Some(pos);
         self
     }
 }
@@ -172,13 +231,16 @@ where
 
     fn output(&mut self, input: Signal<Self::Input>) -> Signal<Self::Output> {
         if self.child.is_none() {
+            let args = if self.is_light {
+                vec!["-t", self.title.as_str(), "--light"]
+            } else {
+                vec!["-t", self.title.as_str()]
+            };
             let command = Command::new("magmar")
                 .stdin(Stdio::piped())
                 .stdout(Stdio::piped())
                 .stderr(Stdio::piped())
-                .arg("-t")
-                .arg(&self.title)
-                .arg(if self.is_light { "--light" } else { "" })
+                .args(args)
                 .spawn()
                 .expect("Failed to start magmar process. Please ensure magmar is installed and in your PATH or install it using `cargo install magmar`.");
             command
@@ -197,6 +259,14 @@ where
                     .as_bytes(),
                 )
                 .unwrap();
+            if let Some(pos) = self.legend_pos {
+                command
+                    .stdin
+                    .as_ref()
+                    .unwrap()
+                    .write_all(format!("!legend,{}\n", pos).as_bytes())
+                    .unwrap();
+            }
             self.child = Some(command);
         }
 

@@ -13,7 +13,9 @@ fn main() {
     let mut itae = ITAE::default();
     let mut good_hart = GoodHart::new(0.3, 0.3, 0.4);
     let mut plotter: Plotter<_, f64> =
-        Plotter::new("Third Order System".to_string(), ["input", "output"]).with_light_theme();
+        Plotter::new("Third Order System".to_string(), ["input", "output"])
+            .with_light_theme()
+            .with_legend_position(LegendPosition::BottomRight);
 
     for dt in time {
         let input = dt * step.as_block();
