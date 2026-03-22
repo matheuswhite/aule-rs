@@ -26,6 +26,7 @@ pub struct RTPlotter<const N: usize, T>
 where
     T: Real + ToString,
 {
+    variable_names: [String; N],
     child: Option<Child>,
     title: String,
     _marker: PhantomData<[T; N]>,
@@ -71,7 +72,7 @@ where
                 .unwrap()
                 .write_all(
                     format!(
-                        "t,{}\n",
+                        "Time (s),{}\n",
                         self.variable_names
                             .iter()
                             .map(|s| s.to_string())
@@ -113,9 +114,10 @@ impl<const N: usize, T> RTPlotter<N, T>
 where
     T: Real + ToString,
 {
-    pub fn new(title: String) -> Self {
+    pub fn new(title: String, variable_names: [impl AsRef<str>; N]) -> Self {
         Self {
             child: None,
+            variable_names: variable_names.map(|vn| vn.as_ref().to_string()),
             title,
             _marker: PhantomData,
         }
@@ -163,6 +165,22 @@ where
                 .arg(&self.title)
                 .spawn()
                 .expect("Failed to start magmar process. Please ensure magmar is installed and in your PATH or install it using `cargo install magmar`.");
+            command
+                .stdin
+                .as_ref()
+                .unwrap()
+                .write_all(
+                    format!(
+                        "Time (s),{}\n",
+                        self.variable_names
+                            .iter()
+                            .map(|s| s.to_string())
+                            .collect::<Vec<_>>()
+                            .join(",")
+                    )
+                    .as_bytes(),
+                )
+                .unwrap();
             self.child = Some(command);
         }
 

@@ -28,7 +28,7 @@ fn test_rt_dc_motor() -> RTPlotter<2, f64> {
     let mut pid = PID::new(10.0, 1.0, 0.1);
     let mut plant = ((k * s) / (s * s + a * k * s)).to_ss_controllable(RK4);
     let mut writer = Writter::new("output/dc_motor.csv", ["output"]);
-    let mut plotter = RTPlotter::new("Real Time DC Motor".to_string());
+    let mut plotter = RTPlotter::new("Real Time DC Motor".to_string(), ["input", "output"]);
 
     for dt in time {
         let signal = dt * input.as_block();
