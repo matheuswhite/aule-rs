@@ -19,6 +19,7 @@ where
     variable_names: [String; N],
     child: Option<Child>,
     title: String,
+    is_light: bool,
 }
 
 #[derive(Debug)]
@@ -29,6 +30,7 @@ where
     variable_names: [String; N],
     child: Option<Child>,
     title: String,
+    is_light: bool,
     _marker: PhantomData<[T; N]>,
 }
 
@@ -50,7 +52,13 @@ where
             variable_names: variable_names.map(|vn| vn.as_ref().to_string()),
             child: None,
             title,
+            is_light: false,
         }
+    }
+
+    pub fn with_light_theme(mut self) -> Self {
+        self.is_light = true;
+        self
     }
 
     pub fn display(&mut self) {
@@ -61,6 +69,7 @@ where
                 .stderr(Stdio::piped())
                 .arg("-t")
                 .arg(&self.title)
+                .arg(if self.is_light { "--light" } else { "" })
                 .spawn()
                 .expect("Failed to start magmar process. Please ensure magmar is installed and in your PATH or install it using `cargo install magmar`."),
         );
@@ -120,7 +129,13 @@ where
             variable_names: variable_names.map(|vn| vn.as_ref().to_string()),
             title,
             _marker: PhantomData,
+            is_light: false,
         }
+    }
+
+    pub fn with_light_theme(mut self) -> Self {
+        self.is_light = true;
+        self
     }
 }
 
@@ -163,6 +178,7 @@ where
                 .stderr(Stdio::piped())
                 .arg("-t")
                 .arg(&self.title)
+                .arg(if self.is_light { "--light" } else { "" })
                 .spawn()
                 .expect("Failed to start magmar process. Please ensure magmar is installed and in your PATH or install it using `cargo install magmar`.");
             command
