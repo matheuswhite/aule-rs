@@ -16,6 +16,7 @@ where
     T: Real + ToString,
 {
     data: Vec<[Signal<T>; N]>,
+    variable_names: [String; N],
     child: Option<Child>,
     title: String,
 }
@@ -42,9 +43,10 @@ impl<const N: usize, T> Plotter<N, T>
 where
     T: Real + ToString,
 {
-    pub fn new(title: String) -> Self {
+    pub fn new(title: String, variable_names: [impl AsRef<str>; N]) -> Self {
         Self {
             data: Vec::new(),
+            variable_names: variable_names.map(|vn| vn.as_ref().to_string()),
             child: None,
             title,
         }
@@ -61,6 +63,25 @@ where
                 .spawn()
                 .expect("Failed to start magmar process. Please ensure magmar is installed and in your PATH or install it using `cargo install magmar`."),
         );
+
+        if let Some(child) = &self.child {
+            child
+                .stdin
+                .as_ref()
+                .unwrap()
+                .write_all(
+                    format!(
+                        "t,{}\n",
+                        self.variable_names
+                            .iter()
+                            .map(|s| s.to_string())
+                            .collect::<Vec<_>>()
+                            .join(",")
+                    )
+                    .as_bytes(),
+                )
+                .unwrap();
+        }
 
         for signals in &self.data {
             let time = &signals[0].delta.sim_time().as_secs_f32();

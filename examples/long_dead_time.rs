@@ -14,7 +14,7 @@ fn open_loop() {
     let mut step = Step::default();
     let mut plant = (5.6 / (40.2f64 * s + 1.0)).to_ss_controllable(RK4);
     let mut delay = Delay::new(Duration::from_secs_f32(93.9));
-    let mut plotter = Plotter::new("[Long Dead Time] Open Loop".to_string());
+    let mut plotter = Plotter::new("[Long Dead Time] Open Loop".to_string(), ["delayed_output"]);
 
     for dt in time {
         let reference = dt * step.as_block();
@@ -38,7 +38,10 @@ fn pi_controller() {
     let mut controller = kp.map(|kp| PID::new(kp, kp / ti, 0.0));
     let mut plant = kp.map(|_| (5.6 / (40.2f64 * s + 1.0)).to_ss_controllable(RK4));
     let mut delay = kp.map(|_| Delay::new(Duration::from_secs_f32(93.9)));
-    let mut plotter = Plotter::new(format!("[Long Dead Time] PI {:?}", kp));
+    let mut plotter = Plotter::new(
+        format!("[Long Dead Time] PI {:?}", kp),
+        ["Kp = 0.06", "Kp = 0.08", "Kp = 0.1"],
+    );
 
     for dt in time {
         let reference = dt * step.as_block();
@@ -71,7 +74,10 @@ fn pi_controller() {
 fn smith_predictor() {
     let time = Time::new(1e-2, 700.0);
     let mut step = Step::default();
-    let mut plotter = Plotter::new("[Long Dead Time] Smith Predictor vs Pure PI".to_string());
+    let mut plotter = Plotter::new(
+        "[Long Dead Time] Smith Predictor vs Pure PI".to_string(),
+        ["with", "without"],
+    );
     let delay_value = Duration::from_secs_f32(93.9);
 
     let kp = 0.574;

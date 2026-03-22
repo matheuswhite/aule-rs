@@ -63,7 +63,7 @@ fn test_dc_motor() -> Plotter<2, f64> {
     let mut plant = ((k * s) / (s * s + a * k * s)).to_ss_controllable(RK4);
 
     let mut writer = Writter::new("output/dc_motor.csv", ["output"]);
-    let mut plotter = Plotter::new("DC Motor".to_string());
+    let mut plotter = Plotter::new("DC Motor".to_string(), ["input", "output"]);
 
     for dt in time {
         let signal = dt * input.as_block();
