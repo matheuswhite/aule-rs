@@ -1,3 +1,5 @@
+use core::fmt::Display;
+
 use crate::{block::Block, signal::Signal};
 use num_traits::One;
 
@@ -24,6 +26,15 @@ where
 {
     fn default() -> Self {
         Step { value: T::one() }
+    }
+}
+
+impl<T> Display for Step<T>
+where
+    T: One + Copy + Display,
+{
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(f, "Step({})", self.value)
     }
 }
 
