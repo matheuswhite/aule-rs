@@ -1,15 +1,15 @@
 use crate::block::Block;
+use crate::output::magmar::Magmar;
 use crate::signal::Signal;
 use alloc::vec::Vec;
 use core::fmt::Display;
 use core::marker::PhantomData;
 use num_traits::real::Real;
 use std::boxed::Box;
-use std::io::{Read, Write};
-use std::process::{Child, Command, Stdio};
+use std::format;
 use std::string::String;
 use std::string::ToString;
-use std::{format, vec};
+use std::vec;
 
 #[derive(Clone, Copy, Default, Debug)]
 pub enum LegendPosition {
@@ -50,7 +50,7 @@ where
 {
     data: Vec<[Signal<T>; N]>,
     variable_names: [String; N],
-    child: Option<Child>,
+    magmar: Option<Magmar>,
     title: String,
     is_light: bool,
     legend_pos: Option<LegendPosition>,
@@ -62,7 +62,7 @@ where
     T: Real + ToString,
 {
     variable_names: [String; N],
-    child: Option<Child>,
+    magmar: Option<Magmar>,
     title: String,
     is_light: bool,
     legend_pos: Option<LegendPosition>,
@@ -85,7 +85,7 @@ where
         Self {
             data: Vec::new(),
             variable_names: variable_names.map(|vn| vn.as_ref().to_string()),
-            child: None,
+            magmar: None,
             title,
             is_light: false,
             legend_pos: None,
@@ -103,70 +103,32 @@ where
     }
 
     pub fn display(&mut self) {
-        let args = if self.is_light {
-            vec!["-t", self.title.as_str(), "--light"]
-        } else {
-            vec!["-t", self.title.as_str()]
-        };
-        self.child = Some(
-            Command::new("magmar")
-                .stdin(Stdio::piped())
-                .stdout(Stdio::piped())
-                .stderr(Stdio::piped())
-                .args(args)
-                .spawn()
-                .expect("Failed to start magmar process. Please ensure magmar is installed and in your PATH or install it using `cargo install magmar`."),
-        );
+        self.magmar = Some(Magmar::new(&self.title, self.is_light));
 
-        if let Some(child) = &self.child {
-            child
-                .stdin
-                .as_ref()
-                .unwrap()
-                .write_all(
-                    format!(
-                        "Time (s),{}\n",
-                        self.variable_names
-                            .iter()
-                            .map(|s| s.to_string())
-                            .collect::<Vec<_>>()
-                            .join(",")
-                    )
-                    .as_bytes(),
-                )
-                .unwrap();
+        if let Some(magmar) = &mut self.magmar {
+            magmar.send_labels(format!(
+                "Time (s),{}\n",
+                self.variable_names
+                    .iter()
+                    .map(|s| s.to_string())
+                    .collect::<Vec<_>>()
+                    .join(",")
+            ));
 
             if let Some(pos) = self.legend_pos {
-                child
-                    .stdin
-                    .as_ref()
-                    .unwrap()
-                    .write_all(format!("!legend,{}\n", pos).as_bytes())
-                    .unwrap();
+                let _ = magmar.send_command(format!("!legend,{}\n", pos), "Legend position set to");
             }
-        }
 
-        for signals in &self.data {
-            let time = &signals[0].delta.sim_time().as_secs_f32();
+            for signals in &self.data {
+                let time = &signals[0].delta.sim_time().as_secs_f32();
+                let mut data = vec![*time as f64];
+                data.extend(
+                    signals
+                        .iter()
+                        .map(|s| s.value.to_string().parse::<f64>().unwrap_or(0.0)),
+                );
 
-            if let Some(child) = &self.child {
-                child
-                    .stdin
-                    .as_ref()
-                    .unwrap()
-                    .write_all(
-                        format!(
-                            "{},{}\n",
-                            time,
-                            signals
-                                .iter()
-                                .map(|s| s.value.to_string())
-                                .collect::<Vec<_>>()
-                                .join(",")
-                        )
-                        .as_bytes(),
-                    )
-                    .unwrap();
+                magmar.send_data(&data);
             }
         }
     }
@@ -178,7 +140,7 @@ where
 {
     pub fn new(title: String, variable_names: [impl AsRef<str>; N]) -> Self {
         Self {
-            child: None,
+            magmar: None,
             variable_names: variable_names.map(|vn| vn.as_ref().to_string()),
             title,
             _marker: PhantomData,
@@ -215,9 +177,9 @@ where
 
     fn reset(&mut self) {
         self.data.clear();
-        if let Some(child) = &mut self.child {
-            child.kill().ok();
-            self.child = None;
+        if let Some(magmar) = &mut self.magmar {
+            magmar.kill().ok();
+            self.magmar = None;
         }
     }
 }
@@ -230,74 +192,45 @@ where
     type Output = [T; N];
 
     fn output(&mut self, input: Signal<Self::Input>) -> Signal<Self::Output> {
-        if self.child.is_none() {
-            let args = if self.is_light {
-                vec!["-t", self.title.as_str(), "--light"]
-            } else {
-                vec!["-t", self.title.as_str()]
-            };
-            let command = Command::new("magmar")
-                .stdin(Stdio::piped())
-                .stdout(Stdio::piped())
-                .stderr(Stdio::piped())
-                .args(args)
-                .spawn()
-                .expect("Failed to start magmar process. Please ensure magmar is installed and in your PATH or install it using `cargo install magmar`.");
-            command
-                .stdin
-                .as_ref()
-                .unwrap()
-                .write_all(
-                    format!(
-                        "Time (s),{}\n",
-                        self.variable_names
-                            .iter()
-                            .map(|s| s.to_string())
-                            .collect::<Vec<_>>()
-                            .join(",")
-                    )
-                    .as_bytes(),
-                )
-                .unwrap();
+        if self.magmar.is_none() {
+            let mut magmar = Magmar::new(&self.title, self.is_light);
+
+            magmar.send_labels(format!(
+                "Time (s),{}\n",
+                self.variable_names
+                    .iter()
+                    .map(|s| s.to_string())
+                    .collect::<Vec<_>>()
+                    .join(",")
+            ));
+
             if let Some(pos) = self.legend_pos {
-                command
-                    .stdin
-                    .as_ref()
-                    .unwrap()
-                    .write_all(format!("!legend,{}\n", pos).as_bytes())
-                    .unwrap();
+                let _ = magmar.send_command(format!("!legend,{}\n", pos), "Legend position set to");
             }
-            self.child = Some(command);
+
+            self.magmar = Some(magmar);
         }
 
-        self.child
-            .as_ref()
-            .unwrap()
-            .stdin
-            .as_ref()
-            .unwrap()
-            .write_all(
-                format!(
-                    "{},{}\n",
-                    input.delta.sim_time().as_secs_f32(),
-                    input
-                        .value
-                        .iter()
-                        .map(|s| s.to_string())
-                        .collect::<Vec<_>>()
-                        .join(",")
-                )
-                .as_bytes(),
-            )
-            .unwrap();
+        let magmar = self.magmar.as_mut().unwrap();
+
+        let time = &input.delta.sim_time().as_secs_f32();
+        let mut data = vec![*time as f64];
+        data.extend(
+            input
+                .value
+                .iter()
+                .map(|s| s.to_string().parse::<f64>().unwrap_or(0.0)),
+        );
+
+        magmar.send_data(&data);
 
         input
     }
 
     fn reset(&mut self) {
-        if let Some(child) = &mut self.child {
-            child.kill().ok();
-            self.child = None;
+        if let Some(magmar) = &mut self.magmar {
+            magmar.kill().ok();
+            self.magmar = None;
         }
     }
 }
@@ -307,8 +240,8 @@ where
     T: Real + ToString,
 {
     fn drop(&mut self) {
-        if let Some(child) = &mut self.child {
-            child.kill().unwrap();
+        if let Some(magmar) = &mut self.magmar {
+            magmar.kill().unwrap();
         }
     }
 }
@@ -318,8 +251,8 @@ where
     T: Real + ToString,
 {
     fn drop(&mut self) {
-        if let Some(child) = &mut self.child {
-            child.kill().unwrap();
+        if let Some(magmar) = &mut self.magmar {
+            magmar.kill().unwrap();
         }
     }
 }
@@ -329,8 +262,8 @@ where
     T: Real + ToString,
 {
     fn join(&mut self) {
-        if let Some(child) = &mut self.child {
-            child.wait().ok();
+        if let Some(magmar) = &mut self.magmar {
+            magmar.wait().ok();
         }
     }
 }
@@ -340,8 +273,8 @@ where
     T: Real + ToString,
 {
     fn join(&mut self) {
-        if let Some(child) = &mut self.child {
-            child.wait().ok();
+        if let Some(magmar) = &mut self.magmar {
+            magmar.wait().ok();
         }
     }
 }
@@ -351,36 +284,11 @@ where
     T: Real + ToString,
 {
     fn save(&mut self, path: &str) -> Result<String, String> {
-        let Some(child) = self.child.as_mut() else {
+        let Some(magmar) = self.magmar.as_mut() else {
             return Err("Plotter process is not running.".to_string());
         };
 
-        child
-            .stdin
-            .as_ref()
-            .unwrap()
-            .write_all(format!("!save,{}\n", path).as_bytes())
-            .unwrap();
-
-        let mut error = String::new();
-        child
-            .stderr
-            .as_mut()
-            .unwrap()
-            .read_to_string(&mut error)
-            .ok();
-        if !error.is_empty() {
-            return Err(error);
-        }
-
-        let mut output = String::new();
-        child
-            .stdout
-            .as_mut()
-            .unwrap()
-            .read_to_string(&mut output)
-            .ok();
-        Ok(output)
+        magmar.send_command(format!("!save,{}", path), "Saved screenshot to")
     }
 }
 
@@ -389,36 +297,11 @@ where
     T: Real + ToString,
 {
     fn save(&mut self, path: &str) -> Result<String, String> {
-        let Some(child) = self.child.as_mut() else {
+        let Some(magmar) = self.magmar.as_mut() else {
             return Err("Plotter process is not running.".to_string());
         };
 
-        child
-            .stdin
-            .as_ref()
-            .unwrap()
-            .write_all(format!("!save,{}\n", path).as_bytes())
-            .unwrap();
-
-        let mut error = String::new();
-        child
-            .stderr
-            .as_mut()
-            .unwrap()
-            .read_to_string(&mut error)
-            .ok();
-        if !error.is_empty() {
-            return Err(error);
-        }
-
-        let mut output = String::new();
-        child
-            .stdout
-            .as_mut()
-            .unwrap()
-            .read_to_string(&mut output)
-            .ok();
-        Ok(output)
+        magmar.send_command(format!("!save,{}", path), "Saved screenshot to")
     }
 }
 
