@@ -77,7 +77,7 @@ pub mod prelude {
     pub use crate::metrics::itae::ITAE;
     #[cfg(feature = "std")]
     pub use crate::output::plotter::{
-        JoinAll, Joinable, LegendPosition, Plotter, RTPlotter, Savable,
+        JoinAll, Joinable, LegendPosition, Plotter, PlotterDynamic, RTPlotter, Savable,
     };
     #[cfg(feature = "std")]
     pub use crate::output::printer::Printer;

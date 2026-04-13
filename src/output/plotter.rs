@@ -69,6 +69,19 @@ where
     _marker: PhantomData<[T; N]>,
 }
 
+#[derive(Debug)]
+pub struct PlotterDynamic<T>
+where
+    T: Real + ToString,
+{
+    data: Vec<Vec<Signal<T>>>,
+    variable_names: Vec<String>,
+    magmar: Option<Magmar>,
+    title: String,
+    is_light: bool,
+    legend_pos: Option<LegendPosition>,
+}
+
 pub trait Joinable {
     fn join(&mut self);
 }
@@ -85,6 +98,66 @@ where
         Self {
             data: Vec::new(),
             variable_names: variable_names.map(|vn| vn.as_ref().to_string()),
+            magmar: None,
+            title,
+            is_light: false,
+            legend_pos: None,
+        }
+    }
+
+    pub fn with_light_theme(mut self) -> Self {
+        self.is_light = true;
+        self
+    }
+
+    pub fn with_legend_position(mut self, pos: LegendPosition) -> Self {
+        self.legend_pos = Some(pos);
+        self
+    }
+
+    pub fn display(&mut self) {
+        self.magmar = Some(Magmar::new(&self.title, self.is_light));
+
+        if let Some(magmar) = &mut self.magmar {
+            magmar.send_labels(format!(
+                "Time (s),{}\n",
+                self.variable_names
+                    .iter()
+                    .map(|s| s.to_string())
+                    .collect::<Vec<_>>()
+                    .join(",")
+            ));
+
+            if let Some(pos) = self.legend_pos {
+                let _ = magmar.send_command(format!("!legend,{}\n", pos), "Legend position set to");
+            }
+
+            for signals in &self.data {
+                let time = &signals[0].delta.sim_time().as_secs_f32();
+                let mut data = vec![*time as f64];
+                data.extend(
+                    signals
+                        .iter()
+                        .map(|s| s.value.to_string().parse::<f64>().unwrap_or(0.0)),
+                );
+
+                magmar.send_data(&data);
+            }
+        }
+    }
+}
+
+impl<T> PlotterDynamic<T>
+where
+    T: Real + ToString,
+{
+    pub fn new(title: String, variable_names: Vec<impl AsRef<str>>) -> Self {
+        Self {
+            data: Vec::new(),
+            variable_names: variable_names
+                .into_iter()
+                .map(|vn| vn.as_ref().to_string())
+                .collect(),
             magmar: None,
             title,
             is_light: false,
@@ -184,6 +257,36 @@ where
     }
 }
 
+impl<T> Block for PlotterDynamic<T>
+where
+    T: Real + ToString,
+{
+    type Input = Vec<T>;
+    type Output = Vec<T>;
+
+    fn output(&mut self, input: Signal<Self::Input>) -> Signal<Self::Output> {
+        self.data.push(
+            input
+                .value
+                .iter()
+                .map(|s| Signal {
+                    value: *s,
+                    delta: input.delta,
+                })
+                .collect::<Vec<_>>(),
+        );
+        input
+    }
+
+    fn reset(&mut self) {
+        self.data.clear();
+        if let Some(magmar) = &mut self.magmar {
+            magmar.kill().ok();
+            self.magmar = None;
+        }
+    }
+}
+
 impl<const N: usize, T> Block for RTPlotter<N, T>
 where
     T: Real + ToString,
@@ -246,6 +349,17 @@ where
     }
 }
 
+impl<T> Drop for PlotterDynamic<T>
+where
+    T: Real + ToString,
+{
+    fn drop(&mut self) {
+        if let Some(magmar) = &mut self.magmar {
+            magmar.kill().unwrap();
+        }
+    }
+}
+
 impl<const N: usize, T> Drop for RTPlotter<N, T>
 where
     T: Real + ToString,
@@ -268,6 +382,17 @@ where
     }
 }
 
+impl<T> Joinable for PlotterDynamic<T>
+where
+    T: Real + ToString,
+{
+    fn join(&mut self) {
+        if let Some(magmar) = &mut self.magmar {
+            magmar.wait().ok();
+        }
+    }
+}
+
 impl<const N: usize, T> Joinable for RTPlotter<N, T>
 where
     T: Real + ToString,
@@ -280,6 +405,19 @@ where
 }
 
 impl<const N: usize, T> Savable for Plotter<N, T>
+where
+    T: Real + ToString,
+{
+    fn save(&mut self, path: &str) -> Result<String, String> {
+        let Some(magmar) = self.magmar.as_mut() else {
+            return Err("Plotter process is not running.".to_string());
+        };
+
+        magmar.send_command(format!("!save,{}", path), "Saved screenshot to")
+    }
+}
+
+impl<T> Savable for PlotterDynamic<T>
 where
     T: Real + ToString,
 {
