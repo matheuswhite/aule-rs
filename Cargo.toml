@@ -6,19 +6,20 @@ edition = "2024"
 
 [dependencies]
 libm = { version = "0.2" }
-num-traits = { version = "0.2.19", default-features = false, features = ["libm"] }
+num-traits = { version = "0.2.19", default-features = false, features = [
+    "libm",
+] }
 
 [features]
 default = ["std", "swd"]
-alloc = ["ndarray"]
+alloc = ["faer"]
 std = ["alloc", "probe-rs", "csv"]
 swd = []
 
-[dependencies.ndarray]
-version = "0.16.0"
+[dependencies.faer]
+version = "0.24.0"
 default-features = false
 optional = true
-features = ["portable-atomic-critical-section"]
 
 [dependencies.csv]
 version = "1.4.0"

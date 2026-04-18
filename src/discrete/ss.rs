@@ -1,83 +1,80 @@
 use crate::block::Block;
 use crate::signal::Signal;
-use alloc::vec;
-use alloc::vec::Vec;
 use core::fmt::Display;
-use ndarray::{Array2, LinalgScalar};
+use faer::{Mat, mat, traits::ComplexField};
 use num_traits::Zero;
 
 pub struct DSS<T>
 where
-    T: Copy + Zero,
+    T: Copy + Zero + ComplexField,
 {
-    a: Array2<T>,
-    b: Array2<T>,
-    c: Array2<T>,
-    d: Array2<T>,
-    initial_state: Option<Vec<T>>,
-    state: Array2<T>,
+    a: Mat<T>,
+    b: Mat<T>,
+    c: Mat<T>,
+    d: Mat<T>,
+    initial_state: Option<Mat<T>>,
+    state: Mat<T>,
     last_output: Option<T>,
 }
 
 impl<T> DSS<T>
 where
-    T: Copy + Zero,
+    T: Copy + Zero + ComplexField,
 {
-    pub fn new(a: Array2<T>, b: Vec<T>, c: Vec<T>, d: T) -> Self {
-        let an = a.shape()[0];
-        let am = a.shape()[1];
-        let bn = b.len();
-        let cn = c.len();
+    pub fn new(a: Mat<T>, b: Mat<T>, c: Mat<T>, d: T) -> Self {
+        let n = a.shape().0;
+        assert_eq!(a.shape().0, a.shape().1, "A must be a square matrix");
 
-        assert_eq!(an, am, "Matrix 'a' must be square.");
-        assert_eq!(
-            bn, an,
-            "Matrix 'b' must have the same number of rows as 'a'."
-        );
-        assert_eq!(
-            cn, an,
-            "Matrix 'c' must have the same number of columns as 'a'."
-        );
+        assert_eq!(b.shape().0, n, "B must has {} rows", n);
+        assert_eq!(b.shape().1, 1, "B must be a column matrix");
+
+        assert_eq!(c.shape().0, 1, "C must be a row matrix");
+        assert_eq!(c.shape().1, n, "C must has {} columns", n);
 
         Self {
             a,
-            b: Array2::from_shape_vec((bn, 1), b).unwrap(),
-            c: Array2::from_shape_vec((1, cn), c).unwrap(),
-            d: Array2::from_shape_vec((1, 1), vec![d]).unwrap(),
-            state: Array2::zeros((an, 1)),
+            b,
+            c,
+            d: mat![[d]],
+            state: Mat::zeros(n, 1),
             initial_state: None,
             last_output: None,
         }
     }
 
-    pub fn with_initial_state(mut self, initial_state: Vec<T>) -> Self {
-        let an = self.a.shape()[0];
-        let xn = initial_state.len();
-
+    pub fn with_initial_state(mut self, initial_state: Mat<T>) -> Self {
+        let n = self.a.shape().0;
         assert_eq!(
-            xn, an,
-            "Initial state vector must have the same length as the number of states."
+            initial_state.shape().0,
+            n,
+            "Inicial state must has {} rows",
+            n
+        );
+        assert_eq!(
+            initial_state.shape().1,
+            1,
+            "Inicial state must be a column matrix"
         );
 
         self.initial_state = Some(initial_state.clone());
-        self.state = Array2::from_shape_vec((xn, 1), initial_state).unwrap();
+        self.state = initial_state;
         self
     }
 }
 
 impl<T> Block for DSS<T>
 where
-    T: Copy + Zero + LinalgScalar,
+    T: Copy + Zero + ComplexField,
 {
     type Input = T;
     type Output = T;
 
     fn output(&mut self, input: Signal<Self::Input>) -> Signal<Self::Output> {
-        let input_matrix = Array2::from_shape_vec((1, 1), vec![input.value]).unwrap();
-        self.state = self.a.dot(&self.state) + self.b.dot(&input_matrix);
+        let input_matrix = mat![[input.value]];
+        self.state = &self.a * &self.state + &self.b * &input_matrix;
 
-        let output = self.c.dot(&self.state) + self.d.dot(&input_matrix);
-        let output = input.replace(output[[0, 0]]);
+        let output = &self.c * &self.state + &self.d * &input_matrix;
+        let output = input.replace(output[(0, 0)]);
         self.last_output = Some(output.value);
         output
     }
@@ -88,8 +85,7 @@ where
 
     fn reset(&mut self) {
         if let Some(initial_state) = &self.initial_state {
-            let xn = initial_state.len();
-            self.state = Array2::from_shape_vec((xn, 1), initial_state.clone()).unwrap();
+            self.state = initial_state.clone();
         } else {
             self.state.fill(T::zero());
         }
@@ -99,12 +95,12 @@ where
 
 impl<T> Display for DSS<T>
 where
-    T: Copy + Zero + Display,
+    T: Copy + Zero + Display + ComplexField,
 {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         write!(
             f,
-            "A: {}\n\tB: {}\n\tC: {}\n\tD: {}\n\tx: {}",
+            "A: {:?}\n\tB: {:?}\n\tC: {:?}\n\tD: {:?}\n\tx: {:?}",
             self.a, self.b, self.c, self.d, self.state
         )
     }

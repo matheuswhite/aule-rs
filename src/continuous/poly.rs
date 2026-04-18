@@ -6,16 +6,17 @@ use core::{
     fmt::Display,
     ops::{Add, AddAssign, Div, Mul, Neg, Sub},
 };
+use faer::traits::ComplexField;
 use num_traits::Float;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Polynomial<T>(crate::poly::Polynomial<T>)
 where
-    T: Float + Default + AddAssign<T>;
+    T: Float + Default + AddAssign<T> + ComplexField;
 
 impl<T> Polynomial<T>
 where
-    T: Float + Default + AddAssign<T>,
+    T: Float + Default + AddAssign<T> + ComplexField,
 {
     pub fn new(coeff: &[T]) -> Self {
         Polynomial(crate::poly::Polynomial::new(coeff))
@@ -48,7 +49,7 @@ where
 
 impl<T> Add for Polynomial<T>
 where
-    T: Float + Default + AddAssign<T>,
+    T: Float + Default + AddAssign<T> + ComplexField,
 {
     type Output = Polynomial<T>;
 
@@ -59,7 +60,7 @@ where
 
 impl<T> Sub for Polynomial<T>
 where
-    T: Float + Default + AddAssign<T>,
+    T: Float + Default + AddAssign<T> + ComplexField,
 {
     type Output = Polynomial<T>;
 
@@ -70,7 +71,7 @@ where
 
 impl<T> Mul for Polynomial<T>
 where
-    T: Float + Default + AddAssign<T>,
+    T: Float + Default + AddAssign<T> + ComplexField,
 {
     type Output = Polynomial<T>;
 
@@ -81,7 +82,7 @@ where
 
 impl<T> Div for Polynomial<T>
 where
-    T: Float + Default + AddAssign<T>,
+    T: Float + Default + AddAssign<T> + ComplexField,
 {
     type Output = Tf<T>;
 
@@ -92,7 +93,7 @@ where
 
 impl<T> Neg for Polynomial<T>
 where
-    T: Float + Default + AddAssign<T>,
+    T: Float + Default + AddAssign<T> + ComplexField,
 {
     type Output = Polynomial<T>;
 
@@ -103,7 +104,7 @@ where
 
 impl<T> Add<T> for Polynomial<T>
 where
-    T: Float + Default + AddAssign<T>,
+    T: Float + Default + AddAssign<T> + ComplexField,
 {
     type Output = Polynomial<T>;
 
@@ -114,7 +115,7 @@ where
 
 impl<T> Sub<T> for Polynomial<T>
 where
-    T: Float + Default + AddAssign<T>,
+    T: Float + Default + AddAssign<T> + ComplexField,
 {
     type Output = Polynomial<T>;
 
@@ -125,7 +126,7 @@ where
 
 impl<T> Mul<T> for Polynomial<T>
 where
-    T: Float + Default + AddAssign<T>,
+    T: Float + Default + AddAssign<T> + ComplexField,
 {
     type Output = Polynomial<T>;
 
@@ -136,7 +137,7 @@ where
 
 impl<T> Div<T> for Polynomial<T>
 where
-    T: Float + Default + AddAssign<T>,
+    T: Float + Default + AddAssign<T> + ComplexField,
 {
     type Output = Tf<T>;
 
@@ -147,7 +148,7 @@ where
 
 impl<T> Add<s> for Polynomial<T>
 where
-    T: Float + Default + AddAssign<T>,
+    T: Float + Default + AddAssign<T> + ComplexField,
 {
     type Output = Polynomial<T>;
 
@@ -158,7 +159,7 @@ where
 
 impl<T> Sub<s> for Polynomial<T>
 where
-    T: Float + Default + AddAssign<T>,
+    T: Float + Default + AddAssign<T> + ComplexField,
 {
     type Output = Polynomial<T>;
 
@@ -169,7 +170,7 @@ where
 
 impl<T> Mul<s> for Polynomial<T>
 where
-    T: Float + Default + AddAssign<T>,
+    T: Float + Default + AddAssign<T> + ComplexField,
 {
     type Output = Polynomial<T>;
 
@@ -180,7 +181,7 @@ where
 
 impl<T> Div<s> for Polynomial<T>
 where
-    T: Float + Default + AddAssign<T>,
+    T: Float + Default + AddAssign<T> + ComplexField,
 {
     type Output = Tf<T>;
 
@@ -244,7 +245,7 @@ impl_poly_ops!(i128, f64);
 
 impl<T> From<T> for Polynomial<T>
 where
-    T: Float + Default + AddAssign<T>,
+    T: Float + Default + AddAssign<T> + ComplexField,
 {
     fn from(value: T) -> Self {
         Polynomial(crate::poly::Polynomial::new(&[value]))
@@ -253,7 +254,7 @@ where
 
 impl<T> From<s> for Polynomial<T>
 where
-    T: Float + Default + AddAssign<T>,
+    T: Float + Default + AddAssign<T> + ComplexField,
 {
     fn from(_value: s) -> Self {
         Polynomial(crate::poly::Polynomial::new(&[T::one(), T::zero()]))
@@ -262,7 +263,7 @@ where
 
 impl<T> Display for Polynomial<T>
 where
-    T: Float + Default + AddAssign<T> + Display,
+    T: Float + Default + AddAssign<T> + Display + ComplexField,
 {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         let degree = self.degree();

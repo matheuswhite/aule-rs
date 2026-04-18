@@ -5,52 +5,54 @@ use core::{
     fmt::{Debug, Display},
     marker::PhantomData,
 };
-use ndarray::{Array2, LinalgScalar};
+use faer::traits::ComplexField;
+use faer::{Mat, mat};
 use num_traits::Zero;
 
 #[derive(Debug, Clone)]
-pub struct Observer<I, const N: usize, T>
+pub struct Observer<I, T>
 where
-    T: Zero + Copy,
+    T: Zero + Copy + ComplexField,
     I: Solver<T> + Debug,
 {
-    a: Array2<T>,
-    b: Array2<T>,
-    c: Array2<T>,
-    d: Array2<T>,
-    l: Array2<T>,
-    initial_state: Option<[T; N]>,
+    a: Mat<T>,
+    b: Mat<T>,
+    c: Mat<T>,
+    d: Mat<T>,
+    l: Mat<T>,
+    initial_state: Option<Mat<T>>,
     current_input: ObserverInput<T>,
-    state: Array2<T>,
-    last_output: Option<ObserverOutput<T, N>>,
+    state: Mat<T>,
+    last_output: Option<ObserverOutput<T>>,
     _marker: PhantomData<I>,
 }
 
-impl<I, const N: usize, T> Observer<I, N, T>
+impl<I, T> Observer<I, T>
 where
-    T: Zero + Copy,
+    T: Zero + Copy + ComplexField,
     I: Solver<T> + Debug,
 {
-    pub fn new(a: Array2<T>, b: [T; N], c: [T; N], d: T, l: [T; N]) -> Self {
-        let an = a.shape()[0];
-        let am = a.shape()[1];
+    pub fn new(a: Mat<T>, b: Mat<T>, c: Mat<T>, d: T, l: Mat<T>) -> Self {
+        let n = a.shape().0;
 
-        assert_eq!(
-            an, N,
-            "State dimension N must match the number of rows in 'a'."
-        );
-        assert_eq!(
-            am, N,
-            "State dimension N must match the number of columns in 'a'."
-        );
+        assert_eq!(a.shape().0, a.shape().1, "A must be a square matrix");
+
+        assert_eq!(b.shape().0, n, "B must has {} rows", n);
+        assert_eq!(b.shape().1, 1, "B must be a column matrix");
+
+        assert_eq!(c.shape().0, 1, "C must be a row matrix");
+        assert_eq!(c.shape().1, n, "C must has {} columns", n);
+
+        assert_eq!(l.shape().0, n, "L must has {} rows", n);
+        assert_eq!(l.shape().1, 1, "L must be a column matrix");
 
         Self {
             a,
-            b: Array2::from_shape_vec((N, 1), b.to_vec()).unwrap(),
-            c: Array2::from_shape_vec((1, N), c.to_vec()).unwrap(),
-            d: Array2::from_elem((1, 1), d),
-            l: Array2::from_shape_vec((N, 1), l.to_vec()).unwrap(),
-            state: Array2::zeros((N, 1)),
+            b,
+            c,
+            d: mat![[d]],
+            l,
+            state: Mat::zeros(n, 1),
             initial_state: None,
             last_output: None,
             current_input: ObserverInput::default(),
@@ -58,17 +60,22 @@ where
         }
     }
 
-    pub fn with_initial_state(mut self, initial_state: [T; N]) -> Self {
-        let an = self.a.shape()[0];
-        let xn = initial_state.len();
-
+    pub fn with_initial_state(mut self, initial_state: Mat<T>) -> Self {
+        let n = self.a.shape().0;
         assert_eq!(
-            an, xn,
-            "Initial state must match the number of rows in 'a'."
+            initial_state.shape().0,
+            n,
+            "Inicial state must has {} rows",
+            n
+        );
+        assert_eq!(
+            initial_state.shape().1,
+            1,
+            "Inicial state must be a column matrix"
         );
 
-        self.initial_state = Some(initial_state);
-        self.state = Array2::from_shape_vec((xn, 1), initial_state.to_vec()).unwrap();
+        self.initial_state = Some(initial_state.clone());
+        self.state = initial_state;
         self
     }
 
@@ -77,28 +84,28 @@ where
     }
 }
 
-impl<I, const N: usize, T> StateEstimation<T> for Observer<I, N, T>
+impl<I, T> StateEstimation<T> for Observer<I, T>
 where
-    T: Zero + Copy + LinalgScalar,
+    T: Zero + Copy + ComplexField,
     I: Solver<T> + Debug,
 {
-    fn estimate(&self, state: Array2<T>) -> Array2<T> {
-        let input_matrix = Array2::from_elem((1, 1), self.current_input.control_input);
-        let y_hat = self.c.dot(&state) + self.d.dot(&input_matrix);
-        let y = Array2::from_elem((1, 1), self.current_input.measured_output);
+    fn estimate(&self, state: Mat<T>) -> Mat<T> {
+        let input_matrix = mat![[self.current_input.control_input]];
+        let y_hat = &self.c * &state + &self.d + &input_matrix;
+        let y = mat![[self.current_input.measured_output]];
         let y_err = y - y_hat;
 
-        self.a.dot(&state) + self.b.dot(&input_matrix) + self.l.dot(&y_err)
+        &self.a * &state + &self.b * &input_matrix + &self.l * &y_err
     }
 }
 
-impl<I, const N: usize, T> Block for Observer<I, N, T>
+impl<I, T> Block for Observer<I, T>
 where
-    T: Zero + Copy + LinalgScalar,
+    T: Zero + Copy + ComplexField,
     I: Solver<T> + Debug,
 {
     type Input = ObserverInput<T>;
-    type Output = ObserverOutput<T, N>;
+    type Output = ObserverOutput<T>;
 
     fn output(&mut self, input: Signal<Self::Input>) -> Signal<Self::Output> {
         let dt = input.delta.dt();
@@ -106,17 +113,10 @@ where
         self.current_input = input.value.clone();
         self.state = I::integrate(self.state.clone(), dt, self);
 
-        let u = Array2::from_elem((1, 1), input.value.control_input);
-        let y = self.c.dot(&self.state) + self.d.dot(&u);
+        let u = mat![[input.value.control_input]];
+        let y = &self.c * &self.state + &self.d * &u;
 
-        let output = ObserverOutput::new(y[[0, 0]], {
-            let mut x_hat = [T::zero(); N];
-            for (i, x) in x_hat.iter_mut().enumerate() {
-                *x = self.state[[i, 0]];
-            }
-            x_hat
-        });
-
+        let output = ObserverOutput::new(y[(0, 0)], self.state.clone());
         self.last_output = Some(output.clone());
 
         input.map(|_| output)
@@ -127,25 +127,25 @@ where
     }
 
     fn reset(&mut self) {
-        if let Some(initial_state) = self.initial_state {
-            self.state = Array2::from_shape_vec((N, 1), initial_state.to_vec()).unwrap();
+        if let Some(initial_state) = &self.initial_state {
+            self.state = initial_state.clone();
         } else {
-            self.state = Array2::zeros((N, 1));
+            self.state.fill(T::zero());
         }
         self.last_output = None;
         self.current_input = ObserverInput::default();
     }
 }
 
-impl<I, const N: usize, T> Display for Observer<I, N, T>
+impl<I, T> Display for Observer<I, T>
 where
-    T: Zero + Copy + Display,
+    T: Zero + Copy + Display + ComplexField,
     I: Solver<T> + Debug,
 {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         write!(
             f,
-            "A: {}\n\tB: {}\n\tC: {}\n\tD: {}\n\tL: {}\n\tx: {}",
+            "A: {:?}\n\tB: {:?}\n\tC: {:?}\n\tD: {:?}\n\tL: {:?}\n\tx: {:?}",
             self.a, self.b, self.c, self.d, self.l, self.state
         )
     }
@@ -154,7 +154,7 @@ where
 #[derive(Debug, Clone)]
 pub struct ObserverInput<T>
 where
-    T: Zero + Copy,
+    T: Zero + Copy + ComplexField,
 {
     pub control_input: T,
     pub measured_output: T,
@@ -162,7 +162,7 @@ where
 
 impl<T> Default for ObserverInput<T>
 where
-    T: Zero + Copy,
+    T: Zero + Copy + ComplexField,
 {
     fn default() -> Self {
         ObserverInput {
@@ -174,7 +174,7 @@ where
 
 impl<T> Pack<ObserverInput<T>> for (Signal<T>, Signal<T>)
 where
-    T: Zero + Copy,
+    T: Zero + Copy + ComplexField,
 {
     fn pack(self) -> Signal<ObserverInput<T>> {
         let control_input = self.0.value;
@@ -192,19 +192,19 @@ where
 }
 
 #[derive(Debug, Clone)]
-pub struct ObserverOutput<T, const N: usize>
+pub struct ObserverOutput<T>
 where
-    T: Zero + Copy,
+    T: Zero + Copy + ComplexField,
 {
     pub measured_output: T,
-    pub state_estimate: [T; N],
+    pub state_estimate: Mat<T>,
 }
 
-impl<T, const N: usize> ObserverOutput<T, N>
+impl<T> ObserverOutput<T>
 where
-    T: Zero + Copy,
+    T: Zero + Copy + ComplexField,
 {
-    pub fn new(measured_output: T, state_estimate: [T; N]) -> Self {
+    pub fn new(measured_output: T, state_estimate: Mat<T>) -> Self {
         ObserverOutput {
             measured_output,
             state_estimate,
@@ -212,11 +212,11 @@ where
     }
 }
 
-impl<T, const N: usize> Unpack<(Signal<T>, Signal<[T; N]>)> for Signal<ObserverOutput<T, N>>
+impl<T> Unpack<(Signal<T>, Signal<Mat<T>>)> for Signal<ObserverOutput<T>>
 where
-    T: Zero + Copy,
+    T: Zero + Copy + ComplexField,
 {
-    fn unpack(self) -> (Signal<T>, Signal<[T; N]>) {
+    fn unpack(self) -> (Signal<T>, Signal<Mat<T>>) {
         let measured_output_signal = Signal {
             value: self.value.measured_output,
             delta: self.delta,
