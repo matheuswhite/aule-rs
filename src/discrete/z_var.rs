@@ -1,5 +1,6 @@
 use crate::discrete::{DTf, Polynomial};
 use core::ops::{Add, AddAssign, Div, Mul, Sub};
+use faer::traits::ComplexField;
 use num_traits::Float;
 
 #[allow(non_camel_case_types)]
@@ -8,7 +9,7 @@ pub struct z;
 
 impl<T> Add<T> for z
 where
-    T: Float + Default + AddAssign<T>,
+    T: Float + Default + AddAssign<T> + ComplexField,
 {
     type Output = Polynomial<T>;
 
@@ -19,7 +20,7 @@ where
 
 impl<T> Sub<T> for z
 where
-    T: Float + Default + AddAssign<T>,
+    T: Float + Default + AddAssign<T> + ComplexField,
 {
     type Output = Polynomial<T>;
 
@@ -30,7 +31,7 @@ where
 
 impl<T> Add<Polynomial<T>> for z
 where
-    T: Float + Default + AddAssign<T>,
+    T: Float + Default + AddAssign<T> + ComplexField,
 {
     type Output = Polynomial<T>;
 
@@ -41,7 +42,7 @@ where
 
 impl<T> Sub<Polynomial<T>> for z
 where
-    T: Float + Default + AddAssign<T>,
+    T: Float + Default + AddAssign<T> + ComplexField,
 {
     type Output = Polynomial<T>;
 
@@ -52,7 +53,7 @@ where
 
 impl<T> Mul<T> for z
 where
-    T: Float + Default + AddAssign<T>,
+    T: Float + Default + AddAssign<T> + ComplexField,
 {
     type Output = Polynomial<T>;
 
@@ -63,7 +64,7 @@ where
 
 impl<T> Mul<Polynomial<T>> for z
 where
-    T: Float + Default + AddAssign<T>,
+    T: Float + Default + AddAssign<T> + ComplexField,
 {
     type Output = Polynomial<T>;
 
@@ -82,7 +83,7 @@ impl Mul<z> for z {
 
 impl<T> Div<Polynomial<T>> for z
 where
-    T: Float + Default + AddAssign<T>,
+    T: Float + Default + AddAssign<T> + ComplexField,
 {
     type Output = DTf<T>;
 

@@ -6,16 +6,17 @@ use core::{
     fmt::Display,
     ops::{Add, AddAssign, Div, Mul, Neg, Sub},
 };
+use faer::traits::ComplexField;
 use num_traits::Float;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct PolynomialInverse<T>(crate::poly::Polynomial<T>)
 where
-    T: Float + Default + AddAssign<T>;
+    T: Float + Default + AddAssign<T> + ComplexField;
 
 impl<T> PolynomialInverse<T>
 where
-    T: Float + Default + AddAssign<T>,
+    T: Float + Default + AddAssign<T> + ComplexField,
 {
     pub fn new(coeff: &[T]) -> Self {
         Self(crate::poly::Polynomial::new(coeff))
@@ -48,7 +49,7 @@ where
 
 impl<T> Add for PolynomialInverse<T>
 where
-    T: Float + Default + AddAssign<T>,
+    T: Float + Default + AddAssign<T> + ComplexField,
 {
     type Output = Self;
 
@@ -59,7 +60,7 @@ where
 
 impl<T> Sub for PolynomialInverse<T>
 where
-    T: Float + Default + AddAssign<T>,
+    T: Float + Default + AddAssign<T> + ComplexField,
 {
     type Output = Self;
 
@@ -70,7 +71,7 @@ where
 
 impl<T> Mul for PolynomialInverse<T>
 where
-    T: Float + Default + AddAssign<T>,
+    T: Float + Default + AddAssign<T> + ComplexField,
 {
     type Output = Self;
 
@@ -81,7 +82,7 @@ where
 
 impl<T> Div for PolynomialInverse<T>
 where
-    T: Float + Default + AddAssign<T>,
+    T: Float + Default + AddAssign<T> + ComplexField,
 {
     type Output = DTf<T>;
 
@@ -92,7 +93,7 @@ where
 
 impl<T> Neg for PolynomialInverse<T>
 where
-    T: Float + Default + AddAssign<T>,
+    T: Float + Default + AddAssign<T> + ComplexField,
 {
     type Output = Self;
 
@@ -103,7 +104,7 @@ where
 
 impl<T> Add<T> for PolynomialInverse<T>
 where
-    T: Float + Default + AddAssign<T>,
+    T: Float + Default + AddAssign<T> + ComplexField,
 {
     type Output = PolynomialInverse<T>;
 
@@ -114,7 +115,7 @@ where
 
 impl<T> Sub<T> for PolynomialInverse<T>
 where
-    T: Float + Default + AddAssign<T>,
+    T: Float + Default + AddAssign<T> + ComplexField,
 {
     type Output = PolynomialInverse<T>;
 
@@ -125,7 +126,7 @@ where
 
 impl<T> Mul<T> for PolynomialInverse<T>
 where
-    T: Float + Default + AddAssign<T>,
+    T: Float + Default + AddAssign<T> + ComplexField,
 {
     type Output = PolynomialInverse<T>;
 
@@ -136,7 +137,7 @@ where
 
 impl<T> Div<T> for PolynomialInverse<T>
 where
-    T: Float + Default + AddAssign<T>,
+    T: Float + Default + AddAssign<T> + ComplexField,
 {
     type Output = DTf<T>;
 
@@ -147,7 +148,7 @@ where
 
 impl<T> Add<z_inv> for PolynomialInverse<T>
 where
-    T: Float + Default + AddAssign<T>,
+    T: Float + Default + AddAssign<T> + ComplexField,
 {
     type Output = PolynomialInverse<T>;
 
@@ -158,7 +159,7 @@ where
 
 impl<T> Sub<z_inv> for PolynomialInverse<T>
 where
-    T: Float + Default + AddAssign<T>,
+    T: Float + Default + AddAssign<T> + ComplexField,
 {
     type Output = PolynomialInverse<T>;
 
@@ -169,7 +170,7 @@ where
 
 impl<T> Mul<z_inv> for PolynomialInverse<T>
 where
-    T: Float + Default + AddAssign<T>,
+    T: Float + Default + AddAssign<T> + ComplexField,
 {
     type Output = PolynomialInverse<T>;
 
@@ -180,7 +181,7 @@ where
 
 impl<T> Div<z_inv> for PolynomialInverse<T>
 where
-    T: Float + Default + AddAssign<T>,
+    T: Float + Default + AddAssign<T> + ComplexField,
 {
     type Output = DTf<T>;
 
@@ -244,7 +245,7 @@ impl_poly_ops!(i128, f64);
 
 impl<T> From<T> for PolynomialInverse<T>
 where
-    T: Float + Default + AddAssign<T>,
+    T: Float + Default + AddAssign<T> + ComplexField,
 {
     fn from(value: T) -> Self {
         PolynomialInverse(crate::poly::Polynomial::new(&[value]))
@@ -253,7 +254,7 @@ where
 
 impl<T> From<z_inv> for PolynomialInverse<T>
 where
-    T: Float + Default + AddAssign<T>,
+    T: Float + Default + AddAssign<T> + ComplexField,
 {
     fn from(_value: z_inv) -> Self {
         PolynomialInverse(crate::poly::Polynomial::new(&[T::one(), T::zero()]))
@@ -262,7 +263,7 @@ where
 
 impl<T> Display for PolynomialInverse<T>
 where
-    T: Float + Default + AddAssign<T> + Display,
+    T: Float + Default + AddAssign<T> + Display + ComplexField,
 {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         let string = self

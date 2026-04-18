@@ -33,6 +33,8 @@ pub use crate::discrete::z_inv_var::z_inv;
 pub use crate::discrete::z_var::z;
 
 pub mod prelude {
+    pub use faer::prelude::*;
+
     pub use crate::block::Block;
     #[cfg(feature = "alloc")]
     pub use crate::continuous::Tf;
