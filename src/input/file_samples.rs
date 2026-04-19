@@ -47,12 +47,10 @@ impl FileSamples {
 
         let time = rec
             .get(self.time_index)
-            .map(|time| time.parse::<f64>().ok())
-            .flatten()?;
+            .and_then(|time| time.parse::<f64>().ok())?;
         let value = rec
             .get(self.value_index)
-            .map(|value| value.parse::<f64>().ok())
-            .flatten()?;
+            .and_then(|value| value.parse::<f64>().ok())?;
 
         let record = Record { time, value };
 
@@ -76,18 +74,14 @@ impl Block for FileSamples {
     type Output = Option<f64>;
 
     fn block(&mut self, _input: Self::Input, sim_state: SimulationState) -> Self::Output {
-        let Some(record) = self.current_record.clone() else {
-            return None;
-        };
+        let record = self.current_record.clone()?;
 
         if sim_state.sim_time().as_secs_f64() >= record.time {
             self.last_record = record;
             self.current_record = self.next_record();
         }
 
-        let Some(record) = self.current_record.clone() else {
-            return None;
-        };
+        let record = self.current_record.clone()?;
 
         let start = self.last_record.time;
         let end = record.time;

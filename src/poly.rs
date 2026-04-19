@@ -109,8 +109,8 @@ where
             let coeff = remainder[0] / den_lead;
             quotient.push(coeff);
 
-            for i in 0..other.coeff.len() {
-                remainder[i] = remainder[i] - coeff * other.coeff[i];
+            for (i, rem) in remainder.iter_mut().enumerate().take(other.coeff.len()) {
+                *rem -= coeff * other.coeff[i];
             }
 
             remainder.remove(0);

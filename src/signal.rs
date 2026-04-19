@@ -357,6 +357,7 @@ impl<T> Unpack<Option<Signal<T>>> for Signal<Option<T>> {
 }
 
 pub trait AsSignal {
+    #[allow(clippy::wrong_self_convention)]
     fn as_signal(self, sim_state: SimulationState) -> Signal<Self>
     where
         Self: Sized,

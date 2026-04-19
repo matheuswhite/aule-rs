@@ -19,9 +19,7 @@ pub trait Filter: Block<Input = Self::SignalValue, Output = Self::SignalValue> {
     {
         let dt = self.dt().as_secs_f32();
         EndlessSimulation::new(dt).map_while(move |sim_state| {
-            let Some(input) = input_generator(sim_state) else {
-                return None;
-            };
+            let input = input_generator(sim_state)?;
 
             Some(self.output(input))
         })

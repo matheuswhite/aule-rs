@@ -33,8 +33,8 @@ impl FirstOrderIdentification for Hagglund {
             .value;
         let y632 = yf * 0.632 + y0;
 
-        let t1 = line_eq.time_at(y0) as f64;
-        let t2 = line_eq.time_at(y632) as f64;
+        let t1 = line_eq.time_at(y0);
+        let t2 = line_eq.time_at(y632);
         let theta = t1;
         let tau = t2 - t1;
         let k = yf - y0;

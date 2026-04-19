@@ -96,7 +96,7 @@ impl SecondOrderIdentification for Smith2 {
 
         let ratio = t20 / t60;
 
-        if ratio < 0.255 || ratio > 0.800 {
+        if !(0.255..=0.800).contains(&ratio) {
             return Err(SecondOrderModelError::ParameterOutOfRange {
                 parameter: ratio,
                 min: 0.255,

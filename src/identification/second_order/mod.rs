@@ -54,6 +54,7 @@ impl Display for SecondOrderModel {
 }
 
 pub trait SecondOrderIdentification {
+    #[allow(clippy::wrong_self_convention)]
     fn from_step_response(
         &self,
         signals: Vec<Signal<f64>>,

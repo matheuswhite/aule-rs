@@ -347,8 +347,8 @@ pub mod std {
         type Output = T;
 
         fn block(&mut self, input: Self::Input, sim_state: SimulationState) -> Self::Output {
-            let down_output = self.down.block(input, sim_state);
-            self.up.block(down_output, sim_state)
+            self.down.block(input, sim_state);
+            self.up.block((), sim_state)
         }
     }
 }
@@ -541,8 +541,8 @@ pub mod no_std {
         type Output = T;
 
         fn block(&mut self, input: Self::Input, sim_state: SimulationState) -> Self::Output {
-            let up_output = self.up.block(input, sim_state);
-            self.down.block(up_output, sim_state)
+            self.up.block(input, sim_state);
+            self.down.block((), sim_state)
         }
     }
 }

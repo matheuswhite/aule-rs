@@ -46,6 +46,7 @@ impl Display for FirstOrderModel {
 }
 
 pub trait FirstOrderIdentification {
+    #[allow(clippy::wrong_self_convention)]
     fn from_step_response(
         &self,
         signals: Vec<Signal<f64>>,

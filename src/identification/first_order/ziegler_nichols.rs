@@ -31,8 +31,8 @@ impl FirstOrderIdentification for ZieglerNichols {
             .ok_or(FirstOrderModelError::NotEnoughSamples)?
             .value;
 
-        let t1 = line_eq.time_at(y0) as f64;
-        let t3 = line_eq.time_at(yf) as f64;
+        let t1 = line_eq.time_at(y0);
+        let t3 = line_eq.time_at(yf);
 
         let theta = t1;
         let tau = t3 - t1;
