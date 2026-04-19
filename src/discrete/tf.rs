@@ -1,4 +1,5 @@
-use crate::{block::Block, discrete::PolynomialInverse, signal::Signal};
+use crate::prelude::SimulationState;
+use crate::{block::Block, discrete::PolynomialInverse};
 use alloc::vec;
 use alloc::vec::Vec;
 use core::ops::AddAssign;
@@ -67,8 +68,8 @@ where
     type Input = T;
     type Output = T;
 
-    fn output(&mut self, input: Signal<Self::Input>) -> Signal<Self::Output> {
-        self.last_inputs.insert(0, input.value);
+    fn block(&mut self, input: Self::Input, _sim_state: SimulationState) -> Self::Output {
+        self.last_inputs.insert(0, input);
         self.last_inputs.pop();
 
         let coeff = self.denominator.coeff();
@@ -90,7 +91,7 @@ where
         self.last_outputs.insert(0, output_value);
         self.last_outputs.pop();
 
-        input.replace(output_value)
+        output_value
     }
 
     fn last_output(&self) -> Option<Self::Output> {

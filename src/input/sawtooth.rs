@@ -1,4 +1,4 @@
-use crate::{block::Block, signal::Signal};
+use crate::{block::Block, prelude::SimulationState};
 use core::{
     f32::consts::PI,
     ops::{Div, Mul},
@@ -49,15 +49,10 @@ where
     type Input = ();
     type Output = T;
 
-    fn output(&mut self, input: Signal<Self::Input>) -> Signal<Self::Output> {
-        let t = input.delta.sim_time().as_secs_f64();
+    fn block(&mut self, _input: Self::Input, sim_state: SimulationState) -> Self::Output {
+        let t = sim_state.sim_time().as_secs_f64();
         let period_secs = self.period.as_secs_f64();
 
-        let value = (self.amplitude / period_secs) * (t % period_secs) + self.offset;
-
-        Signal {
-            value,
-            delta: input.delta,
-        }
+        (self.amplitude / period_secs) * (t % period_secs) + self.offset
     }
 }

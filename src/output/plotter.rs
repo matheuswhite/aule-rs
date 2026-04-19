@@ -1,5 +1,7 @@
 use crate::block::Block;
 use crate::output::magmar::Magmar;
+use crate::prelude::SimulationState;
+use crate::signal::AsSignal;
 use crate::signal::Signal;
 use alloc::vec::Vec;
 use core::fmt::Display;
@@ -133,7 +135,7 @@ where
             }
 
             for signals in &self.data {
-                let time = &signals[0].delta.sim_time().as_secs_f32();
+                let time = &signals[0].sim_state.sim_time().as_secs_f32();
                 let mut data = vec![*time as f64];
                 data.extend(
                     signals
@@ -193,7 +195,7 @@ where
             }
 
             for signals in &self.data {
-                let time = &signals[0].delta.sim_time().as_secs_f32();
+                let time = &signals[0].sim_state.sim_time().as_secs_f32();
                 let mut data = vec![*time as f64];
                 data.extend(
                     signals
@@ -240,11 +242,8 @@ where
     type Input = [T; N];
     type Output = [T; N];
 
-    fn output(&mut self, input: Signal<Self::Input>) -> Signal<Self::Output> {
-        self.data.push(input.value.map(|s| Signal {
-            value: s,
-            delta: input.delta,
-        }));
+    fn block(&mut self, input: Self::Input, sim_state: SimulationState) -> Self::Output {
+        self.data.push(input.map(|s| s.as_signal(sim_state)));
         input
     }
 
@@ -264,15 +263,12 @@ where
     type Input = Vec<T>;
     type Output = Vec<T>;
 
-    fn output(&mut self, input: Signal<Self::Input>) -> Signal<Self::Output> {
+    fn block(&mut self, input: Self::Input, sim_state: SimulationState) -> Self::Output {
         self.data.push(
             input
-                .value
-                .iter()
-                .map(|s| Signal {
-                    value: *s,
-                    delta: input.delta,
-                })
+                .clone()
+                .into_iter()
+                .map(|s| s.as_signal(sim_state))
                 .collect::<Vec<_>>(),
         );
         input
@@ -294,7 +290,7 @@ where
     type Input = [T; N];
     type Output = [T; N];
 
-    fn output(&mut self, input: Signal<Self::Input>) -> Signal<Self::Output> {
+    fn block(&mut self, input: Self::Input, sim_state: SimulationState) -> Self::Output {
         if self.magmar.is_none() {
             let mut magmar = Magmar::new(&self.title, self.is_light);
 
@@ -316,11 +312,10 @@ where
 
         let magmar = self.magmar.as_mut().unwrap();
 
-        let time = &input.delta.sim_time().as_secs_f32();
-        let mut data = vec![*time as f64];
+        let time = sim_state.sim_time().as_secs_f32();
+        let mut data = vec![time as f64];
         data.extend(
             input
-                .value
                 .iter()
                 .map(|s| s.to_string().parse::<f64>().unwrap_or(0.0)),
         );

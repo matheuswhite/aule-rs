@@ -1,6 +1,5 @@
+use crate::{block::Block, prelude::SimulationState};
 use core::fmt::Display;
-
-use crate::{block::Block, signal::Signal};
 use num_traits::One;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -45,10 +44,7 @@ where
     type Input = ();
     type Output = T;
 
-    fn output(&mut self, input: Signal<Self::Input>) -> Signal<Self::Output> {
-        Signal {
-            value: self.value,
-            delta: input.delta,
-        }
+    fn block(&mut self, _input: Self::Input, _sim_state: SimulationState) -> Self::Output {
+        self.value
     }
 }

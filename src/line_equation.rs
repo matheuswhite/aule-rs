@@ -31,15 +31,15 @@ impl LineEquation {
         let mut right = signals.next().ok_or(LineEquationError::NotEnoughSignals)?;
 
         loop {
-            let h1 = center.delta.sim_time().as_secs_f64() - left.delta.sim_time().as_secs_f64();
-            let h2 = right.delta.sim_time().as_secs_f64() - center.delta.sim_time().as_secs_f64();
+            let h1 = center.sim_state.sim_time().as_secs_f64() - left.sim_state.sim_time().as_secs_f64();
+            let h2 = right.sim_state.sim_time().as_secs_f64() - center.sim_state.sim_time().as_secs_f64();
 
             let slope = (h2 / (h1 + h2)) * ((center.value - left.value) / h1)
                 + (h1 / (h1 + h2)) * ((right.value - center.value) / h2);
 
             if slope.abs() > max_slope.abs() {
                 max_slope = slope;
-                x0 = center.delta.sim_time().as_secs_f64();
+                x0 = center.sim_state.sim_time().as_secs_f64();
                 y0 = center.value;
             }
 

@@ -22,7 +22,7 @@ fn main() {
 fn test_rt_dc_motor() -> RTPlotter<2, f64> {
     let k = 1.0f64;
     let a = 1.0f64;
-    let time = Time::new(0.001, 10.0);
+    let simulation = Simulation::new(0.001, 10.0);
 
     let mut input = Sinusoid::new(1.0f64, Duration::from_secs_f32(1.0), 0.0);
     let mut pid = PID::new(10.0, 1.0, 0.1);
@@ -32,14 +32,14 @@ fn test_rt_dc_motor() -> RTPlotter<2, f64> {
         .with_light_theme()
         .with_legend_position(LegendPosition::Right);
 
-    for dt in time {
-        let signal = dt * input.as_block();
+    for sim_state in simulation {
+        let signal = sim_state * input.as_block();
         let output = (signal - plant.last_output()) * pid.as_block() * plant.as_block();
         let output = output * writer.as_block();
 
         let _ = [signal, output].pack() * plotter.as_block();
 
-        sleep(dt.delta.dt());
+        sleep(sim_state.dt());
     }
 
     let res = plotter
@@ -53,7 +53,7 @@ fn test_rt_dc_motor() -> RTPlotter<2, f64> {
 fn test_dc_motor() -> Plotter<2, f64> {
     let k = 1.0f64;
     let a = 1.0f64;
-    let time = Time::new(0.001, 10.0);
+    let simulation = Simulation::new(0.001, 10.0);
 
     let mut iae = IAE::default();
     let mut ise = ISE::default();
@@ -67,8 +67,8 @@ fn test_dc_motor() -> Plotter<2, f64> {
     let mut writer = Writter::new("output/dc_motor.csv", ["output"]);
     let mut plotter = Plotter::new("DC Motor".to_string(), ["input", "output"]);
 
-    for dt in time {
-        let signal = dt * input.as_block();
+    for sim_state in simulation {
+        let signal = sim_state * input.as_block();
         let error = signal - plant.last_output();
         let control_signal = error * pid.as_block();
         let output = control_signal * plant.as_block();

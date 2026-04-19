@@ -2,7 +2,7 @@ use aule::prelude::*;
 
 fn main() {
     let mut swd_conn = SwdConnection::new("nRF52833_xxAA", 0, 0x2000_0000, 128 * 1024);
-    let time = Time::new(1e-3, 10.0);
+    let simulation = Simulation::new(1e-3, 10.0);
 
     let mut step = Step::default();
     let mut remote_pid = swd_conn.new_remote_block("pid1").unwrap();
@@ -13,8 +13,8 @@ fn main() {
     let mut good_hart = GoodHart::new(0.3, 0.3, 0.4);
     let mut plotter = Plotter::new("Third Order System".to_string(), ["input", "output"]);
 
-    for dt in time {
-        let input = dt * step.as_block();
+    for sim_state in simulation {
+        let input = sim_state * step.as_block();
         let error = input - plant.last_output();
         iae.output(error);
         ise.output(error);
@@ -23,8 +23,8 @@ fn main() {
         let control_signal = remote_pid.output(error);
         let output = control_signal * plant.as_block();
 
-        let _ = error.map(|e| (e, control_signal.value)) * good_hart.as_block();
-        plotter.output(input.map(|i| [i, output.value]));
+        let _ = (error, control_signal).pack() * good_hart.as_block();
+        let _ = [input, output].pack() * plotter.as_block();
     }
 
     println!("IAE Value: {}", iae.value());

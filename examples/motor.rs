@@ -27,13 +27,14 @@ impl Block for Motor {
     type Input = f64;
     type Output = f64;
 
-    fn output(&mut self, input: Signal<Self::Input>) -> Signal<Self::Output> {
-        let eletrical = (input - self.last_output) * self.kv * self.eletrical.as_block();
+    fn block(&mut self, input: Self::Input, sim_state: SimulationState) -> Self::Output {
+        let eletrical =
+            (input.as_signal(sim_state) - self.last_output) * self.kv * self.eletrical.as_block();
         let mechanical = (eletrical * self.km - self.tau_l) * self.mechanical.as_block();
 
         self.last_output = Some(mechanical.value);
 
-        mechanical
+        mechanical.value
     }
 
     fn last_output(&self) -> Option<Self::Output> {
@@ -58,14 +59,14 @@ fn main() {
 }
 
 fn open_loop_motor() -> Plotter<1, f64> {
-    let time = Time::new(1e-3, 1.0);
+    let simulation = Simulation::new(1e-3, 1.0);
     let mut motor = Motor::new(1.0, 1.0, 0.1, 0.01, 1.0, 0.01, 0.01);
     let mut step = Step::default();
     let mut writer = Writter::new("output/open_loop_motor.csv", ["output"]);
     let mut plotter = Plotter::new("Open loop Motor".to_string(), ["output"]);
 
-    for dt in time {
-        let input = dt * step.as_block();
+    for sim_state in simulation {
+        let input = sim_state * step.as_block();
         let output = input * motor.as_block() * writer.as_block();
 
         let _ = output * plotter.as_block();
@@ -81,15 +82,15 @@ fn open_loop_motor() -> Plotter<1, f64> {
 }
 
 fn closed_loop_motor() -> Plotter<1, f64> {
-    let time = Time::new(1e-3, 1.0);
+    let simulation = Simulation::new(1e-3, 1.0);
     let mut motor = Motor::new(1.0, 1.0, 0.1, 0.01, 1.0, 0.01, 0.01);
     let mut step = Step::default();
     let mut pid = PID::new(10.0, 0.1, 0.01);
     let mut writer = Writter::new("output/closed_loop_motor.csv", ["output"]);
     let mut plotter = Plotter::new("Closed Loop Motor".to_string(), ["output"]);
 
-    for dt in time {
-        let input = dt * step.as_block();
+    for sim_state in simulation {
+        let input = sim_state * step.as_block();
         let error = input - motor.last_output();
         let control_signal = error * pid.as_block();
         let output = control_signal * motor.as_block() * writer.as_block();

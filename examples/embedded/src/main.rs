@@ -19,7 +19,7 @@ const HEAP_SIZE: usize = 1024;
 fn main() -> ! {
     init_heap();
 
-    let time = Time::new(1e-3, 10.0);
+    let simulation = Time::new(1e-3, 10.0);
 
     let mut step = Step::default();
     let mut pid = PID::new(40.0, 10.0, 10.00);
@@ -31,7 +31,7 @@ fn main() -> ! {
 
     println!("Starting simulation...");
 
-    for dt in time {
+    for sim_state in time {
         let input = dt * step.as_block();
         let error = input - plant.last_output();
         iae.output(error);

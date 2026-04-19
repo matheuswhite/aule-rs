@@ -1,4 +1,4 @@
-use crate::{block::Block, signal::Signal};
+use crate::{block::Block, prelude::SimulationState};
 use num_traits::{Bounded, Zero};
 
 #[derive(Debug, Clone, PartialEq)]
@@ -36,18 +36,12 @@ where
     type Input = ();
     type Output = T;
 
-    fn output(&mut self, input: Signal<Self::Input>) -> Signal<Self::Output> {
+    fn block(&mut self, _input: Self::Input, _sim_state: SimulationState) -> Self::Output {
         let Some(value) = self.value.take() else {
-            return Signal {
-                value: T::zero(),
-                delta: input.delta,
-            };
+            return T::zero();
         };
 
         self.value = None;
-        Signal {
-            value,
-            delta: input.delta,
-        }
+        value
     }
 }

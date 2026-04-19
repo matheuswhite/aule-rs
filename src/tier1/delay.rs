@@ -1,4 +1,5 @@
 use crate::block::Block;
+use crate::prelude::SimulationState;
 use crate::signal::Signal;
 use alloc::vec;
 use alloc::vec::Vec;
@@ -50,7 +51,7 @@ where
         while self.input_buffer.len() >= 2 {
             let second = &self.input_buffer[1];
 
-            if current_time < second.delta.sim_time() {
+            if current_time < second.sim_state.sim_time() {
                 break;
             }
 
@@ -66,26 +67,32 @@ where
     type Input = T;
     type Output = T;
 
-    fn output(&mut self, input: Signal<Self::Input>) -> Signal<Self::Output> {
-        let current_time = input.delta.sim_time();
+    fn block(&mut self, input: Self::Input, sim_state: SimulationState) -> Self::Output {
+        let current_time = sim_state.sim_time();
 
         if self.input_buffer.is_empty() {
-            let mut initial_signal = input.replace(T::zero());
-            initial_signal.delta.reset_dt();
-            initial_signal.delta.reset_sim_time();
-            initial_signal.delta += (self.delay, self.delay);
+            let mut initial_sim_state = sim_state;
+            initial_sim_state.reset_dt();
+            initial_sim_state.reset_sim_time();
+            initial_sim_state += (self.delay, self.delay);
 
-            self.input_buffer.push(initial_signal);
+            self.input_buffer.push(Signal {
+                value: T::zero(),
+                sim_state: initial_sim_state,
+            });
         }
 
-        let mut input_delayed = input;
-        input_delayed.delta += self.delay;
+        let mut input_delayed = Signal {
+            value: input,
+            sim_state,
+        };
+        input_delayed.sim_state += self.delay;
         self.input_buffer.push(input_delayed);
 
         /* # Current time before delay */
         if current_time < self.delay {
-            let output = input.replace(self.initial_value);
-            self.last_output = Some(output.value);
+            let output = self.initial_value;
+            self.last_output = Some(output);
             return output;
         }
 
@@ -93,19 +100,19 @@ where
         self.drop_invalid_inputs(current_time);
 
         let mut first_input = &self.input_buffer[0];
-        let mut second_input = self.input_buffer.get(1).unwrap_or(&input);
+        let mut second_input = self.input_buffer.get(1).unwrap_or(&input_delayed);
 
-        if current_time < first_input.delta.sim_time() {
+        if current_time < first_input.sim_state.sim_time() {
             second_input = first_input;
-            first_input = &input;
+            first_input = &input_delayed;
         }
 
-        let gama = if first_input.delta.sim_time().as_secs_f64()
-            != second_input.delta.sim_time().as_secs_f64()
+        let gama = if first_input.sim_state.sim_time().as_secs_f64()
+            != second_input.sim_state.sim_time().as_secs_f64()
         {
-            let num = current_time.as_secs_f64() - first_input.delta.sim_time().as_secs_f64();
-            let dem = second_input.delta.sim_time().as_secs_f64()
-                - first_input.delta.sim_time().as_secs_f64();
+            let num = current_time.as_secs_f64() - first_input.sim_state.sim_time().as_secs_f64();
+            let dem = second_input.sim_state.sim_time().as_secs_f64()
+                - first_input.sim_state.sim_time().as_secs_f64();
             num / dem
         } else {
             0.0
@@ -116,13 +123,8 @@ where
             gama
         );
 
-        let output_delta = first_input.delta.merge(second_input.delta);
-        let output_value = first_input.value * (1.0 - gama) + second_input.value * gama;
-        let output = Signal {
-            value: output_value,
-            delta: output_delta,
-        };
-        self.last_output = Some(output.value);
+        let output = first_input.value * (1.0 - gama) + second_input.value * gama;
+        self.last_output = Some(output);
         output
     }
 
@@ -144,12 +146,12 @@ mod tests {
 
     #[test]
     fn test_delay_happy_way() {
-        let time = Time::new(1.0, 3.0);
+        let simulation = Simulation::new(1.0, 3.0);
         let mut delay = Delay::new(Duration::from_secs(2));
 
         let mut output_signals = Vec::new();
-        for dt in time {
-            let input_signal = dt.map(|_| 1.0);
+        for sim_state in simulation {
+            let input_signal = 1.0.as_signal(sim_state);
             let output = delay.output(input_signal);
             output_signals.push(output);
         }
@@ -171,18 +173,18 @@ mod tests {
 
     #[test]
     fn test_delay_half_dt() {
-        let mut time = Time::new(1.0, 6.0);
+        let mut simulation = Simulation::new(1.0, 6.0);
         let mut delay = Delay::new(Duration::from_secs(2));
 
         let mut input_signals = Vec::new();
         for i in 0..3 {
-            let dt = time.next().unwrap();
-            input_signals.push(dt.map(|_| (i + 1) as f64));
+            let sim_state = simulation.next().unwrap();
+            input_signals.push(((i + 1) as f64).as_signal(sim_state));
         }
-        time.set_dt(0.5);
+        simulation.set_dt(0.5);
         for i in 0..6 {
-            let dt = time.next().unwrap();
-            input_signals.push(dt.map(|_| 3.0 + (i + 1) as f64));
+            let sim_state = simulation.next().unwrap();
+            input_signals.push((3.0 + (i + 1) as f64).as_signal(sim_state));
         }
         let mut output_signals = Vec::new();
         for input in input_signals {
@@ -212,22 +214,22 @@ mod tests {
 
     #[test]
     fn test_delay_large_dt() {
-        let mut time = Time::new(5.0, 10.0);
+        let mut simulation = Simulation::new(5.0, 10.0);
         let mut delay = Delay::new(Duration::from_secs(2));
         let mut input_signals = Vec::new();
 
-        let large_input_signal = time.next().unwrap().map(|_| 1.0);
+        let large_input_signal = 1.0.as_signal(simulation.next().unwrap());
         input_signals.push(large_input_signal);
 
-        time.set_dt(1.0);
-        let input_signal = time.next().unwrap().map(|_| 1.0);
+        simulation.set_dt(1.0);
+        let input_signal = 1.0.as_signal(simulation.next().unwrap());
         input_signals.push(input_signal);
-        let input_signal = time.next().unwrap().map(|_| 1.0);
+        let input_signal = 1.0.as_signal(simulation.next().unwrap());
         input_signals.push(input_signal);
 
-        time.set_dt(0.5);
+        simulation.set_dt(0.5);
         for i in 0..6 {
-            let half_input_signal = time.next().unwrap().map(|_| 2.0 + i as f64);
+            let half_input_signal = (2.0 + i as f64).as_signal(simulation.next().unwrap());
             input_signals.push(half_input_signal);
         }
 
@@ -259,26 +261,29 @@ mod tests {
 
     #[test]
     fn test_delay_large_dt_in_middle() {
-        let mut time = Time::new(5.0, 11.0);
+        let mut simulation = Simulation::new(5.0, 11.0);
         let mut delay = Delay::new(Duration::from_secs(2));
 
-        let large_input_signal = |v, time: &mut Time| time.next().unwrap().map(|_| v as f64);
+        let large_input_signal =
+            |v: i32, simulation: &mut Simulation| (v as f64).as_signal(simulation.next().unwrap());
 
-        time.set_dt(1.0);
-        let input_signal = |v, time: &mut Time| time.next().unwrap().map(|_| v as f64);
+        simulation.set_dt(1.0);
+        let input_signal =
+            |v: i32, simulation: &mut Simulation| (v as f64).as_signal(simulation.next().unwrap());
 
-        time.set_dt(0.5);
-        let half_signal = |v, time: &mut Time| time.next().unwrap().map(|_| v as f64);
+        simulation.set_dt(0.5);
+        let half_signal =
+            |v: i32, simulation: &mut Simulation| (v as f64).as_signal(simulation.next().unwrap());
 
         let mut output_signals = Vec::new();
         for i in 0..3 {
-            let input = input_signal(i + 1, &mut time);
-            output_signals.push(delay.output(input));
+            let input = input_signal(i + 1, &mut simulation);
+            output_signals.push(input * delay.as_block());
         }
-        output_signals.push(delay.output(large_input_signal(4, &mut time)));
+        output_signals.push(delay.output(large_input_signal(4, &mut simulation)));
         for i in 0..6 {
-            let input = half_signal(5 + i, &mut time);
-            output_signals.push(delay.output(input));
+            let input = half_signal(5 + i, &mut simulation);
+            output_signals.push(input * delay.as_block());
         }
         // Output signals will be:
         // 1st input (t=1s): output = 0.0 (initial signal)

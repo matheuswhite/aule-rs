@@ -1,5 +1,4 @@
-use crate::block::Block;
-use crate::signal::Signal;
+use crate::{block::Block, prelude::SimulationState};
 use core::fmt::Display;
 use faer::{Mat, mat, traits::ComplexField};
 use num_traits::Zero;
@@ -69,13 +68,13 @@ where
     type Input = T;
     type Output = T;
 
-    fn output(&mut self, input: Signal<Self::Input>) -> Signal<Self::Output> {
-        let input_matrix = mat![[input.value]];
+    fn block(&mut self, input: Self::Input, _sim_state: SimulationState) -> Self::Output {
+        let input_matrix = mat![[input]];
         self.state = &self.a * &self.state + &self.b * &input_matrix;
 
         let output = &self.c * &self.state + &self.d * &input_matrix;
-        let output = input.replace(output[(0, 0)]);
-        self.last_output = Some(output.value);
+        let output = output[(0, 0)];
+        self.last_output = Some(output);
         output
     }
 

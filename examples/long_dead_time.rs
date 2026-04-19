@@ -1,6 +1,7 @@
 use aule::prelude::*;
 use aule::s;
 use aule::tier2::SmithPredictorFiltered;
+use aule::tier2::smith_predictor::SmithPredictorInput;
 use std::time::Duration;
 
 fn main() {
@@ -10,14 +11,14 @@ fn main() {
 }
 
 fn open_loop() {
-    let time = Time::new(1e-2, 400.0);
+    let simulation = Simulation::new(1e-2, 400.0);
     let mut step = Step::default();
     let mut plant = (5.6 / (40.2f64 * s + 1.0)).to_ss_controllable(RK4);
     let mut delay = Delay::new(Duration::from_secs_f32(93.9));
     let mut plotter = Plotter::new("[Long Dead Time] Open Loop".to_string(), ["delayed_output"]);
 
-    for dt in time {
-        let reference = dt * step.as_block();
+    for sim_state in simulation {
+        let reference = sim_state * step.as_block();
 
         let plant_output = reference * plant.as_block();
         let delayed_output = delay.output(plant_output);
@@ -30,7 +31,7 @@ fn open_loop() {
 }
 
 fn pi_controller() {
-    let time = Time::new(1e-2, 2000.0);
+    let simulation = Simulation::new(1e-2, 2000.0);
     let mut step = Step::default();
 
     let kp = [0.06, 0.08, 0.1];
@@ -43,9 +44,9 @@ fn pi_controller() {
         ["Kp = 0.06", "Kp = 0.08", "Kp = 0.1"],
     );
 
-    for dt in time {
-        let reference = dt * step.as_block();
-        let mut outputs = [(); 3].map(|_| dt.map(|_| 0.0));
+    for sim_state in simulation {
+        let reference = sim_state * step.as_block();
+        let mut outputs = [(); 3].map(|_| 0.0.as_signal(sim_state));
 
         for i in 0..3 {
             let error = reference - delay[i].last_output();
@@ -55,15 +56,14 @@ fn pi_controller() {
             outputs[i] = delay[i].output(plant_output);
         }
 
-        let output =
-            outputs
-                .into_iter()
-                .enumerate()
-                .fold(dt.map(|_| [0.0; 3]), |mut acc, (i, v)| {
-                    acc.value[i] = v.value;
-                    acc.delta = acc.delta.merge(v.delta);
-                    acc
-                });
+        let output = outputs.into_iter().enumerate().fold(
+            [0.0; 3].as_signal(sim_state),
+            |mut acc, (i, v)| {
+                acc.value[i] = v.value;
+                acc.sim_state = acc.sim_state.merge(v.sim_state);
+                acc
+            },
+        );
         plotter.output(output);
     }
 
@@ -72,7 +72,7 @@ fn pi_controller() {
 }
 
 fn smith_predictor() {
-    let time = Time::new(1e-2, 700.0);
+    let simulation = Simulation::new(1e-2, 700.0);
     let mut step = Step::default();
     let mut plotter = Plotter::new(
         "[Long Dead Time] Smith Predictor vs Pure PI".to_string(),
@@ -102,8 +102,8 @@ fn smith_predictor() {
         smith_predictor: None,
     };
 
-    for dt in time {
-        let reference = dt * step.as_block();
+    for sim_state in simulation {
+        let reference = sim_state * step.as_block();
 
         let with_predictor_output = reference * with_predictor.as_block();
         let without_predictor_output = reference * without_predictor.as_block();
@@ -129,24 +129,27 @@ impl Block for BlockCollection {
     type Input = f64;
     type Output = f64;
 
-    fn output(&mut self, input: Signal<Self::Input>) -> Signal<Self::Output> {
+    fn block(&mut self, input: Self::Input, sim_state: SimulationState) -> Self::Output {
         if let Some(smith_predictor) = &mut self.smith_predictor {
             let preditor_last_output = smith_predictor.last_output();
-            let error = input - preditor_last_output;
+            let error = input.as_signal(sim_state) - preditor_last_output;
             let control_signal = error * self.controller.as_block();
 
             let plant_output = control_signal * self.plant.as_block();
             let delayed_output = plant_output * self.delay.as_block();
             let _predicted_output =
-                (control_signal, delayed_output).pack() * smith_predictor.as_block();
+                SmithPredictorInput::from_signals(control_signal, delayed_output)
+                    * smith_predictor.as_block();
 
-            delayed_output
+            delayed_output.value
         } else {
-            let error = input - self.delay.last_output();
+            let error = input.as_signal(sim_state) - self.delay.last_output();
             let control_signal = error * self.controller.as_block();
 
             let plant_output = control_signal * self.plant.as_block();
-            plant_output * self.delay.as_block()
+            let output = plant_output * self.delay.as_block();
+
+            output.value
         }
     }
 

@@ -19,10 +19,10 @@ impl Block for RlCircuit {
     type Input = f64;
     type Output = f64;
 
-    fn output(&mut self, input: Signal<Self::Input>) -> Signal<Self::Output> {
-        let output = input * self.integrator.as_block();
+    fn block(&mut self, input: Self::Input, sim_state: SimulationState) -> Self::Output {
+        let output = self.integrator.block(input, sim_state);
 
-        self.last_output = Some(output.value);
+        self.last_output = Some(output);
 
         output
     }
@@ -47,27 +47,27 @@ fn main() {
 }
 
 fn open_loop_rl_circuit() {
-    let time = Time::new(0.001, 0.2);
+    let simulation = Simulation::new(0.001, 0.2);
     let mut rl_circuit = RlCircuit::new(5.0, 0.05);
     let mut step = Step::default();
     let mut writer = Writter::new("output/open_loop_rl_circuit.csv", ["output"]);
 
-    for dt in time {
-        let input = dt * step.as_block();
+    for sim_state in simulation {
+        let input = sim_state * step.as_block();
         let _ = input * rl_circuit.as_block() * writer.as_block();
     }
 }
 
 fn closed_loop_rl_circuit() {
-    let time = Time::new(0.001, 0.2);
+    let simulation = Simulation::new(0.001, 0.2);
 
     let mut pid = PID::new(1.0, 0.0, 0.00);
     let mut rl_circuit = RlCircuit::new(5.0, 0.05);
     let mut step = Step::default();
     let mut writer = Writter::new("output/closed_loop_rl_circuit.csv", ["output"]);
 
-    for dt in time {
-        let input = dt * step.as_block();
+    for sim_state in simulation {
+        let input = sim_state * step.as_block();
         let _ = (input - rl_circuit.last_output())
             * pid.as_block()
             * rl_circuit.as_block()

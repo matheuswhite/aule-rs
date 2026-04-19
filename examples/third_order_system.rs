@@ -1,7 +1,7 @@
 use aule::prelude::*;
 
 fn main() {
-    let time = Time::new(1e-3, 10.0);
+    let simulation = Simulation::new(1e-3, 10.0);
 
     let mut step = Step::default();
     let mut pid = PID::new(40.0, 10.0, 10.00);
@@ -17,8 +17,8 @@ fn main() {
             .with_light_theme()
             .with_legend_position(LegendPosition::BottomRight);
 
-    for dt in time {
-        let input = dt * step.as_block();
+    for sim_state in simulation {
+        let input = sim_state * step.as_block();
         let error = input - plant.last_output();
         iae.output(error);
         ise.output(error);

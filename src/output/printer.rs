@@ -1,5 +1,5 @@
 use crate::block::Block;
-use crate::signal::Signal;
+use crate::prelude::SimulationState;
 use alloc::format;
 use alloc::string::String;
 use alloc::string::ToString;
@@ -38,9 +38,8 @@ where
     type Input = [T; N];
     type Output = [T; N];
 
-    fn output(&mut self, input: Signal<Self::Input>) -> Signal<Self::Output> {
+    fn block(&mut self, input: Self::Input, _sim_state: SimulationState) -> Self::Output {
         let values = input
-            .value
             .iter()
             .zip(self.units.iter())
             .map(|(input, unit)| format!("{} {}", input, unit))

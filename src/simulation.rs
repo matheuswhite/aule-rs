@@ -1,30 +1,31 @@
-use crate::signal::Signal;
 use core::{
     fmt::Debug,
-    ops::{Add, AddAssign},
+    ops::{Add, AddAssign, Mul},
     time::Duration,
 };
 
+use crate::{block::Block, signal::Signal};
+
 #[derive(Debug, Clone, Copy, PartialEq)]
-pub struct Delta {
+pub struct SimulationState {
     dt: Duration,
     sim_time: Duration,
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct Time {
+pub struct Simulation {
     dt: Duration,
     sim_time: Duration,
     max_time: Duration,
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct EndlessTime {
+pub struct EndlessSimulation {
     dt: Duration,
     sim_time: Duration,
 }
 
-impl Time {
+impl Simulation {
     pub fn new(dt: f32, max_time: f32) -> Self {
         Self {
             dt: Duration::from_secs_f32(dt),
@@ -46,7 +47,7 @@ impl Time {
     }
 }
 
-impl EndlessTime {
+impl EndlessSimulation {
     pub fn new(dt: f32) -> Self {
         Self {
             dt: Duration::from_secs_f32(dt),
@@ -59,7 +60,7 @@ impl EndlessTime {
     }
 }
 
-impl Delta {
+impl SimulationState {
     pub fn dt(&self) -> Duration {
         self.dt
     }
@@ -84,7 +85,19 @@ impl Delta {
     }
 }
 
-impl Add<(Duration, Duration)> for Delta {
+impl<O> Mul<&mut dyn Block<Input = (), Output = O>> for SimulationState {
+    type Output = Signal<O>;
+
+    fn mul(self, block: &mut dyn Block<Input = (), Output = O>) -> Self::Output {
+        let output = block.block((), self);
+        Signal {
+            value: output,
+            sim_state: self,
+        }
+    }
+}
+
+impl Add<(Duration, Duration)> for SimulationState {
     type Output = Self;
 
     fn add(self, rhs: (Duration, Duration)) -> Self::Output {
@@ -95,14 +108,14 @@ impl Add<(Duration, Duration)> for Delta {
     }
 }
 
-impl AddAssign<(Duration, Duration)> for Delta {
+impl AddAssign<(Duration, Duration)> for SimulationState {
     fn add_assign(&mut self, rhs: (Duration, Duration)) {
         self.dt += rhs.0;
         self.sim_time += rhs.1;
     }
 }
 
-impl Add<Duration> for Delta {
+impl Add<Duration> for SimulationState {
     type Output = Self;
 
     fn add(self, rhs: Duration) -> Self::Output {
@@ -113,13 +126,13 @@ impl Add<Duration> for Delta {
     }
 }
 
-impl AddAssign<Duration> for Delta {
+impl AddAssign<Duration> for SimulationState {
     fn add_assign(&mut self, rhs: Duration) {
         self.sim_time += rhs;
     }
 }
 
-impl Default for Time {
+impl Default for Simulation {
     fn default() -> Self {
         Self {
             dt: Duration::from_secs_f32(1e-3),
@@ -129,7 +142,7 @@ impl Default for Time {
     }
 }
 
-impl Default for EndlessTime {
+impl Default for EndlessSimulation {
     fn default() -> Self {
         Self {
             dt: Duration::from_secs_f32(1e-3),
@@ -138,19 +151,16 @@ impl Default for EndlessTime {
     }
 }
 
-impl Iterator for Time {
-    type Item = Signal<()>;
+impl Iterator for Simulation {
+    type Item = SimulationState;
 
     fn next(&mut self) -> Option<Self::Item> {
         self.sim_time += self.dt;
 
         if self.sim_time <= self.max_time {
-            Some(Signal {
-                value: (),
-                delta: Delta {
-                    dt: self.dt,
-                    sim_time: self.sim_time,
-                },
+            Some(SimulationState {
+                dt: self.dt,
+                sim_time: self.sim_time,
             })
         } else {
             None
@@ -158,18 +168,15 @@ impl Iterator for Time {
     }
 }
 
-impl Iterator for EndlessTime {
-    type Item = Signal<()>;
+impl Iterator for EndlessSimulation {
+    type Item = SimulationState;
 
     fn next(&mut self) -> Option<Self::Item> {
         self.sim_time += self.dt;
 
-        Some(Signal {
-            value: (),
-            delta: Delta {
-                dt: self.dt,
-                sim_time: self.sim_time,
-            },
+        Some(SimulationState {
+            dt: self.dt,
+            sim_time: self.sim_time,
         })
     }
 }

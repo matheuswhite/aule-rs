@@ -20,10 +20,10 @@ mod output;
 #[cfg(feature = "alloc")]
 pub mod poly;
 mod signal;
+mod simulation;
 mod tier1;
 pub mod tier2;
 pub mod tier3;
-mod time;
 
 #[cfg(feature = "alloc")]
 pub use crate::continuous::s_var::s;
@@ -85,7 +85,8 @@ pub mod prelude {
     pub use crate::output::printer::Printer;
     #[cfg(feature = "std")]
     pub use crate::output::writer::Writter;
-    pub use crate::signal::{Pack, Signal, Unpack};
+    pub use crate::signal::{AsSignal, Pack, Signal, Unpack};
+    pub use crate::simulation::{EndlessSimulation, Simulation, SimulationState};
     #[cfg(all(feature = "alloc", feature = "swd"))]
     pub use crate::tier1::bridge::{BridgeSwdDown, BridgeSwdUp, RemoteSwd, SwdConnection};
     #[cfg(feature = "alloc")]
@@ -102,7 +103,6 @@ pub mod prelude {
     pub use crate::tier1::observer::Observer;
     pub use crate::tier1::pid::PID;
     pub use crate::tier1::saturation::Saturation;
-    pub use crate::time::{Delta, EndlessTime, Time};
 }
 
 #[cfg(all(test, feature = "std"))]
@@ -111,12 +111,12 @@ mod tests {
 
     #[test]
     fn test_no_std_support() {
-        let time = Time::new(0.1, 1.0);
+        let simulation = Simulation::new(0.1, 1.0);
         let mut step = Step::default();
         let mut pid = PID::new(1.0, 0.1, 0.01);
 
-        for dt in time {
-            let r = step.output(dt);
+        for sim_state in simulation {
+            let r = sim_state * step.as_block();
             let _y = pid.output(r);
         }
     }

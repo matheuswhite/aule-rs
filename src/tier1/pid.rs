@@ -1,5 +1,4 @@
-use crate::block::Block;
-use crate::signal::Signal;
+use crate::{block::Block, prelude::SimulationState};
 use core::ops::{Div, Mul, Sub};
 use num_traits::{Zero, clamp};
 
@@ -88,10 +87,11 @@ where
     type Input = T;
     type Output = T;
 
-    fn output(&mut self, input: Signal<Self::Input>) -> Signal<Self::Output> {
-        let proportional = input.value;
-        let integral = self.last_integral + input.value * input.delta.dt().as_secs_f64();
-        let derivative = (input.value - self.last_input) / input.delta.dt().as_secs_f64();
+    fn block(&mut self, input: Self::Input, sim_state: SimulationState) -> Self::Output {
+        let dt = sim_state.dt().as_secs_f64();
+        let proportional = input;
+        let integral = self.last_integral + input * dt;
+        let derivative = (input - self.last_input) / dt;
 
         let output = self.kp * proportional + self.ki * integral + self.kd * derivative;
         let (output, integral) = if let Some((min, max)) = self.anti_windup {
@@ -104,10 +104,8 @@ where
             (output, integral)
         };
 
-        let output = input.replace(output);
-
-        self.last_output = Some(output.value);
-        self.last_input = input.value;
+        self.last_output = Some(output);
+        self.last_input = input;
         self.last_integral = integral;
 
         output

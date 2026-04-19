@@ -1,10 +1,18 @@
-use crate::signal::Signal;
+use crate::{prelude::SimulationState, signal::Signal};
 
 pub trait Block {
     type Input;
     type Output;
 
-    fn output(&mut self, input: Signal<Self::Input>) -> Signal<Self::Output>;
+    fn block(&mut self, input: Self::Input, sim_state: SimulationState) -> Self::Output;
+
+    fn output(&mut self, input: Signal<Self::Input>) -> Signal<Self::Output> {
+        let value = self.block(input.value, input.sim_state);
+        Signal {
+            value,
+            sim_state: input.sim_state,
+        }
+    }
 
     fn last_output(&self) -> Option<Self::Output> {
         None

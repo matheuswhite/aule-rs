@@ -1,4 +1,7 @@
-use crate::{block::Block, prelude::Filter, signal::Signal};
+use crate::{
+    block::Block,
+    prelude::{Filter, SimulationState},
+};
 use core::{
     ops::{Add, Mul, Sub},
     time::Duration,
@@ -13,8 +16,8 @@ where
     b2: f64,
     a1: f64,
     a2: f64,
-    prev_input: [Option<Signal<T>>; 2],
-    prev_output: [Option<Signal<T>>; 2],
+    prev_input: [Option<T>; 2],
+    prev_output: [Option<T>; 2],
     dt: Duration,
 }
 
@@ -47,31 +50,30 @@ where
     type Input = T;
     type Output = T;
 
-    fn output(&mut self, input: Signal<Self::Input>) -> Signal<Self::Output> {
+    fn block(&mut self, input: Self::Input, _sim_state: SimulationState) -> Self::Output {
         let prev_in_1 = self.prev_input[0].as_ref();
         let prev_in_2 = self.prev_input[1].as_ref();
         let prev_out_1 = self.prev_output[0].as_ref();
         let prev_out_2 = self.prev_output[1].as_ref();
 
         let prev_in_value_1 = prev_in_1
-            .map(|sig| sig.value.clone())
-            .unwrap_or_else(|| input.value.clone() - input.value.clone());
+            .cloned()
+            .unwrap_or_else(|| input.clone() - input.clone());
         let prev_in_value_2 = prev_in_2
-            .map(|sig| sig.value.clone())
-            .unwrap_or_else(|| input.value.clone() - input.value.clone());
+            .cloned()
+            .unwrap_or_else(|| input.clone() - input.clone());
         let prev_out_value_1 = prev_out_1
-            .map(|sig| sig.value.clone())
-            .unwrap_or_else(|| input.value.clone() - input.value.clone());
+            .cloned()
+            .unwrap_or_else(|| input.clone() - input.clone());
         let prev_out_value_2 = prev_out_2
-            .map(|sig| sig.value.clone())
-            .unwrap_or_else(|| input.value.clone() - input.value.clone());
+            .cloned()
+            .unwrap_or_else(|| input.clone() - input.clone());
 
         let input_clone = input.clone();
-        let filtered = input.map(|sig| {
-            sig * self.b0 + prev_in_value_1.clone() * self.b1 + prev_in_value_2.clone() * self.b2
+        let filtered =
+            input * self.b0 + prev_in_value_1.clone() * self.b1 + prev_in_value_2.clone() * self.b2
                 - prev_out_value_1.clone() * self.a1
-                - prev_out_value_2.clone() * self.a2
-        });
+                - prev_out_value_2.clone() * self.a2;
 
         self.prev_input[1] = self.prev_input[0].take();
         self.prev_input[0] = Some(input_clone);
@@ -82,9 +84,7 @@ where
     }
 
     fn last_output(&self) -> Option<Self::Output> {
-        self.prev_output[0]
-            .as_ref()
-            .map(|signal| signal.value.clone())
+        self.prev_output[0].clone()
     }
 
     fn reset(&mut self) {
@@ -116,9 +116,9 @@ mod tests {
     where
         B: Block<Input = f64, Output = f64>,
     {
-        Time::new(dt, dt * samples.len() as f32)
+        Simulation::new(dt, dt * samples.len() as f32)
             .zip(samples.iter().copied())
-            .map(|(delta, value)| block.output(delta.map(|_| value)).value)
+            .map(|(sim_state, value)| block.block(value, sim_state))
             .collect()
     }
 
@@ -153,11 +153,11 @@ mod tests {
     fn test_biquad_uses_null_initial_condition() {
         let dt = 0.01_f64;
         let mut filter = Biquad::new(0.0, 1.0, 0.0, 0.0, 0.0, Duration::from_secs_f64(dt));
-        let delta = Time::new(dt as f32, dt as f32).next().unwrap();
+        let sim_state = Simulation::new(dt as f32, dt as f32).next().unwrap();
 
-        let output = filter.output(delta.map(|_| 1.0));
+        let output = filter.block(1.0, sim_state);
 
-        assert!((output.value - 0.0).abs() < 1e-9);
+        assert!((output - 0.0).abs() < 1e-9);
         assert!((filter.last_output().unwrap() - 0.0).abs() < 1e-9);
     }
 

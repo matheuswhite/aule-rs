@@ -1,6 +1,5 @@
-use crate::prelude::{Solver, StateEstimation};
-use crate::signal::{Pack, Unpack};
-use crate::{block::Block, signal::Signal};
+use crate::block::Block;
+use crate::prelude::{SimulationState, Solver, StateEstimation};
 use core::{
     fmt::{Debug, Display},
     marker::PhantomData,
@@ -107,19 +106,19 @@ where
     type Input = ObserverInput<T>;
     type Output = ObserverOutput<T>;
 
-    fn output(&mut self, input: Signal<Self::Input>) -> Signal<Self::Output> {
-        let dt = input.delta.dt();
+    fn block(&mut self, input: Self::Input, sim_state: SimulationState) -> Self::Output {
+        let dt = sim_state.dt();
 
-        self.current_input = input.value.clone();
+        self.current_input = input.clone();
         self.state = I::integrate(self.state.clone(), dt, self);
 
-        let u = mat![[input.value.control_input]];
+        let u = mat![[input.control_input]];
         let y = &self.c * &self.state + &self.d * &u;
 
         let output = ObserverOutput::new(y[(0, 0)], self.state.clone());
         self.last_output = Some(output.clone());
 
-        input.map(|_| output)
+        output
     }
 
     fn last_output(&self) -> Option<Self::Output> {
@@ -172,25 +171,6 @@ where
     }
 }
 
-impl<T> Pack<ObserverInput<T>> for (Signal<T>, Signal<T>)
-where
-    T: Zero + Copy + ComplexField,
-{
-    fn pack(self) -> Signal<ObserverInput<T>> {
-        let control_input = self.0.value;
-        let measured_output = self.1.value;
-        let delta = self.0.delta.merge(self.1.delta);
-
-        Signal {
-            value: ObserverInput {
-                control_input,
-                measured_output,
-            },
-            delta,
-        }
-    }
-}
-
 #[derive(Debug, Clone)]
 pub struct ObserverOutput<T>
 where
@@ -209,23 +189,5 @@ where
             measured_output,
             state_estimate,
         }
-    }
-}
-
-impl<T> Unpack<(Signal<T>, Signal<Mat<T>>)> for Signal<ObserverOutput<T>>
-where
-    T: Zero + Copy + ComplexField,
-{
-    fn unpack(self) -> (Signal<T>, Signal<Mat<T>>) {
-        let measured_output_signal = Signal {
-            value: self.value.measured_output,
-            delta: self.delta,
-        };
-        let state_estimate_signal = Signal {
-            value: self.value.state_estimate,
-            delta: self.delta,
-        };
-
-        (measured_output_signal, state_estimate_signal)
     }
 }

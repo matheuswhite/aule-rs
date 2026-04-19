@@ -1,4 +1,8 @@
-use crate::{block::Block, continuous::solver::StateEstimation, prelude::Solver, signal::Signal};
+use crate::{
+    block::Block,
+    continuous::solver::StateEstimation,
+    prelude::{SimulationState, Solver},
+};
 use core::{
     fmt::{Debug, Display},
     marker::PhantomData,
@@ -93,14 +97,14 @@ where
     type Input = T;
     type Output = T;
 
-    fn output(&mut self, input: Signal<Self::Input>) -> Signal<Self::Output> {
-        self.current_input[(0, 0)] = input.value;
-        self.state = I::integrate(self.state.clone(), input.delta.dt(), self);
+    fn block(&mut self, input: Self::Input, sim_state: SimulationState) -> Self::Output {
+        self.current_input[(0, 0)] = input;
+        self.state = I::integrate(self.state.clone(), sim_state.dt(), self);
 
-        let input_matrix = mat![[input.value]];
+        let input_matrix = mat![[input]];
         let output = &self.c * &self.state + &self.d * &input_matrix;
-        let output = input.replace(output[(0, 0)]);
-        self.last_output = Some(output.value);
+        let output = output[(0, 0)];
+        self.last_output = Some(output);
 
         output
     }

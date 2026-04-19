@@ -1,4 +1,4 @@
-use crate::{block::Block, signal::Signal, tier1::filter::Filter};
+use crate::{block::Block, prelude::SimulationState, tier1::filter::Filter};
 use core::{
     ops::{Add, Mul, Sub},
     time::Duration,
@@ -10,7 +10,7 @@ where
 {
     cutoff_freq: f64,
     alpha: f64,
-    prev_output: Option<Signal<T>>,
+    prev_output: Option<T>,
     dt: Duration,
 }
 
@@ -51,14 +51,13 @@ where
     type Input = T;
     type Output = T;
 
-    fn output(&mut self, input: Signal<Self::Input>) -> Signal<Self::Output> {
-        let prev_value = self.prev_output.as_ref().map_or_else(
-            || input.value.clone() - input.value.clone(),
-            |prev| prev.value.clone(),
-        );
+    fn block(&mut self, input: Self::Input, _sim_state: SimulationState) -> Self::Output {
+        let prev_value = self
+            .prev_output
+            .as_ref()
+            .map_or_else(|| input.clone() - input.clone(), |prev| prev.clone());
 
-        let filtered =
-            input.map(|sig| prev_value.clone() + (sig - prev_value.clone()) * self.alpha);
+        let filtered = prev_value.clone() + (input - prev_value.clone()) * self.alpha;
         self.prev_output = Some(filtered.clone());
         filtered
     }
@@ -68,7 +67,7 @@ where
     }
 
     fn last_output(&self) -> Option<Self::Output> {
-        self.prev_output.clone().map(|signal| signal.value)
+        self.prev_output.clone()
     }
 }
 
@@ -95,9 +94,9 @@ mod tests {
     where
         B: Block<Input = f64, Output = f64>,
     {
-        Time::new(dt, dt * samples.len() as f32)
+        Simulation::new(dt, dt * samples.len() as f32)
             .zip(samples.iter().copied())
-            .map(|(delta, value)| block.output(delta.map(|_| value)).value)
+            .map(|(sim_state, value)| block.block(value, sim_state))
             .collect()
     }
 
@@ -114,15 +113,15 @@ mod tests {
 
     #[test]
     fn test_low_pass_uses_null_initial_condition() {
-        let delta = Time::new(0.1, 0.1).next().unwrap();
+        let sim_state = Simulation::new(0.1, 0.1).next().unwrap();
         let mut filter = LowPass::new(1.0, Duration::from_secs_f32(0.1));
         let tau = 1.0 / (2.0 * PI);
         let ts = Duration::from_secs_f32(0.1).as_secs_f64();
         let alpha = 1.0 - (-ts / tau).exp();
 
-        let output = filter.output(delta.map(|_| 1.0));
+        let output = filter.block(1.0, sim_state);
 
-        assert!((output.value - alpha).abs() < 1e-9);
+        assert!((output - alpha).abs() < 1e-9);
         assert!((filter.last_output().unwrap() - alpha).abs() < 1e-9);
     }
 

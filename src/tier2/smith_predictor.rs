@@ -1,6 +1,6 @@
 use crate::block::Block;
-use crate::signal::Pack;
-use crate::{prelude::Delay, signal::Signal};
+use crate::prelude::{Delay, SimulationState};
+use crate::signal::Signal;
 use core::ops::{Mul, Sub};
 use core::time::Duration;
 use num_traits::Zero;
@@ -31,8 +31,8 @@ pub struct SmithPredictorInput<T>
 where
     T: Zero + Copy + Mul<f64, Output = T> + Sub<Output = T>,
 {
-    pub control_signal: Signal<T>,
-    pub measured_output: Signal<T>,
+    pub control_signal: T,
+    pub measured_output: T,
 }
 
 impl<T, P> SmithPredictor<T, P>
@@ -65,6 +65,21 @@ where
     }
 }
 
+impl<T> SmithPredictorInput<T>
+where
+    T: Zero + Copy + Mul<f64, Output = T> + Sub<Output = T>,
+{
+    pub fn from_signals(control_signal: Signal<T>, measured_output: Signal<T>) -> Signal<Self> {
+        Signal {
+            value: Self {
+                control_signal: control_signal.value,
+                measured_output: measured_output.value,
+            },
+            sim_state: control_signal.sim_state.merge(measured_output.sim_state),
+        }
+    }
+}
+
 impl<T, P> Block for SmithPredictor<T, P>
 where
     T: Zero + Copy + Mul<f64, Output = T> + Sub<Output = T>,
@@ -73,14 +88,14 @@ where
     type Input = SmithPredictorInput<T>;
     type Output = T;
 
-    fn output(&mut self, input: Signal<Self::Input>) -> Signal<Self::Output> {
-        let predicted_output = self.process.output(input.value.control_signal);
-        let delayed_predicted_output = self.delay.output(input.value.measured_output);
+    fn block(&mut self, input: Self::Input, sim_state: SimulationState) -> Self::Output {
+        let predicted_output = self.process.block(input.control_signal, sim_state);
+        let delayed_predicted_output = self.delay.block(input.measured_output, sim_state);
 
-        let output_diff = input.value.measured_output - delayed_predicted_output;
+        let output_diff = input.measured_output - delayed_predicted_output;
 
         let output = predicted_output + output_diff;
-        self.last_output = Some(output.value);
+        self.last_output = Some(output);
         output
     }
 
@@ -104,15 +119,15 @@ where
     type Input = SmithPredictorInput<T>;
     type Output = T;
 
-    fn output(&mut self, input: Signal<Self::Input>) -> Signal<Self::Output> {
-        let predicted_output = self.process.output(input.value.control_signal);
-        let delayed_predicted_output = self.delay.output(predicted_output);
+    fn block(&mut self, input: Self::Input, sim_state: SimulationState) -> Self::Output {
+        let predicted_output = self.process.block(input.control_signal, sim_state);
+        let delayed_predicted_output = self.delay.block(predicted_output, sim_state);
 
-        let output_diff = input.value.measured_output - delayed_predicted_output;
-        let output_diff_filtered = self.filter.output(output_diff);
+        let output_diff = input.measured_output - delayed_predicted_output;
+        let output_diff_filtered = self.filter.block(output_diff, sim_state);
 
         let output = predicted_output + output_diff_filtered;
-        self.last_output = Some(output.value);
+        self.last_output = Some(output);
         output
     }
 
@@ -125,24 +140,5 @@ where
         self.filter.reset();
         self.delay.reset();
         self.last_output = None;
-    }
-}
-
-impl<T> Pack<SmithPredictorInput<T>> for (Signal<T>, Signal<T>)
-where
-    T: Zero + Copy + Mul<f64, Output = T> + Sub<Output = T>,
-{
-    fn pack(self) -> Signal<SmithPredictorInput<T>> {
-        let control_signal = self.0;
-        let measured_output = self.1;
-        let delta = self.0.delta.merge(self.1.delta);
-
-        Signal {
-            value: SmithPredictorInput {
-                control_signal,
-                measured_output,
-            },
-            delta,
-        }
     }
 }

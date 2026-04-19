@@ -1,4 +1,4 @@
-use crate::{block::Block, signal::Signal, tier1::filter::Filter};
+use crate::{block::Block, prelude::SimulationState, tier1::filter::Filter};
 use core::{
     ops::{Add, Mul, Sub},
     time::Duration,
@@ -10,8 +10,8 @@ where
 {
     cutoff_freq: f64,
     alpha: f64,
-    prev_input: Option<Signal<T>>,
-    prev_output: Option<Signal<T>>,
+    prev_input: Option<T>,
+    prev_output: Option<T>,
     dt: Duration,
 }
 
@@ -53,22 +53,21 @@ where
     type Input = T;
     type Output = T;
 
-    fn output(&mut self, input: Signal<Self::Input>) -> Signal<Self::Output> {
+    fn block(&mut self, input: Self::Input, _sim_state: SimulationState) -> Self::Output {
         let Some(prev_in) = self.prev_input.as_ref() else {
-            let filtered = input.clone().map(|value| value.clone() - value);
+            let filtered = input.clone() - input.clone();
             self.prev_input = Some(input);
             self.prev_output = Some(filtered.clone());
             return filtered;
         };
 
         let prev_out_value = self.prev_output.as_ref().map_or_else(
-            || input.value.clone() - input.value.clone(),
-            |prev_out| prev_out.value.clone(),
+            || input.clone() - input.clone(),
+            |prev_out| prev_out.clone(),
         );
 
         let input_clone = input.clone();
-        let filtered =
-            input.map(|sig| (prev_out_value.clone() + sig - prev_in.value.clone()) * self.alpha);
+        let filtered = (prev_out_value.clone() + input - prev_in.clone()) * self.alpha;
         self.prev_input = Some(input_clone);
         self.prev_output = Some(filtered.clone());
 
@@ -81,7 +80,7 @@ where
     }
 
     fn last_output(&self) -> Option<Self::Output> {
-        self.prev_output.clone().map(|signal| signal.value)
+        self.prev_output.clone()
     }
 }
 
@@ -108,9 +107,9 @@ mod tests {
     where
         B: Block<Input = f64, Output = f64>,
     {
-        Time::new(dt, dt * samples.len() as f32)
+        Simulation::new(dt, dt * samples.len() as f32)
             .zip(samples.iter().copied())
-            .map(|(delta, value)| block.output(delta.map(|_| value)).value)
+            .map(|(sim_state, value)| block.block(value, sim_state))
             .collect()
     }
 
@@ -127,13 +126,13 @@ mod tests {
 
     #[test]
     fn test_high_pass_uses_null_initial_condition() {
-        let delta = Time::new(0.1, 0.1).next().unwrap();
+        let sim_state = Simulation::new(0.1, 0.1).next().unwrap();
         let mut filter = HighPass::new(1.0, Duration::from_secs_f32(0.1));
         let expected = 0.0;
 
-        let output = filter.output(delta.map(|_| 1.0));
+        let output = filter.block(1.0, sim_state);
 
-        assert!((output.value - expected).abs() < 1e-9);
+        assert!((output - expected).abs() < 1e-9);
         assert!((filter.last_output().unwrap() - expected).abs() < 1e-9);
     }
 

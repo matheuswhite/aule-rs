@@ -1,4 +1,4 @@
-use crate::{block::Block, signal::Signal};
+use crate::{block::Block, prelude::SimulationState};
 use alloc::vec::Vec;
 use core::{
     iter::Sum,
@@ -68,9 +68,9 @@ where
     type Input = (T, T);
     type Output = (T, T);
 
-    fn output(&mut self, input: Signal<Self::Input>) -> Signal<Self::Output> {
-        let error = input.value.0;
-        let control_signal = input.value.1;
+    fn block(&mut self, input: Self::Input, _sim_state: SimulationState) -> Self::Output {
+        let error = input.0;
+        let control_signal = input.1;
         self.error.push(error);
         self.control_signal.push(control_signal);
 

@@ -1,4 +1,4 @@
-use crate::{block::Block, signal::Signal};
+use crate::{block::Block, prelude::SimulationState};
 use core::ops::{AddAssign, Div};
 use num_traits::{Signed, Zero};
 
@@ -31,8 +31,8 @@ where
     type Input = T;
     type Output = T;
 
-    fn output(&mut self, input: Signal<Self::Input>) -> Signal<Self::Output> {
-        self.acc += input.value.abs();
+    fn block(&mut self, input: Self::Input, _sim_state: SimulationState) -> Self::Output {
+        self.acc += input.abs();
         self.n += 1;
         input
     }

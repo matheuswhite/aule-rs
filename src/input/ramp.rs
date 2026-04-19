@@ -1,4 +1,4 @@
-use crate::{block::Block, signal::Signal};
+use crate::{block::Block, prelude::SimulationState};
 use core::ops::Mul;
 use num_traits::One;
 
@@ -35,11 +35,7 @@ where
     type Input = ();
     type Output = T;
 
-    fn output(&mut self, input: Signal<Self::Input>) -> Signal<Self::Output> {
-        let value = self.value * input.delta.sim_time().as_secs_f64();
-        Signal {
-            value,
-            delta: input.delta,
-        }
+    fn block(&mut self, _input: Self::Input, sim_state: SimulationState) -> Self::Output {
+        self.value * sim_state.sim_time().as_secs_f64()
     }
 }

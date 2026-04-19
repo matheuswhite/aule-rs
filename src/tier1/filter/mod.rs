@@ -1,4 +1,6 @@
-use crate::{block::Block, signal::Signal, time::EndlessTime};
+use crate::{
+    block::Block, prelude::SimulationState, signal::Signal, simulation::EndlessSimulation,
+};
 use core::time::Duration;
 
 pub mod first_order;
@@ -13,11 +15,11 @@ pub trait Filter: Block<Input = Self::SignalValue, Output = Self::SignalValue> {
         mut input_generator: F,
     ) -> impl Iterator<Item = Signal<Self::SignalValue>>
     where
-        F: FnMut(Signal<()>) -> Option<Signal<Self::SignalValue>> + 'static,
+        F: FnMut(SimulationState) -> Option<Signal<Self::SignalValue>> + 'static,
     {
         let dt = self.dt().as_secs_f32();
-        EndlessTime::new(dt).map_while(move |dt| {
-            let Some(input) = input_generator(dt.map(|_| ())) else {
+        EndlessSimulation::new(dt).map_while(move |sim_state| {
+            let Some(input) = input_generator(sim_state) else {
                 return None;
             };
 

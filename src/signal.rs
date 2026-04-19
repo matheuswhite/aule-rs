@@ -1,69 +1,39 @@
 use crate::block::Block;
-use crate::time::Delta;
+use crate::simulation::SimulationState;
 use core::ops::{Add, Div, Mul, Neg, Sub};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Signal<T> {
     pub value: T,
-    pub delta: Delta,
+    pub sim_state: SimulationState,
 }
 
 impl<T> Copy for Signal<T> where T: Copy {}
-
-impl<T> Signal<T> {
-    pub fn replace(self, value: T) -> Self {
-        Signal {
-            value,
-            delta: self.delta,
-        }
-    }
-
-    pub fn map<U, F>(self, f: F) -> Signal<U>
-    where
-        F: FnOnce(T) -> U,
-    {
-        Signal {
-            value: f(self.value),
-            delta: self.delta,
-        }
-    }
-
-    pub fn filter<P>(self, predicate: P) -> Option<Self>
-    where
-        P: FnOnce(&T, &Delta) -> bool,
-    {
-        if predicate(&self.value, &self.delta) {
-            Some(self)
-        } else {
-            None
-        }
-    }
-}
 
 impl<T> Signal<Signal<T>> {
     pub fn flatten(self) -> Signal<T> {
         Signal {
             value: self.value.value,
-            delta: self.value.delta.merge(self.delta),
+            sim_state: self.value.sim_state.merge(self.sim_state),
         }
     }
 }
 
-impl<T> From<Delta> for Signal<T>
+impl<T> From<SimulationState> for Signal<T>
 where
     T: Default,
 {
-    fn from(delta: Delta) -> Self {
+    fn from(sim_state: SimulationState) -> Self {
         Signal {
             value: T::default(),
-            delta,
+            sim_state,
         }
     }
 }
 
-impl<T> From<(T, Delta)> for Signal<T> {
-    fn from((value, delta): (T, Delta)) -> Self {
-        Signal { value, delta }
+impl<T> From<(T, SimulationState)> for Signal<T> {
+    fn from((value, sim_state): (T, SimulationState)) -> Self {
+        Signal { value, sim_state }
     }
 }
 
@@ -76,7 +46,7 @@ where
     fn neg(self) -> Self::Output {
         Signal {
             value: -self.value,
-            delta: self.delta,
+            sim_state: self.sim_state,
         }
     }
 }
@@ -90,7 +60,7 @@ where
     fn sub(self, rhs: Self) -> Self::Output {
         Signal {
             value: self.value - rhs.value,
-            delta: self.delta.merge(rhs.delta),
+            sim_state: self.sim_state.merge(rhs.sim_state),
         }
     }
 }
@@ -104,7 +74,7 @@ where
     fn sub(self, rhs: T) -> Self::Output {
         Signal {
             value: self.value - rhs,
-            delta: self.delta,
+            sim_state: self.sim_state,
         }
     }
 }
@@ -118,7 +88,7 @@ where
     fn sub(self, rhs: Option<T>) -> Self::Output {
         Signal {
             value: self.value - rhs.unwrap_or_default(),
-            delta: self.delta,
+            sim_state: self.sim_state,
         }
     }
 }
@@ -146,7 +116,7 @@ where
     fn add(self, rhs: Self) -> Self::Output {
         Signal {
             value: self.value + rhs.value,
-            delta: self.delta.merge(rhs.delta),
+            sim_state: self.sim_state.merge(rhs.sim_state),
         }
     }
 }
@@ -160,7 +130,7 @@ where
     fn add(self, rhs: T) -> Self::Output {
         Signal {
             value: self.value + rhs,
-            delta: self.delta,
+            sim_state: self.sim_state,
         }
     }
 }
@@ -188,7 +158,7 @@ where
     fn div(self, rhs: Self) -> Self::Output {
         Signal {
             value: self.value / rhs.value,
-            delta: self.delta.merge(rhs.delta),
+            sim_state: self.sim_state.merge(rhs.sim_state),
         }
     }
 }
@@ -202,7 +172,7 @@ where
     fn div(self, rhs: T) -> Self::Output {
         Signal {
             value: self.value / rhs,
-            delta: self.delta,
+            sim_state: self.sim_state,
         }
     }
 }
@@ -216,7 +186,7 @@ where
     fn mul(self, rhs: Self) -> Self::Output {
         Signal {
             value: self.value * rhs.value,
-            delta: self.delta.merge(rhs.delta),
+            sim_state: self.sim_state.merge(rhs.sim_state),
         }
     }
 }
@@ -230,7 +200,7 @@ where
     fn mul(self, rhs: T) -> Self::Output {
         Signal {
             value: self.value * rhs,
-            delta: self.delta,
+            sim_state: self.sim_state,
         }
     }
 }
@@ -250,9 +220,11 @@ where
     type Output = Signal<O>;
 
     fn mul(self, block: &mut dyn Block<Input = [I; 1], Output = [O; 1]>) -> Self::Output {
-        block
-            .output(self.map(|value| [value]))
-            .map(|arr| arr[0].clone())
+        let output = block.block([self.value], self.sim_state);
+        Signal {
+            value: output[0].clone(),
+            sim_state: self.sim_state,
+        }
     }
 }
 
@@ -266,14 +238,14 @@ where
 {
     fn pack(self) -> Signal<[T; N]> {
         let values = self.map(|signal| signal.value);
-        let deltas = self.map(|signal| signal.delta);
+        let deltas = self.map(|signal| signal.sim_state);
         let merged_delta = deltas
             .into_iter()
-            .fold(deltas[0], |acc, delta| acc.merge(delta));
+            .fold(deltas[0], |acc, sim_state| acc.merge(sim_state));
 
         Signal {
             value: values,
-            delta: merged_delta,
+            sim_state: merged_delta,
         }
     }
 }
@@ -285,11 +257,11 @@ where
     fn pack(self) -> Signal<(T, T)> {
         let (signal_a, signal_b) = self;
         let packed_value = (signal_a.value, signal_b.value);
-        let packed_delta = signal_a.delta.merge(signal_b.delta);
+        let packed_delta = signal_a.sim_state.merge(signal_b.sim_state);
 
         Signal {
             value: packed_value,
-            delta: packed_delta,
+            sim_state: packed_delta,
         }
     }
 }
@@ -301,11 +273,14 @@ where
     fn pack(self) -> Signal<(T, T, T)> {
         let (signal_a, signal_b, signal_c) = self;
         let packed_value = (signal_a.value, signal_b.value, signal_c.value);
-        let packed_delta = signal_a.delta.merge(signal_b.delta).merge(signal_c.delta);
+        let packed_delta = signal_a
+            .sim_state
+            .merge(signal_b.sim_state)
+            .merge(signal_c.sim_state);
 
         Signal {
             value: packed_value,
-            delta: packed_delta,
+            sim_state: packed_delta,
         }
     }
 }
@@ -319,9 +294,18 @@ where
     T: Copy,
 {
     fn unpack(self) -> (Signal<T>, Signal<T>) {
-        let Signal { value, delta } = self;
+        let Signal { value, sim_state } = self;
         let (v1, v2) = value;
-        (Signal { value: v1, delta }, Signal { value: v2, delta })
+        (
+            Signal {
+                value: v1,
+                sim_state,
+            },
+            Signal {
+                value: v2,
+                sim_state,
+            },
+        )
     }
 }
 
@@ -330,12 +314,21 @@ where
     T: Copy,
 {
     fn unpack(self) -> (Signal<T>, Signal<T>, Signal<T>) {
-        let Signal { value, delta } = self;
+        let Signal { value, sim_state } = self;
         let (v1, v2, v3) = value;
         (
-            Signal { value: v1, delta },
-            Signal { value: v2, delta },
-            Signal { value: v3, delta },
+            Signal {
+                value: v1,
+                sim_state,
+            },
+            Signal {
+                value: v2,
+                sim_state,
+            },
+            Signal {
+                value: v3,
+                sim_state,
+            },
         )
     }
 }
@@ -345,14 +338,34 @@ where
     T: Copy,
 {
     fn unpack(self) -> [Signal<T>; N] {
-        let Signal { value, delta } = self;
-        value.map(|v| Signal { value: v, delta })
+        let Signal { value, sim_state } = self;
+        value.map(|v| Signal {
+            value: v,
+            sim_state,
+        })
     }
 }
 
 impl<T> Unpack<Option<Signal<T>>> for Signal<Option<T>> {
     fn unpack(self) -> Option<Signal<T>> {
-        let Signal { value, delta } = self;
-        value.map(|v| Signal { value: v, delta })
+        let Signal { value, sim_state } = self;
+        value.map(|v| Signal {
+            value: v,
+            sim_state,
+        })
     }
 }
+
+pub trait AsSignal {
+    fn as_signal(self, sim_state: SimulationState) -> Signal<Self>
+    where
+        Self: Sized,
+    {
+        Signal {
+            value: self,
+            sim_state,
+        }
+    }
+}
+
+impl<T> AsSignal for T {}

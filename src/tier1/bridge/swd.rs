@@ -3,8 +3,9 @@ type BridgeId = [u8; 6];
 
 #[cfg(all(feature = "std", feature = "swd"))]
 pub mod std {
+    use crate::block::Block;
+    use crate::prelude::SimulationState;
     use crate::tier1::bridge::swd::BridgeId;
-    use crate::{block::Block, signal::Signal};
     use core::marker::PhantomData;
     use num_traits::{FromBytes, ToBytes};
     use probe_rs::probe::WireProtocol;
@@ -259,8 +260,8 @@ pub mod std {
         type Input = T;
         type Output = ();
 
-        fn output(&mut self, input: Signal<Self::Input>) -> Signal<Self::Output> {
-            let slice_data = input.value.to_be_bytes();
+        fn block(&mut self, input: Self::Input, _sim_state: SimulationState) -> Self::Output {
+            let slice_data = input.to_be_bytes();
 
             self.req
                 .send(SwdMessage::DownReq {
@@ -268,8 +269,6 @@ pub mod std {
                     data: slice_data.to_vec(),
                 })
                 .unwrap();
-
-            input.map(|_| ())
         }
     }
 
@@ -304,7 +303,7 @@ pub mod std {
         type Input = ();
         type Output = T;
 
-        fn output(&mut self, input: Signal<Self::Input>) -> Signal<Self::Output> {
+        fn block(&mut self, _input: Self::Input, _sim_state: SimulationState) -> Self::Output {
             self.req
                 .send(SwdMessage::UpReq {
                     name: self.name,
@@ -318,8 +317,8 @@ pub mod std {
 
             let mut data_slice = [0u8; N];
             data_slice.clone_from_slice(&data);
-            let output = T::from_le_bytes(&data_slice);
-            input.map(|_| output)
+
+            T::from_le_bytes(&data_slice)
         }
     }
 
@@ -347,16 +346,16 @@ pub mod std {
         type Input = T;
         type Output = T;
 
-        fn output(&mut self, input: Signal<Self::Input>) -> Signal<Self::Output> {
-            let down_output = self.down.output(input);
-            self.up.output(down_output)
+        fn block(&mut self, input: Self::Input, sim_state: SimulationState) -> Self::Output {
+            let down_output = self.down.block(input, sim_state);
+            self.up.block(down_output, sim_state)
         }
     }
 }
 
 #[cfg(all(not(feature = "std"), feature = "swd"))]
 pub mod no_std {
-    use crate::{block::Block, signal::Signal, tier1::bridge::swd::BridgeId};
+    use crate::{block::Block, prelude::SimulationState, tier1::bridge::swd::BridgeId};
     use alloc::vec::Vec;
     use core::ptr;
 
@@ -459,7 +458,7 @@ pub mod no_std {
         type Input = ();
         type Output = T;
 
-        fn output(&mut self, input: Signal<Self::Input>) -> Signal<Self::Output> {
+        fn block(&mut self, _input: Self::Input, _sim_state: SimulationState) -> Self::Output {
             let ready_ptr: *mut bool = &mut self.ready;
             let data_ptr: *mut T = &mut self.data;
 
@@ -475,9 +474,7 @@ pub mod no_std {
             }
 
             // TODO: Write down why this is safe
-            let output = unsafe { ptr::read_volatile(data_ptr) };
-
-            input.map(|_| output)
+            unsafe { ptr::read_volatile(data_ptr) }
         }
     }
 
@@ -512,11 +509,9 @@ pub mod no_std {
         type Input = T;
         type Output = ();
 
-        fn output(&mut self, input: Signal<Self::Input>) -> Signal<Self::Output> {
-            self.data = input.value.clone();
+        fn block(&mut self, input: Self::Input, _sim_state: SimulationState) -> Self::Output {
+            self.data = input.clone();
             self.ready = true;
-
-            input.map(|_| ())
         }
     }
 
@@ -545,9 +540,9 @@ pub mod no_std {
         type Input = T;
         type Output = T;
 
-        fn output(&mut self, input: Signal<Self::Input>) -> Signal<Self::Output> {
-            let up_output = self.up.output(input);
-            self.down.output(up_output)
+        fn block(&mut self, input: Self::Input, sim_state: SimulationState) -> Self::Output {
+            let up_output = self.up.block(input, sim_state);
+            self.down.block(up_output, sim_state)
         }
     }
 }

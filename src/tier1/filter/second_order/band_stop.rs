@@ -1,7 +1,6 @@
 use crate::{
     block::Block,
-    prelude::{Biquad, Filter},
-    signal::Signal,
+    prelude::{Biquad, Filter, SimulationState},
 };
 use core::{
     ops::{Add, Mul, Sub},
@@ -65,8 +64,8 @@ where
     type Input = T;
     type Output = T;
 
-    fn output(&mut self, input: Signal<Self::Input>) -> Signal<Self::Output> {
-        self.biquad.output(input)
+    fn block(&mut self, input: Self::Input, sim_state: SimulationState) -> Self::Output {
+        self.biquad.block(input, sim_state)
     }
 
     fn reset(&mut self) {

@@ -1,5 +1,5 @@
 use crate::block::Block;
-use crate::signal::Signal;
+use crate::prelude::SimulationState;
 use alloc::format;
 use alloc::string::String;
 use alloc::string::ToString;
@@ -67,11 +67,11 @@ where
     type Input = [T; N];
     type Output = [T; N];
 
-    fn output(&mut self, input: Signal<Self::Input>) -> Signal<Self::Output> {
-        let values: Vec<String> = input.value.iter().map(|v| v.to_string()).collect();
+    fn block(&mut self, input: Self::Input, sim_state: SimulationState) -> Self::Output {
+        let values: Vec<String> = input.iter().map(|v| v.to_string()).collect();
         let line = format!(
             "{},{}\n",
-            input.delta.sim_time().as_secs_f32(),
+            sim_state.sim_time().as_secs_f32(),
             values.join(",")
         );
         self.append_line(line).expect("Failed to write data line");
