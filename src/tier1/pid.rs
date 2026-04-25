@@ -1,17 +1,10 @@
 use crate::{block::Block, prelude::SimulationState};
-use core::ops::{Div, Mul, Sub};
-use num_traits::{Zero, clamp};
+use num_traits::Float;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct PID<T>
 where
-    T: Zero
-        + Copy
-        + Mul<f64, Output = T>
-        + Mul<Output = T>
-        + Sub<Output = T>
-        + Div<f64, Output = T>
-        + PartialOrd,
+    T: Float,
 {
     kp: T,
     ki: T,
@@ -24,13 +17,7 @@ where
 
 impl<T> PID<T>
 where
-    T: Zero
-        + Copy
-        + Mul<f64, Output = T>
-        + Mul<Output = T>
-        + Sub<Output = T>
-        + Div<f64, Output = T>
-        + PartialOrd,
+    T: Float,
 {
     pub fn new(kp: T, ki: T, kd: T) -> Self {
         PID {
@@ -76,19 +63,13 @@ where
 
 impl<T> Block for PID<T>
 where
-    T: Zero
-        + Copy
-        + Mul<f64, Output = T>
-        + Mul<Output = T>
-        + Sub<Output = T>
-        + Div<f64, Output = T>
-        + PartialOrd,
+    T: Float,
 {
     type Input = T;
     type Output = T;
 
     fn block(&mut self, input: Self::Input, sim_state: SimulationState) -> Self::Output {
-        let dt = sim_state.dt().as_secs_f64();
+        let dt = T::from(sim_state.dt().as_secs_f32()).unwrap();
         let proportional = input;
         let integral = self.last_integral + input * dt;
         let derivative = (input - self.last_input) / dt;
@@ -96,7 +77,7 @@ where
         let output = self.kp * proportional + self.ki * integral + self.kd * derivative;
         let (output, integral) = if let Some((min, max)) = self.anti_windup {
             if output < min || output > max {
-                (clamp(output, min, max), self.last_integral)
+                (output.clamp(min, max), self.last_integral)
             } else {
                 (output, integral)
             }
