@@ -1,11 +1,10 @@
 use crate::{block::Block, prelude::SimulationState};
-use core::ops::{AddAssign, Div, Mul};
-use num_traits::{Signed, Zero};
+use num_traits::Float;
 
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct ITAE<T>
 where
-    T: Zero + Copy + Signed + Div<f64, Output = T> + AddAssign<T>,
+    T: Float,
 {
     acc: T,
     n: usize,
@@ -13,27 +12,27 @@ where
 
 impl<T> ITAE<T>
 where
-    T: Zero + Copy + Signed + Div<f64, Output = T> + AddAssign<T>,
+    T: Float,
 {
     pub fn value(&self) -> T {
         if self.n == 0 {
             T::zero()
         } else {
-            self.acc / self.n as f64
+            self.acc / T::from(self.n as f32).unwrap()
         }
     }
 }
 
 impl<T> Block for ITAE<T>
 where
-    T: Zero + Copy + Signed + Div<f64, Output = T> + AddAssign<T> + Mul<f64, Output = T>,
+    T: Float,
 {
     type Input = T;
     type Output = T;
 
     fn block(&mut self, input: Self::Input, _sim_state: SimulationState) -> Self::Output {
         self.n += 1;
-        self.acc += input.abs() * self.n as f64;
+        self.acc = self.acc + input.abs() * T::from(self.n as f32).unwrap();
         input
     }
 

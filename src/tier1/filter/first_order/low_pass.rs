@@ -1,3 +1,5 @@
+use num_traits::Float;
+
 use crate::{block::Block, prelude::SimulationState, tier1::filter::Filter};
 use core::{
     ops::{Add, Mul, Sub},
@@ -6,21 +8,21 @@ use core::{
 
 pub struct LowPass<T>
 where
-    T: Clone + Mul<f64, Output = T> + Add<Output = T> + Sub<Output = T>,
+    T: Float,
 {
-    cutoff_freq: f64,
-    alpha: f64,
+    cutoff_freq: f32,
+    alpha: f32,
     prev_output: Option<T>,
     dt: Duration,
 }
 
 impl<T> LowPass<T>
 where
-    T: Clone + Mul<f64, Output = T> + Add<Output = T> + Sub<Output = T>,
+    T: Float,
 {
-    pub fn new(cutoff_freq: f64, dt: Duration) -> Self {
-        let ts = dt.as_secs_f64();
-        let tau = 1.0 / (2.0 * core::f64::consts::PI * cutoff_freq);
+    pub fn new(cutoff_freq: f32, dt: Duration) -> Self {
+        let ts = dt.as_secs_f32();
+        let tau = 1.0 / (2.0 * core::f32::consts::PI * cutoff_freq);
 
         #[cfg(feature = "std")]
         let alpha = 1.0 - (-ts / tau).exp();
@@ -35,18 +37,18 @@ where
         }
     }
 
-    pub fn cutoff_freq(&self) -> f64 {
+    pub fn cutoff_freq(&self) -> f32 {
         self.cutoff_freq
     }
 
-    pub fn alpha(&self) -> f64 {
+    pub fn alpha(&self) -> f32 {
         self.alpha
     }
 }
 
 impl<T> Block for LowPass<T>
 where
-    T: Clone + Mul<f64, Output = T> + Add<Output = T> + Sub<Output = T>,
+    T: Float,
 {
     type Input = T;
     type Output = T;
@@ -57,7 +59,8 @@ where
             .as_ref()
             .map_or_else(|| input.clone() - input.clone(), |prev| prev.clone());
 
-        let filtered = prev_value.clone() + (input - prev_value.clone()) * self.alpha;
+        let filtered =
+            prev_value.clone() + (input - prev_value.clone()) * T::from(self.alpha).unwrap();
         self.prev_output = Some(filtered.clone());
         filtered
     }
@@ -73,7 +76,7 @@ where
 
 impl<T> Filter for LowPass<T>
 where
-    T: Clone + Mul<f64, Output = T> + Add<Output = T> + Sub<Output = T>,
+    T: Float,
 {
     type SignalValue = T;
 

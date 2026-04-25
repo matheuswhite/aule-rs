@@ -1,6 +1,24 @@
+use std::ops::Mul;
+
 use aule::prelude::*;
+use faer::{complex::Complex, traits::ComplexField};
+use num_traits::{Float, float::FloatCore, real::Real};
+
+fn foo<T>(t: T) -> T
+where
+    T: Scalar,
+{
+    t * T::from(2.3_f32).unwrap()
+}
+
+trait Scalar: Float + ComplexField {}
+
+impl Scalar for f32 {}
+impl Scalar for f64 {}
 
 fn main() {
+    let a = foo(2.0_f64);
+
     let simulation = Simulation::new(1e-3, 10.0);
 
     let mut step = Step::default();
