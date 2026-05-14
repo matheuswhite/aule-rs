@@ -18,7 +18,7 @@ fn main() -> ! {
 
     let mut swd_conn = SwdConnection::default();
 
-    let simulation = EndlessTime::new(1e-3);
+    let simulation = EndlessSimulation::new(1e-3);
     let mut pid = PID::new(40.0, 10.0, 10.0);
     let mut error = swd_conn.new_bridge_down("pid1").unwrap();
     let mut plant = swd_conn.new_bridge_up("pid1").unwrap();
@@ -29,8 +29,8 @@ fn main() -> ! {
     let plant_addr = &plant as *const _ as usize;
     println!("plant address: 0x{:x}", plant_addr);
 
-    for sim_state in time {
-        let error_signal = error.output(dt);
+    for sim_state in simulation {
+        let error_signal = sim_state * error.as_block();
         let control_signal = error_signal * pid.as_block();
         plant.output(control_signal);
     }
