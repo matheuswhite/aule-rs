@@ -13,14 +13,10 @@ mod discrete;
 #[cfg(feature = "std")]
 mod identification;
 mod input;
-mod line_equation;
-#[cfg(feature = "alloc")]
-mod math;
+pub mod math;
 mod metrics;
 #[cfg(feature = "std")]
 mod output;
-#[cfg(feature = "alloc")]
-pub mod poly;
 mod signal;
 mod simulation;
 mod tier1;
@@ -74,11 +70,10 @@ pub mod prelude {
     pub use crate::input::sinusoid::Sinusoid;
     pub use crate::input::square::Square;
     pub use crate::input::step::Step;
-    pub use crate::line_equation::LineEquation;
-    #[cfg(feature = "alloc")]
     pub use crate::math::from_f64::FromF64;
     #[cfg(feature = "alloc")]
     pub use crate::math::lerp::Lerp;
+    pub use crate::math::line_equation::LineEquation;
     #[cfg(feature = "alloc")]
     pub use crate::metrics::good_hart::GoodHart;
     pub use crate::metrics::iae::IAE;

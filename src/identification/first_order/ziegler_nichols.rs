@@ -4,7 +4,7 @@ use crate::{
     identification::first_order::{
         FirstOrderIdentification, FirstOrderModel, FirstOrderModelError,
     },
-    line_equation::LineEquationError,
+    math::line_equation::LineEquationError,
     prelude::LineEquation,
     signal::Signal,
 };

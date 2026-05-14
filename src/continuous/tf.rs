@@ -1,4 +1,4 @@
-use crate::{continuous::ss::SS, poly::Polynomial, prelude::Solver};
+use crate::{continuous::ss::SS, math::poly::Polynomial, prelude::Solver};
 use alloc::vec;
 use alloc::vec::Vec;
 use core::fmt::Debug;

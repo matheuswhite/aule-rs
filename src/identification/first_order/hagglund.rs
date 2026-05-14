@@ -17,7 +17,7 @@ impl FirstOrderIdentification for Hagglund {
     ) -> Result<FirstOrderModel, FirstOrderModelError> {
         let line_eq = LineEquation::from_signals_with_maximum_slope(signals.clone().into_iter())
             .map_err(|err| match err {
-                crate::line_equation::LineEquationError::NotEnoughSignals => {
+                crate::math::line_equation::LineEquationError::NotEnoughSignals => {
                     FirstOrderModelError::NotEnoughSamples
                 }
             })?;

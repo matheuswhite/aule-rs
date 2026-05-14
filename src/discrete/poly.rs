@@ -10,7 +10,7 @@ use faer::traits::ComplexField;
 use num_traits::Float;
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct Polynomial<T>(crate::poly::Polynomial<T>)
+pub struct Polynomial<T>(crate::math::poly::Polynomial<T>)
 where
     T: Float + Default + AddAssign<T> + ComplexField;
 
@@ -19,11 +19,11 @@ where
     T: Float + Default + AddAssign<T> + ComplexField,
 {
     pub fn new(coeff: &[T]) -> Self {
-        Polynomial(crate::poly::Polynomial::new(coeff))
+        Polynomial(crate::math::poly::Polynomial::new(coeff))
     }
 
     pub fn empty() -> Self {
-        Polynomial(crate::poly::Polynomial::empty())
+        Polynomial(crate::math::poly::Polynomial::empty())
     }
 
     pub fn pow(self, exp: usize) -> Self {
@@ -42,7 +42,7 @@ where
         self.0.lead_coeff()
     }
 
-    pub fn inner(&self) -> &crate::poly::Polynomial<T> {
+    pub fn inner(&self) -> &crate::math::poly::Polynomial<T> {
         &self.0
     }
 }
@@ -248,7 +248,7 @@ where
     T: Float + Default + AddAssign<T> + ComplexField,
 {
     fn from(value: T) -> Self {
-        Polynomial(crate::poly::Polynomial::new(&[value]))
+        Polynomial(crate::math::poly::Polynomial::new(&[value]))
     }
 }
 
@@ -257,7 +257,7 @@ where
     T: Float + Default + AddAssign<T> + ComplexField,
 {
     fn from(_value: z) -> Self {
-        Polynomial(crate::poly::Polynomial::new(&[T::one(), T::zero()]))
+        Polynomial(crate::math::poly::Polynomial::new(&[T::one(), T::zero()]))
     }
 }
 
