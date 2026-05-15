@@ -1,6 +1,6 @@
 use crate::discrete::{DTf, Polynomial};
 use core::ops::{Add, AddAssign, Div, Mul, Sub};
-use faer::traits::ComplexField;
+use nalgebra::{ClosedAddAssign, ClosedMulAssign, ClosedSubAssign, Scalar};
 use num_traits::Float;
 
 #[allow(non_camel_case_types)]
@@ -9,7 +9,7 @@ pub struct z;
 
 impl<T> Add<T> for z
 where
-    T: Float + Default + AddAssign<T> + ComplexField,
+    T: Float + Default + AddAssign<T> + Scalar + ClosedAddAssign + ClosedSubAssign + ClosedMulAssign,
 {
     type Output = Polynomial<T>;
 
@@ -20,7 +20,7 @@ where
 
 impl<T> Sub<T> for z
 where
-    T: Float + Default + AddAssign<T> + ComplexField,
+    T: Float + Default + AddAssign<T> + Scalar + ClosedAddAssign + ClosedSubAssign + ClosedMulAssign,
 {
     type Output = Polynomial<T>;
 
@@ -31,7 +31,7 @@ where
 
 impl<T> Add<Polynomial<T>> for z
 where
-    T: Float + Default + AddAssign<T> + ComplexField,
+    T: Float + Default + AddAssign<T> + Scalar + ClosedAddAssign + ClosedSubAssign + ClosedMulAssign,
 {
     type Output = Polynomial<T>;
 
@@ -42,7 +42,7 @@ where
 
 impl<T> Sub<Polynomial<T>> for z
 where
-    T: Float + Default + AddAssign<T> + ComplexField,
+    T: Float + Default + AddAssign<T> + Scalar + ClosedAddAssign + ClosedSubAssign + ClosedMulAssign,
 {
     type Output = Polynomial<T>;
 
@@ -53,7 +53,7 @@ where
 
 impl<T> Mul<T> for z
 where
-    T: Float + Default + AddAssign<T> + ComplexField,
+    T: Float + Default + AddAssign<T> + Scalar + ClosedAddAssign + ClosedSubAssign + ClosedMulAssign,
 {
     type Output = Polynomial<T>;
 
@@ -64,7 +64,7 @@ where
 
 impl<T> Mul<Polynomial<T>> for z
 where
-    T: Float + Default + AddAssign<T> + ComplexField,
+    T: Float + Default + AddAssign<T> + Scalar + ClosedAddAssign + ClosedSubAssign + ClosedMulAssign,
 {
     type Output = Polynomial<T>;
 
@@ -83,7 +83,7 @@ impl Mul<z> for z {
 
 impl<T> Div<Polynomial<T>> for z
 where
-    T: Float + Default + AddAssign<T> + ComplexField,
+    T: Float + Default + AddAssign<T> + Scalar + ClosedAddAssign + ClosedSubAssign + ClosedMulAssign,
 {
     type Output = DTf<T>;
 

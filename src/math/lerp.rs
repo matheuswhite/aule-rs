@@ -1,6 +1,6 @@
 use crate::math::from_f64::FromF64;
-use faer::Mat;
-use faer::complex::Complex;
+use nalgebra::DMatrix;
+use num_complex::Complex;
 
 pub trait Lerp: Sized {
     type Alpha: FromF64;
@@ -35,23 +35,23 @@ impl Lerp for Complex<f64> {
     }
 }
 
-impl Lerp for Mat<f32> {
+impl Lerp for DMatrix<f32> {
     type Alpha = f32;
-    fn lerp(start: &Mat<f32>, end: &Mat<f32>, alpha: f32) -> Mat<f32> {
+    fn lerp(start: &DMatrix<f32>, end: &DMatrix<f32>, alpha: f32) -> DMatrix<f32> {
         let r = start.nrows();
         let c = start.ncols();
-        Mat::from_fn(r, c, |i, j| {
+        DMatrix::from_fn(r, c, |i, j| {
             start[(i, j)] + (end[(i, j)] - start[(i, j)]) * alpha
         })
     }
 }
 
-impl Lerp for Mat<f64> {
+impl Lerp for DMatrix<f64> {
     type Alpha = f64;
-    fn lerp(start: &Mat<f64>, end: &Mat<f64>, alpha: f64) -> Mat<f64> {
+    fn lerp(start: &DMatrix<f64>, end: &DMatrix<f64>, alpha: f64) -> DMatrix<f64> {
         let r = start.nrows();
         let c = start.ncols();
-        Mat::from_fn(r, c, |i, j| {
+        DMatrix::from_fn(r, c, |i, j| {
             start[(i, j)] + (end[(i, j)] - start[(i, j)]) * alpha
         })
     }

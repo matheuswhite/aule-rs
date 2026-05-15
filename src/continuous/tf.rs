@@ -3,14 +3,13 @@ use alloc::vec;
 use alloc::vec::Vec;
 use core::fmt::Debug;
 use core::ops::AddAssign;
-use faer::Mat;
-use faer::traits::ComplexField;
+use nalgebra::{ClosedAddAssign, ClosedMulAssign, ClosedSubAssign, DMatrix, Scalar};
 use num_traits::Float;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Tf<T>
 where
-    T: Float + Default + AddAssign<T> + ComplexField,
+    T: Float + Default + AddAssign<T> + Scalar + ClosedAddAssign + ClosedSubAssign + ClosedMulAssign,
 {
     numerator: crate::continuous::poly::Polynomial<T>,
     denominator: crate::continuous::poly::Polynomial<T>,
@@ -18,7 +17,7 @@ where
 
 impl<T> Tf<T>
 where
-    T: Float + Default + AddAssign<T> + ComplexField,
+    T: Float + Default + AddAssign<T> + Scalar + ClosedAddAssign + ClosedSubAssign + ClosedMulAssign,
 {
     pub fn new(numerator: &[T], denominator: &[T]) -> Self {
         assert!(!numerator.is_empty(), "Numerator cannot be empty.");
@@ -82,10 +81,10 @@ where
 
         let mut b_mat = vec![T::zero(); n];
         b_mat[n - 1] = T::one();
-        let b_mat = Mat::from_fn(n, 1, |i, _| b_mat[i]);
+        let b_mat = DMatrix::from_fn(n, 1, |i, _| b_mat[i]);
 
         let c_mat = b.iter().rev().copied().collect::<Vec<_>>();
-        let c_mat = Mat::from_fn(1, n, |_, j| c_mat[j]);
+        let c_mat = DMatrix::from_fn(1, n, |_, j| c_mat[j]);
 
         SS::new(a_mat, b_mat, c_mat, d)
     }

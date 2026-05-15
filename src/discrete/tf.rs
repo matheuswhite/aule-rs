@@ -3,13 +3,13 @@ use crate::{block::Block, discrete::PolynomialInverse};
 use alloc::vec;
 use alloc::vec::Vec;
 use core::ops::AddAssign;
-use faer::traits::ComplexField;
+use nalgebra::{ClosedAddAssign, ClosedMulAssign, ClosedSubAssign, Scalar};
 use num_traits::Float;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct DTf<T>
 where
-    T: Float + Default + AddAssign<T> + ComplexField,
+    T: Float + Default + AddAssign<T> + Scalar + ClosedAddAssign + ClosedSubAssign + ClosedMulAssign,
 {
     numerator: PolynomialInverse<T>,
     denominator: PolynomialInverse<T>,
@@ -20,7 +20,7 @@ where
 
 impl<T> DTf<T>
 where
-    T: Float + Default + AddAssign<T> + ComplexField,
+    T: Float + Default + AddAssign<T> + Scalar + ClosedAddAssign + ClosedSubAssign + ClosedMulAssign,
 {
     pub fn new(numerator: &[T], denominator: &[T]) -> Self {
         assert!(!denominator.is_empty(), "Denominator cannot be empty.");
@@ -63,7 +63,7 @@ where
 
 impl<T> Block for DTf<T>
 where
-    T: Float + Default + AddAssign<T> + ComplexField,
+    T: Float + Default + AddAssign<T> + Scalar + ClosedAddAssign + ClosedSubAssign + ClosedMulAssign,
 {
     type Input = T;
     type Output = T;

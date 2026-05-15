@@ -32,7 +32,7 @@ pub use crate::discrete::z_var::z;
 
 pub mod prelude {
     #[cfg(feature = "alloc")]
-    pub use faer::prelude::*;
+    pub use nalgebra::{DMatrix, dmatrix};
 
     pub use crate::block::Block;
     #[cfg(feature = "alloc")]

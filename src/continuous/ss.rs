@@ -7,32 +7,33 @@ use core::{
     fmt::{Debug, Display},
     marker::PhantomData,
 };
-use faer::{Mat, mat, traits::ComplexField};
-use num_traits::Zero;
+use alloc::vec;
+use nalgebra::{ClosedAddAssign, ClosedMulAssign, DMatrix, Scalar, dmatrix};
+use num_traits::{One, Zero};
 
 #[derive(Debug, Clone)]
 pub struct SS<I, T>
 where
-    T: Copy + Zero + ComplexField,
+    T: Copy + Zero + One + Scalar + ClosedAddAssign + ClosedMulAssign,
     I: Solver<T> + Debug,
 {
-    a: Mat<T>,
-    b: Mat<T>,
-    c: Mat<T>,
-    d: Mat<T>,
-    state: Mat<T>,
-    initial_state: Option<Mat<T>>,
-    current_input: Mat<T>,
+    a: DMatrix<T>,
+    b: DMatrix<T>,
+    c: DMatrix<T>,
+    d: DMatrix<T>,
+    state: DMatrix<T>,
+    initial_state: Option<DMatrix<T>>,
+    current_input: DMatrix<T>,
     last_output: Option<T>,
     _marker: PhantomData<I>,
 }
 
 impl<I, T> SS<I, T>
 where
-    T: Copy + Zero + ComplexField,
+    T: Copy + Zero + One + Scalar + ClosedAddAssign + ClosedMulAssign,
     I: Solver<T> + Debug,
 {
-    pub fn new(a: Mat<T>, b: Mat<T>, c: Mat<T>, d: T) -> Self {
+    pub fn new(a: DMatrix<T>, b: DMatrix<T>, c: DMatrix<T>, d: T) -> Self {
         let n = a.shape().0;
         assert_eq!(a.shape().0, a.shape().1, "A must be a square matrix");
 
@@ -46,16 +47,16 @@ where
             a,
             b,
             c,
-            d: mat![[d]],
-            state: Mat::zeros(n, 1),
+            d: dmatrix![d],
+            state: DMatrix::zeros(n, 1),
             initial_state: None,
             last_output: None,
-            current_input: mat![[T::zero()]],
+            current_input: dmatrix![T::zero()],
             _marker: PhantomData,
         }
     }
 
-    pub fn with_initial_state(mut self, initial_state: Mat<T>) -> Self {
+    pub fn with_initial_state(mut self, initial_state: DMatrix<T>) -> Self {
         let n = self.a.shape().0;
         assert_eq!(
             initial_state.shape().0,
@@ -81,17 +82,17 @@ where
 
 impl<I, T> StateEstimation<T> for SS<I, T>
 where
-    T: Copy + Zero + ComplexField,
+    T: Copy + Zero + One + Scalar + ClosedAddAssign + ClosedMulAssign,
     I: Solver<T> + Debug,
 {
-    fn estimate(&self, state: Mat<T>) -> Mat<T> {
+    fn estimate(&self, state: DMatrix<T>) -> DMatrix<T> {
         &self.a * &state + &self.b * &self.current_input
     }
 }
 
 impl<I, T> Block for SS<I, T>
 where
-    T: Copy + Zero + ComplexField,
+    T: Copy + Zero + One + Scalar + ClosedAddAssign + ClosedMulAssign,
     I: Solver<T> + Debug,
 {
     type Input = T;
@@ -101,7 +102,7 @@ where
         self.current_input[(0, 0)] = input;
         self.state = I::integrate(self.state.clone(), sim_state.dt(), self);
 
-        let input_matrix = mat![[input]];
+        let input_matrix = dmatrix![input];
         let output = &self.c * &self.state + &self.d * &input_matrix;
         let output = output[(0, 0)];
         self.last_output = Some(output);
@@ -126,7 +127,7 @@ where
 
 impl<I, T> Display for SS<I, T>
 where
-    T: Copy + Zero + Display + ComplexField,
+    T: Copy + Zero + One + Display + Scalar + ClosedAddAssign + ClosedMulAssign,
     I: Solver<T> + Debug,
 {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {

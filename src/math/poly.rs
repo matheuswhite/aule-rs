@@ -6,20 +6,20 @@ use core::{
     fmt::Display,
     ops::{Add, AddAssign, Mul, Neg, Sub},
 };
-use faer::{Mat, traits::ComplexField};
+use nalgebra::{ClosedAddAssign, ClosedMulAssign, ClosedSubAssign, DMatrix, Scalar};
 use num_traits::Float;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Polynomial<T>
 where
-    T: Float + Default + ComplexField,
+    T: Float + Default + Scalar + ClosedAddAssign + ClosedSubAssign + ClosedMulAssign,
 {
     coeff: Vec<T>,
 }
 
 impl<T> Polynomial<T>
 where
-    T: Float + Default + AddAssign<T> + ComplexField,
+    T: Float + Default + AddAssign<T> + Scalar + ClosedAddAssign + ClosedSubAssign + ClosedMulAssign,
 {
     pub fn new(coeff: &[T]) -> Self {
         let output = Polynomial {
@@ -71,9 +71,9 @@ where
         self.coeff.first().copied().unwrap_or(T::zero())
     }
 
-    pub fn transposed_companion_matrix(self) -> Mat<T> {
+    pub fn transposed_companion_matrix(self) -> DMatrix<T> {
         if self.degree() < 1 {
-            return Mat::zeros(0, 0);
+            return DMatrix::zeros(0, 0);
         }
 
         let n = self.positive_degree();
@@ -94,7 +94,7 @@ where
                 .collect::<Vec<_>>(),
         );
 
-        Mat::from_fn(n, n, |i, j| lines[i][j])
+        DMatrix::from_fn(n, n, |i, j| lines[i][j])
     }
 
     pub fn poly_div(&self, other: &Polynomial<T>) -> (Polynomial<T>, Polynomial<T>) {
@@ -129,7 +129,7 @@ where
 
 impl<T> Add for Polynomial<T>
 where
-    T: Float + Default + AddAssign<T> + ComplexField,
+    T: Float + Default + AddAssign<T> + Scalar + ClosedAddAssign + ClosedSubAssign + ClosedMulAssign,
 {
     type Output = Polynomial<T>;
 
@@ -168,7 +168,7 @@ where
 
 impl<T> Sub for Polynomial<T>
 where
-    T: Float + Default + AddAssign<T> + ComplexField,
+    T: Float + Default + AddAssign<T> + Scalar + ClosedAddAssign + ClosedSubAssign + ClosedMulAssign,
 {
     type Output = Polynomial<T>;
 
@@ -207,7 +207,7 @@ where
 
 impl<T> Mul for Polynomial<T>
 where
-    T: Float + Default + AddAssign<T> + ComplexField,
+    T: Float + Default + AddAssign<T> + Scalar + ClosedAddAssign + ClosedSubAssign + ClosedMulAssign,
 {
     type Output = Polynomial<T>;
 
@@ -232,7 +232,7 @@ where
 
 impl<T> Neg for Polynomial<T>
 where
-    T: Float + Default + ComplexField,
+    T: Float + Default + Scalar + ClosedAddAssign + ClosedSubAssign + ClosedMulAssign,
 {
     type Output = Polynomial<T>;
 
@@ -245,7 +245,14 @@ where
 
 impl<T> Display for Polynomial<T>
 where
-    T: Float + Default + AddAssign<T> + Display + ComplexField,
+    T: Float
+        + Default
+        + AddAssign<T>
+        + Display
+        + Scalar
+        + ClosedAddAssign
+        + ClosedSubAssign
+        + ClosedMulAssign,
 {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         let degree = self.degree();

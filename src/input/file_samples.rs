@@ -6,8 +6,8 @@ use crate::{
 use core::time::Duration;
 use std::{fs::File, path::PathBuf};
 
-use faer::Mat;
-use faer::complex::Complex;
+use nalgebra::DMatrix;
+use num_complex::Complex;
 
 pub struct FileSamples<T> {
     path: PathBuf,
@@ -56,7 +56,7 @@ impl FromCsvRecord for Complex<f64> {
     }
 }
 
-impl FromCsvRecord for Mat<f32> {
+impl FromCsvRecord for DMatrix<f32> {
     fn from_csv_record(record: &csv::StringRecord, value_index: usize) -> Option<Self> {
         let mut values = std::vec::Vec::new();
         let mut i = value_index;
@@ -69,11 +69,11 @@ impl FromCsvRecord for Mat<f32> {
             return None;
         }
         let n = values.len();
-        Some(Mat::from_fn(n, 1, |i, _| values[i]))
+        Some(DMatrix::from_fn(n, 1, |i, _| values[i]))
     }
 }
 
-impl FromCsvRecord for Mat<f64> {
+impl FromCsvRecord for DMatrix<f64> {
     fn from_csv_record(record: &csv::StringRecord, value_index: usize) -> Option<Self> {
         let mut values = std::vec::Vec::new();
         let mut i = value_index;
@@ -86,7 +86,7 @@ impl FromCsvRecord for Mat<f64> {
             return None;
         }
         let n = values.len();
-        Some(Mat::from_fn(n, 1, |i, _| values[i]))
+        Some(DMatrix::from_fn(n, 1, |i, _| values[i]))
     }
 }
 
@@ -361,12 +361,12 @@ mod tests {
         assert!(approx_eq_f32(v.im, 2.0, 1e-4), "im: {}", v.im);
     }
 
-    // ───────────────────────────── Mat<f64> ─────────────────────────────
+    // ───────────────────────────── DMatrix<f64> ─────────────────────────────
 
     #[test]
     fn mat_returns_first_value_before_first_sample() {
         let path = write_tmp_csv("time,a,b,c\n1.0,1.0,2.0,3.0\n2.0,4.0,5.0,6.0\n");
-        let mut fs = FileSamples::<Mat<f64>>::from_csv(path.to_str().unwrap(), 0, 1).unwrap();
+        let mut fs = FileSamples::<DMatrix<f64>>::from_csv(path.to_str().unwrap(), 0, 1).unwrap();
         let state = make_state(0.5, 0.5);
         let v = fs.block((), state).expect("should produce a value");
         assert_eq!((v.nrows(), v.ncols()), (3, 1));
@@ -378,7 +378,7 @@ mod tests {
     #[test]
     fn mat_midpoint_interpolation() {
         let path = write_tmp_csv("time,a,b,c\n0.0,0.0,0.0,0.0\n1.0,2.0,4.0,6.0\n");
-        let mut fs = FileSamples::<Mat<f64>>::from_csv(path.to_str().unwrap(), 0, 1).unwrap();
+        let mut fs = FileSamples::<DMatrix<f64>>::from_csv(path.to_str().unwrap(), 0, 1).unwrap();
         let state = make_state(0.5, 0.1);
         let v = fs.block((), state).expect("should produce a value");
         assert_eq!((v.nrows(), v.ncols()), (3, 1));
@@ -391,7 +391,7 @@ mod tests {
     fn mat_full_traversal() {
         let path =
             write_tmp_csv("time,a,b\n0.0,0.0,0.0\n1.0,10.0,20.0\n2.0,20.0,40.0\n");
-        let mut fs = FileSamples::<Mat<f64>>::from_csv(path.to_str().unwrap(), 0, 1).unwrap();
+        let mut fs = FileSamples::<DMatrix<f64>>::from_csv(path.to_str().unwrap(), 0, 1).unwrap();
         let state = make_state(1.5, 0.1);
         let v = fs.block((), state).expect("should produce a value");
         assert_eq!((v.nrows(), v.ncols()), (2, 1));
@@ -399,12 +399,12 @@ mod tests {
         assert!(approx_eq_f64(v[(1, 0)], 30.0, 1e-6), "{}", v[(1, 0)]);
     }
 
-    // ───────────────────────────── Mat<f32> ─────────────────────────────
+    // ───────────────────────────── DMatrix<f32> ─────────────────────────────
 
     #[test]
     fn mat_f32_returns_first_value_before_first_sample() {
         let path = write_tmp_csv("time,a,b,c\n1.0,1.0,2.0,3.0\n2.0,4.0,5.0,6.0\n");
-        let mut fs = FileSamples::<Mat<f32>>::from_csv(path.to_str().unwrap(), 0, 1).unwrap();
+        let mut fs = FileSamples::<DMatrix<f32>>::from_csv(path.to_str().unwrap(), 0, 1).unwrap();
         let state = make_state(0.5, 0.5);
         let v = fs.block((), state).expect("should produce a value");
         assert_eq!((v.nrows(), v.ncols()), (3, 1));
@@ -416,7 +416,7 @@ mod tests {
     #[test]
     fn mat_f32_midpoint_interpolation() {
         let path = write_tmp_csv("time,a,b,c\n0.0,0.0,0.0,0.0\n1.0,2.0,4.0,6.0\n");
-        let mut fs = FileSamples::<Mat<f32>>::from_csv(path.to_str().unwrap(), 0, 1).unwrap();
+        let mut fs = FileSamples::<DMatrix<f32>>::from_csv(path.to_str().unwrap(), 0, 1).unwrap();
         let state = make_state(0.5, 0.1);
         let v = fs.block((), state).expect("should produce a value");
         assert_eq!((v.nrows(), v.ncols()), (3, 1));
@@ -429,7 +429,7 @@ mod tests {
     fn mat_f32_full_traversal() {
         let path =
             write_tmp_csv("time,a,b\n0.0,0.0,0.0\n1.0,10.0,20.0\n2.0,20.0,40.0\n");
-        let mut fs = FileSamples::<Mat<f32>>::from_csv(path.to_str().unwrap(), 0, 1).unwrap();
+        let mut fs = FileSamples::<DMatrix<f32>>::from_csv(path.to_str().unwrap(), 0, 1).unwrap();
         let state = make_state(1.5, 0.1);
         let v = fs.block((), state).expect("should produce a value");
         assert_eq!((v.nrows(), v.ncols()), (2, 1));

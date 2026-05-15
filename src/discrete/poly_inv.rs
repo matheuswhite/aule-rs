@@ -6,17 +6,17 @@ use core::{
     fmt::Display,
     ops::{Add, AddAssign, Div, Mul, Neg, Sub},
 };
-use faer::traits::ComplexField;
+use nalgebra::{ClosedAddAssign, ClosedMulAssign, ClosedSubAssign, Scalar};
 use num_traits::Float;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct PolynomialInverse<T>(crate::math::poly::Polynomial<T>)
 where
-    T: Float + Default + AddAssign<T> + ComplexField;
+    T: Float + Default + AddAssign<T> + Scalar + ClosedAddAssign + ClosedSubAssign + ClosedMulAssign;
 
 impl<T> PolynomialInverse<T>
 where
-    T: Float + Default + AddAssign<T> + ComplexField,
+    T: Float + Default + AddAssign<T> + Scalar + ClosedAddAssign + ClosedSubAssign + ClosedMulAssign,
 {
     pub fn new(coeff: &[T]) -> Self {
         Self(crate::math::poly::Polynomial::new(coeff))
@@ -49,7 +49,7 @@ where
 
 impl<T> Add for PolynomialInverse<T>
 where
-    T: Float + Default + AddAssign<T> + ComplexField,
+    T: Float + Default + AddAssign<T> + Scalar + ClosedAddAssign + ClosedSubAssign + ClosedMulAssign,
 {
     type Output = Self;
 
@@ -60,7 +60,7 @@ where
 
 impl<T> Sub for PolynomialInverse<T>
 where
-    T: Float + Default + AddAssign<T> + ComplexField,
+    T: Float + Default + AddAssign<T> + Scalar + ClosedAddAssign + ClosedSubAssign + ClosedMulAssign,
 {
     type Output = Self;
 
@@ -71,7 +71,7 @@ where
 
 impl<T> Mul for PolynomialInverse<T>
 where
-    T: Float + Default + AddAssign<T> + ComplexField,
+    T: Float + Default + AddAssign<T> + Scalar + ClosedAddAssign + ClosedSubAssign + ClosedMulAssign,
 {
     type Output = Self;
 
@@ -82,7 +82,7 @@ where
 
 impl<T> Div for PolynomialInverse<T>
 where
-    T: Float + Default + AddAssign<T> + ComplexField,
+    T: Float + Default + AddAssign<T> + Scalar + ClosedAddAssign + ClosedSubAssign + ClosedMulAssign,
 {
     type Output = DTf<T>;
 
@@ -93,7 +93,7 @@ where
 
 impl<T> Neg for PolynomialInverse<T>
 where
-    T: Float + Default + AddAssign<T> + ComplexField,
+    T: Float + Default + AddAssign<T> + Scalar + ClosedAddAssign + ClosedSubAssign + ClosedMulAssign,
 {
     type Output = Self;
 
@@ -104,7 +104,7 @@ where
 
 impl<T> Add<T> for PolynomialInverse<T>
 where
-    T: Float + Default + AddAssign<T> + ComplexField,
+    T: Float + Default + AddAssign<T> + Scalar + ClosedAddAssign + ClosedSubAssign + ClosedMulAssign,
 {
     type Output = PolynomialInverse<T>;
 
@@ -115,7 +115,7 @@ where
 
 impl<T> Sub<T> for PolynomialInverse<T>
 where
-    T: Float + Default + AddAssign<T> + ComplexField,
+    T: Float + Default + AddAssign<T> + Scalar + ClosedAddAssign + ClosedSubAssign + ClosedMulAssign,
 {
     type Output = PolynomialInverse<T>;
 
@@ -126,7 +126,7 @@ where
 
 impl<T> Mul<T> for PolynomialInverse<T>
 where
-    T: Float + Default + AddAssign<T> + ComplexField,
+    T: Float + Default + AddAssign<T> + Scalar + ClosedAddAssign + ClosedSubAssign + ClosedMulAssign,
 {
     type Output = PolynomialInverse<T>;
 
@@ -137,7 +137,7 @@ where
 
 impl<T> Div<T> for PolynomialInverse<T>
 where
-    T: Float + Default + AddAssign<T> + ComplexField,
+    T: Float + Default + AddAssign<T> + Scalar + ClosedAddAssign + ClosedSubAssign + ClosedMulAssign,
 {
     type Output = DTf<T>;
 
@@ -148,7 +148,7 @@ where
 
 impl<T> Add<z_inv> for PolynomialInverse<T>
 where
-    T: Float + Default + AddAssign<T> + ComplexField,
+    T: Float + Default + AddAssign<T> + Scalar + ClosedAddAssign + ClosedSubAssign + ClosedMulAssign,
 {
     type Output = PolynomialInverse<T>;
 
@@ -159,7 +159,7 @@ where
 
 impl<T> Sub<z_inv> for PolynomialInverse<T>
 where
-    T: Float + Default + AddAssign<T> + ComplexField,
+    T: Float + Default + AddAssign<T> + Scalar + ClosedAddAssign + ClosedSubAssign + ClosedMulAssign,
 {
     type Output = PolynomialInverse<T>;
 
@@ -170,7 +170,7 @@ where
 
 impl<T> Mul<z_inv> for PolynomialInverse<T>
 where
-    T: Float + Default + AddAssign<T> + ComplexField,
+    T: Float + Default + AddAssign<T> + Scalar + ClosedAddAssign + ClosedSubAssign + ClosedMulAssign,
 {
     type Output = PolynomialInverse<T>;
 
@@ -181,7 +181,7 @@ where
 
 impl<T> Div<z_inv> for PolynomialInverse<T>
 where
-    T: Float + Default + AddAssign<T> + ComplexField,
+    T: Float + Default + AddAssign<T> + Scalar + ClosedAddAssign + ClosedSubAssign + ClosedMulAssign,
 {
     type Output = DTf<T>;
 
@@ -245,7 +245,7 @@ impl_poly_ops!(i128, f64);
 
 impl<T> From<T> for PolynomialInverse<T>
 where
-    T: Float + Default + AddAssign<T> + ComplexField,
+    T: Float + Default + AddAssign<T> + Scalar + ClosedAddAssign + ClosedSubAssign + ClosedMulAssign,
 {
     fn from(value: T) -> Self {
         PolynomialInverse(crate::math::poly::Polynomial::new(&[value]))
@@ -254,7 +254,7 @@ where
 
 impl<T> From<z_inv> for PolynomialInverse<T>
 where
-    T: Float + Default + AddAssign<T> + ComplexField,
+    T: Float + Default + AddAssign<T> + Scalar + ClosedAddAssign + ClosedSubAssign + ClosedMulAssign,
 {
     fn from(_value: z_inv) -> Self {
         PolynomialInverse(crate::math::poly::Polynomial::new(&[T::one(), T::zero()]))
@@ -263,7 +263,7 @@ where
 
 impl<T> Display for PolynomialInverse<T>
 where
-    T: Float + Default + AddAssign<T> + Display + ComplexField,
+    T: Float + Default + AddAssign<T> + Display + Scalar + ClosedAddAssign + ClosedSubAssign + ClosedMulAssign,
 {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         let string = self
