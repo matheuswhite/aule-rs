@@ -6,7 +6,7 @@ use crate::{
 use core::time::Duration;
 use std::{fs::File, path::PathBuf};
 
-use nalgebra::DMatrix;
+use nalgebra::{DMatrix, SMatrix};
 use num_complex::Complex;
 
 pub struct FileSamples<T> {
@@ -87,6 +87,32 @@ impl FromCsvRecord for DMatrix<f64> {
         }
         let n = values.len();
         Some(DMatrix::from_fn(n, 1, |i, _| values[i]))
+    }
+}
+
+impl<const R: usize, const C: usize> FromCsvRecord for SMatrix<f32, R, C> {
+    fn from_csv_record(record: &csv::StringRecord, value_index: usize) -> Option<Self> {
+        let count = R * C;
+        let mut values = std::vec::Vec::with_capacity(count);
+        for i in 0..count {
+            let s = record.get(value_index + i)?;
+            let v: f32 = s.parse().ok()?;
+            values.push(v);
+        }
+        Some(SMatrix::from_row_iterator(values))
+    }
+}
+
+impl<const R: usize, const C: usize> FromCsvRecord for SMatrix<f64, R, C> {
+    fn from_csv_record(record: &csv::StringRecord, value_index: usize) -> Option<Self> {
+        let count = R * C;
+        let mut values = std::vec::Vec::with_capacity(count);
+        for i in 0..count {
+            let s = record.get(value_index + i)?;
+            let v: f64 = s.parse().ok()?;
+            values.push(v);
+        }
+        Some(SMatrix::from_row_iterator(values))
     }
 }
 
@@ -435,5 +461,76 @@ mod tests {
         assert_eq!((v.nrows(), v.ncols()), (2, 1));
         assert!(approx_eq_f32(v[(0, 0)], 15.0, 1e-4), "{}", v[(0, 0)]);
         assert!(approx_eq_f32(v[(1, 0)], 30.0, 1e-4), "{}", v[(1, 0)]);
+    }
+
+    // ───────────────────────────── SMatrix<f64, R, C> ─────────────────────────────
+
+    #[test]
+    fn smatrix_f64_column_vector_returns_first_value_before_first_sample() {
+        let path = write_tmp_csv("time,a,b,c\n1.0,1.0,2.0,3.0\n2.0,4.0,5.0,6.0\n");
+        let mut fs =
+            FileSamples::<SMatrix<f64, 3, 1>>::from_csv(path.to_str().unwrap(), 0, 1).unwrap();
+        let state = make_state(0.5, 0.5);
+        let v = fs.block((), state).expect("should produce a value");
+        assert!(approx_eq_f64(v[(0, 0)], 1.0, 1e-9));
+        assert!(approx_eq_f64(v[(1, 0)], 2.0, 1e-9));
+        assert!(approx_eq_f64(v[(2, 0)], 3.0, 1e-9));
+    }
+
+    #[test]
+    fn smatrix_f64_column_vector_midpoint_interpolation() {
+        let path = write_tmp_csv("time,a,b,c\n0.0,0.0,0.0,0.0\n1.0,2.0,4.0,6.0\n");
+        let mut fs =
+            FileSamples::<SMatrix<f64, 3, 1>>::from_csv(path.to_str().unwrap(), 0, 1).unwrap();
+        let state = make_state(0.5, 0.1);
+        let v = fs.block((), state).expect("should produce a value");
+        assert!(approx_eq_f64(v[(0, 0)], 1.0, 1e-6), "{}", v[(0, 0)]);
+        assert!(approx_eq_f64(v[(1, 0)], 2.0, 1e-6), "{}", v[(1, 0)]);
+        assert!(approx_eq_f64(v[(2, 0)], 3.0, 1e-6), "{}", v[(2, 0)]);
+    }
+
+    #[test]
+    fn smatrix_f64_square_matrix_midpoint_interpolation() {
+        // CSV row-major: m00, m01, m10, m11
+        let path = write_tmp_csv(
+            "time,m00,m01,m10,m11\n0.0,0.0,0.0,0.0,0.0\n1.0,2.0,4.0,6.0,8.0\n",
+        );
+        let mut fs =
+            FileSamples::<SMatrix<f64, 2, 2>>::from_csv(path.to_str().unwrap(), 0, 1).unwrap();
+        let state = make_state(0.5, 0.1);
+        let v = fs.block((), state).expect("should produce a value");
+        assert!(approx_eq_f64(v[(0, 0)], 1.0, 1e-6), "{}", v[(0, 0)]);
+        assert!(approx_eq_f64(v[(0, 1)], 2.0, 1e-6), "{}", v[(0, 1)]);
+        assert!(approx_eq_f64(v[(1, 0)], 3.0, 1e-6), "{}", v[(1, 0)]);
+        assert!(approx_eq_f64(v[(1, 1)], 4.0, 1e-6), "{}", v[(1, 1)]);
+    }
+
+    // ───────────────────────────── SMatrix<f32, R, C> ─────────────────────────────
+
+    #[test]
+    fn smatrix_f32_column_vector_midpoint_interpolation() {
+        let path = write_tmp_csv("time,a,b,c\n0.0,0.0,0.0,0.0\n1.0,2.0,4.0,6.0\n");
+        let mut fs =
+            FileSamples::<SMatrix<f32, 3, 1>>::from_csv(path.to_str().unwrap(), 0, 1).unwrap();
+        let state = make_state(0.5, 0.1);
+        let v = fs.block((), state).expect("should produce a value");
+        assert!(approx_eq_f32(v[(0, 0)], 1.0, 1e-4), "{}", v[(0, 0)]);
+        assert!(approx_eq_f32(v[(1, 0)], 2.0, 1e-4), "{}", v[(1, 0)]);
+        assert!(approx_eq_f32(v[(2, 0)], 3.0, 1e-4), "{}", v[(2, 0)]);
+    }
+
+    #[test]
+    fn smatrix_f32_square_matrix_midpoint_interpolation() {
+        let path = write_tmp_csv(
+            "time,m00,m01,m10,m11\n0.0,0.0,0.0,0.0,0.0\n1.0,2.0,4.0,6.0,8.0\n",
+        );
+        let mut fs =
+            FileSamples::<SMatrix<f32, 2, 2>>::from_csv(path.to_str().unwrap(), 0, 1).unwrap();
+        let state = make_state(0.5, 0.1);
+        let v = fs.block((), state).expect("should produce a value");
+        assert!(approx_eq_f32(v[(0, 0)], 1.0, 1e-4), "{}", v[(0, 0)]);
+        assert!(approx_eq_f32(v[(0, 1)], 2.0, 1e-4), "{}", v[(0, 1)]);
+        assert!(approx_eq_f32(v[(1, 0)], 3.0, 1e-4), "{}", v[(1, 0)]);
+        assert!(approx_eq_f32(v[(1, 1)], 4.0, 1e-4), "{}", v[(1, 1)]);
     }
 }

@@ -1,5 +1,5 @@
 use crate::math::from_f64::FromF64;
-use nalgebra::DMatrix;
+use nalgebra::{DMatrix, SMatrix};
 use num_complex::Complex;
 
 pub trait Lerp: Sized {
@@ -54,5 +54,19 @@ impl Lerp for DMatrix<f64> {
         DMatrix::from_fn(r, c, |i, j| {
             start[(i, j)] + (end[(i, j)] - start[(i, j)]) * alpha
         })
+    }
+}
+
+impl<const R: usize, const C: usize> Lerp for SMatrix<f32, R, C> {
+    type Alpha = f32;
+    fn lerp(start: &Self, end: &Self, alpha: f32) -> Self {
+        SMatrix::from_fn(|i, j| start[(i, j)] + (end[(i, j)] - start[(i, j)]) * alpha)
+    }
+}
+
+impl<const R: usize, const C: usize> Lerp for SMatrix<f64, R, C> {
+    type Alpha = f64;
+    fn lerp(start: &Self, end: &Self, alpha: f64) -> Self {
+        SMatrix::from_fn(|i, j| start[(i, j)] + (end[(i, j)] - start[(i, j)]) * alpha)
     }
 }
