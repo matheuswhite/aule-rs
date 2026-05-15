@@ -44,6 +44,7 @@ where
 mod tests {
     use super::*;
     use crate::prelude::Simulation;
+    use nalgebra::SMatrix;
     use num_complex::Complex;
 
     fn first_state() -> SimulationState {
@@ -109,5 +110,45 @@ mod tests {
         let state = first_state();
         assert_eq!(imp.block((), state), value);
         assert_eq!(imp.block((), state), Complex::new(0.0_f64, 0.0));
+    }
+
+    // ───────────────────────────── SMatrix<f32, R, C> ─────────────────────────────
+
+    #[test]
+    fn smatrix_f32_column_vector_fires_once_then_returns_zero() {
+        let value = SMatrix::<f32, 3, 1>::new(1.0, 2.0, 3.0);
+        let mut imp = Impulse::new(value);
+        let state = first_state();
+        assert_eq!(imp.block((), state), value);
+        assert_eq!(imp.block((), state), SMatrix::<f32, 3, 1>::zeros());
+    }
+
+    #[test]
+    fn smatrix_f32_square_matrix_fires_once_then_returns_zero() {
+        let value = SMatrix::<f32, 2, 2>::new(1.0, 2.0, 3.0, 4.0);
+        let mut imp = Impulse::new(value);
+        let state = first_state();
+        assert_eq!(imp.block((), state), value);
+        assert_eq!(imp.block((), state), SMatrix::<f32, 2, 2>::zeros());
+    }
+
+    // ───────────────────────────── SMatrix<f64, R, C> ─────────────────────────────
+
+    #[test]
+    fn smatrix_f64_column_vector_fires_once_then_returns_zero() {
+        let value = SMatrix::<f64, 3, 1>::new(1.0, 2.0, 3.0);
+        let mut imp = Impulse::new(value);
+        let state = first_state();
+        assert_eq!(imp.block((), state), value);
+        assert_eq!(imp.block((), state), SMatrix::<f64, 3, 1>::zeros());
+    }
+
+    #[test]
+    fn smatrix_f64_square_matrix_fires_once_then_returns_zero() {
+        let value = SMatrix::<f64, 2, 2>::new(1.0, 2.0, 3.0, 4.0);
+        let mut imp = Impulse::new(value);
+        let state = first_state();
+        assert_eq!(imp.block((), state), value);
+        assert_eq!(imp.block((), state), SMatrix::<f64, 2, 2>::zeros());
     }
 }
