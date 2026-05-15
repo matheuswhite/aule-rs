@@ -4,3 +4,9 @@ pub mod lerp;
 pub mod line_equation;
 #[cfg(feature = "alloc")]
 pub mod poly;
+#[cfg(feature = "alloc")]
+pub mod scale;
+#[cfg(feature = "alloc")]
+pub mod sinusoidal;
+#[cfg(feature = "alloc")]
+pub mod zeroish;

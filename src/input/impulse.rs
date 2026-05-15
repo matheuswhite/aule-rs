@@ -1,42 +1,46 @@
-use crate::{block::Block, prelude::SimulationState};
-use num_traits::{Bounded, Zero};
+use crate::{block::Block, math::zeroish::Zeroish, prelude::SimulationState};
+use num_traits::Bounded;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Impulse<T> {
     value: Option<T>,
+    idle: T,
 }
 
-impl<T> Impulse<T> {
+impl<T> Impulse<T>
+where
+    T: Zeroish,
+{
     pub fn new(value: T) -> Self {
-        Impulse { value: Some(value) }
+        let idle = T::zeroish(&value);
+        Impulse {
+            value: Some(value),
+            idle,
+        }
     }
 }
 
 impl<T> Default for Impulse<T>
 where
-    T: Bounded,
+    T: Bounded + Zeroish,
 {
     fn default() -> Self {
-        Self {
-            value: Some(T::max_value()),
-        }
+        Self::new(T::max_value())
     }
 }
 
 impl<T> Block for Impulse<T>
 where
-    T: Zero,
+    T: Clone,
 {
     type Input = ();
     type Output = T;
 
     fn block(&mut self, _input: Self::Input, _sim_state: SimulationState) -> Self::Output {
-        let Some(value) = self.value.take() else {
-            return T::zero();
-        };
-
-        self.value = None;
-        value
+        match self.value.take() {
+            Some(value) => value,
+            None => self.idle.clone(),
+        }
     }
 }
 
@@ -44,7 +48,7 @@ where
 mod tests {
     use super::*;
     use crate::prelude::Simulation;
-    use nalgebra::SMatrix;
+    use nalgebra::{DMatrix, SMatrix};
     use num_complex::Complex;
 
     fn first_state() -> SimulationState {
@@ -110,6 +114,28 @@ mod tests {
         let state = first_state();
         assert_eq!(imp.block((), state), value);
         assert_eq!(imp.block((), state), Complex::new(0.0_f64, 0.0));
+    }
+
+    // ───────────────────────────── DMatrix<f32> ─────────────────────────────
+
+    #[test]
+    fn dmatrix_f32_fires_once_then_returns_zero() {
+        let value = DMatrix::<f32>::from_row_slice(2, 2, &[1.0, 2.0, 3.0, 4.0]);
+        let mut imp = Impulse::new(value.clone());
+        let state = first_state();
+        assert_eq!(imp.block((), state), value);
+        assert_eq!(imp.block((), state), DMatrix::<f32>::zeros(2, 2));
+    }
+
+    // ───────────────────────────── DMatrix<f64> ─────────────────────────────
+
+    #[test]
+    fn dmatrix_f64_fires_once_then_returns_zero() {
+        let value = DMatrix::<f64>::from_row_slice(3, 1, &[1.0, 2.0, 3.0]);
+        let mut imp = Impulse::new(value.clone());
+        let state = first_state();
+        assert_eq!(imp.block((), state), value);
+        assert_eq!(imp.block((), state), DMatrix::<f64>::zeros(3, 1));
     }
 
     // ───────────────────────────── SMatrix<f32, R, C> ─────────────────────────────
