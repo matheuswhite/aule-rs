@@ -79,3 +79,35 @@ impl<const R: usize, const C: usize> Sinusoidal for SMatrix<f64, R, C> {
         amplitude.component_mul(&sin_arg)
     }
 }
+
+impl Sinusoidal for DMatrix<Complex<f32>> {
+    fn sinusoid(amplitude: &Self, omega_t: f64, phase: &Self) -> Self {
+        let omega_t = Complex::new(omega_t as f32, 0.0);
+        let sin_arg = phase.map(|p| complex_sin_f32(p + omega_t));
+        amplitude.component_mul(&sin_arg)
+    }
+}
+
+impl Sinusoidal for DMatrix<Complex<f64>> {
+    fn sinusoid(amplitude: &Self, omega_t: f64, phase: &Self) -> Self {
+        let omega_t = Complex::new(omega_t, 0.0);
+        let sin_arg = phase.map(|p| complex_sin_f64(p + omega_t));
+        amplitude.component_mul(&sin_arg)
+    }
+}
+
+impl<const R: usize, const C: usize> Sinusoidal for SMatrix<Complex<f32>, R, C> {
+    fn sinusoid(amplitude: &Self, omega_t: f64, phase: &Self) -> Self {
+        let omega_t = Complex::new(omega_t as f32, 0.0);
+        let sin_arg = phase.map(|p| complex_sin_f32(p + omega_t));
+        amplitude.component_mul(&sin_arg)
+    }
+}
+
+impl<const R: usize, const C: usize> Sinusoidal for SMatrix<Complex<f64>, R, C> {
+    fn sinusoid(amplitude: &Self, omega_t: f64, phase: &Self) -> Self {
+        let omega_t = Complex::new(omega_t, 0.0);
+        let sin_arg = phase.map(|p| complex_sin_f64(p + omega_t));
+        amplitude.component_mul(&sin_arg)
+    }
+}

@@ -70,3 +70,47 @@ impl<const R: usize, const C: usize> Lerp for SMatrix<f64, R, C> {
         SMatrix::from_fn(|i, j| start[(i, j)] + (end[(i, j)] - start[(i, j)]) * alpha)
     }
 }
+
+impl Lerp for DMatrix<Complex<f32>> {
+    type Alpha = f32;
+    fn lerp(
+        start: &DMatrix<Complex<f32>>,
+        end: &DMatrix<Complex<f32>>,
+        alpha: f32,
+    ) -> DMatrix<Complex<f32>> {
+        let r = start.nrows();
+        let c = start.ncols();
+        DMatrix::from_fn(r, c, |i, j| {
+            start[(i, j)] + (end[(i, j)] - start[(i, j)]) * alpha
+        })
+    }
+}
+
+impl Lerp for DMatrix<Complex<f64>> {
+    type Alpha = f64;
+    fn lerp(
+        start: &DMatrix<Complex<f64>>,
+        end: &DMatrix<Complex<f64>>,
+        alpha: f64,
+    ) -> DMatrix<Complex<f64>> {
+        let r = start.nrows();
+        let c = start.ncols();
+        DMatrix::from_fn(r, c, |i, j| {
+            start[(i, j)] + (end[(i, j)] - start[(i, j)]) * alpha
+        })
+    }
+}
+
+impl<const R: usize, const C: usize> Lerp for SMatrix<Complex<f32>, R, C> {
+    type Alpha = f32;
+    fn lerp(start: &Self, end: &Self, alpha: f32) -> Self {
+        SMatrix::from_fn(|i, j| start[(i, j)] + (end[(i, j)] - start[(i, j)]) * alpha)
+    }
+}
+
+impl<const R: usize, const C: usize> Lerp for SMatrix<Complex<f64>, R, C> {
+    type Alpha = f64;
+    fn lerp(start: &Self, end: &Self, alpha: f64) -> Self {
+        SMatrix::from_fn(|i, j| start[(i, j)] + (end[(i, j)] - start[(i, j)]) * alpha)
+    }
+}

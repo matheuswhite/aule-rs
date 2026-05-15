@@ -57,3 +57,27 @@ impl<const R: usize, const C: usize> Zeroish for SMatrix<f64, R, C> {
         SMatrix::<f64, R, C>::zeros()
     }
 }
+
+impl Zeroish for DMatrix<Complex<f32>> {
+    fn zeroish(prototype: &Self) -> Self {
+        DMatrix::zeros(prototype.nrows(), prototype.ncols())
+    }
+}
+
+impl Zeroish for DMatrix<Complex<f64>> {
+    fn zeroish(prototype: &Self) -> Self {
+        DMatrix::zeros(prototype.nrows(), prototype.ncols())
+    }
+}
+
+impl<const R: usize, const C: usize> Zeroish for SMatrix<Complex<f32>, R, C> {
+    fn zeroish(_prototype: &Self) -> Self {
+        SMatrix::<Complex<f32>, R, C>::zeros()
+    }
+}
+
+impl<const R: usize, const C: usize> Zeroish for SMatrix<Complex<f64>, R, C> {
+    fn zeroish(_prototype: &Self) -> Self {
+        SMatrix::<Complex<f64>, R, C>::zeros()
+    }
+}

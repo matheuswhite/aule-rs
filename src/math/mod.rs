@@ -1,9 +1,12 @@
+pub mod absolute;
 pub mod from_f64;
+pub mod from_usize;
 #[cfg(feature = "alloc")]
 pub mod lerp;
 pub mod line_equation;
 #[cfg(feature = "alloc")]
 pub mod poly;
+pub mod recip_of_count;
 #[cfg(feature = "alloc")]
 pub mod scale;
 #[cfg(feature = "alloc")]
