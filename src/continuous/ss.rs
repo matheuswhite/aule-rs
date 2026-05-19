@@ -127,7 +127,7 @@ where
 impl<I, T> Display for SS<I, T>
 where
     T: Number,
-    I: Solver<T> + Debug,
+    I: Solver<T>,
 {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         write!(
