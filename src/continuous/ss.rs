@@ -9,7 +9,7 @@ use core::{
     fmt::{Debug, Display},
     marker::PhantomData,
 };
-use nalgebra::{DMatrix, Scalar, dmatrix};
+use nalgebra::{DMatrix, dmatrix};
 
 #[derive(Debug, Clone)]
 pub struct SS<I, T>
@@ -81,7 +81,7 @@ where
 
 impl<I, T> StateEstimation<T> for SS<I, T>
 where
-    T: Number + Scalar,
+    T: Number + 'static,
     I: Solver<T>,
 {
     fn estimate(&self, state: DMatrix<T>) -> DMatrix<T> {
@@ -91,7 +91,7 @@ where
 
 impl<I, T> Block for SS<I, T>
 where
-    T: Number + Scalar,
+    T: Number + 'static,
     I: Solver<T>,
 {
     type Input = T;

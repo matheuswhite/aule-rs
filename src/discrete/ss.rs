@@ -1,13 +1,9 @@
-use crate::{block::Block, prelude::SimulationState};
-use core::fmt::Display;
+use crate::{block::Block, math::number::Number, prelude::SimulationState};
 use alloc::vec;
-use nalgebra::{ClosedAddAssign, ClosedMulAssign, DMatrix, Scalar, dmatrix};
-use num_traits::{One, Zero};
+use core::fmt::Display;
+use nalgebra::{DMatrix, dmatrix};
 
-pub struct DSS<T>
-where
-    T: Copy + Zero + One + Scalar + ClosedAddAssign + ClosedMulAssign,
-{
+pub struct DSS<T> {
     a: DMatrix<T>,
     b: DMatrix<T>,
     c: DMatrix<T>,
@@ -19,7 +15,7 @@ where
 
 impl<T> DSS<T>
 where
-    T: Copy + Zero + One + Scalar + ClosedAddAssign + ClosedMulAssign,
+    T: Number + 'static,
 {
     pub fn new(a: DMatrix<T>, b: DMatrix<T>, c: DMatrix<T>, d: T) -> Self {
         let n = a.shape().0;
@@ -64,7 +60,7 @@ where
 
 impl<T> Block for DSS<T>
 where
-    T: Copy + Zero + One + Scalar + ClosedAddAssign + ClosedMulAssign,
+    T: Number + 'static,
 {
     type Input = T;
     type Output = T;
@@ -95,7 +91,7 @@ where
 
 impl<T> Display for DSS<T>
 where
-    T: Copy + Zero + One + Display + Scalar + ClosedAddAssign + ClosedMulAssign,
+    T: Number,
 {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         write!(

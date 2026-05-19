@@ -4,14 +4,14 @@ use crate::{
     prelude::Solver,
 };
 use core::time::Duration;
-use nalgebra::{DMatrix, Scalar};
+use nalgebra::DMatrix;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct RK4;
 
 impl<T> Solver<T> for RK4
 where
-    T: Number + Scalar,
+    T: Number + 'static,
 {
     fn integrate(
         old_value: DMatrix<T>,
