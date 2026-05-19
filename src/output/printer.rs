@@ -9,19 +9,13 @@ use core::marker::PhantomData;
 use std::println;
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct Printer<const N: usize, T>
-where
-    T: Display,
-{
+pub struct Printer<const N: usize, T> {
     title: String,
     units: [String; N],
     _marker: PhantomData<T>,
 }
 
-impl<const N: usize, T> Printer<N, T>
-where
-    T: Display,
-{
+impl<const N: usize, T> Printer<N, T> {
     pub fn new(title: &str, units: [&str; N]) -> Self {
         Self {
             title: title.to_string(),
