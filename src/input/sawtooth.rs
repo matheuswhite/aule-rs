@@ -1,10 +1,9 @@
 use crate::{
     block::Block,
-    math::{from_f64::FromF64, scale::Scale},
+    math::{float_point::FloatPoint, sample::Sample},
     prelude::SimulationState,
 };
-use core::{f32::consts::PI, ops::Add, time::Duration};
-use num_traits::{One, Zero};
+use core::{f32::consts::PI, time::Duration};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Sawtooth<T> {
@@ -25,7 +24,7 @@ impl<T> Sawtooth<T> {
 
 impl<T> Default for Sawtooth<T>
 where
-    T: Zero + One,
+    T: Sample,
 {
     fn default() -> Self {
         Self {
@@ -38,16 +37,15 @@ where
 
 impl<T> Block for Sawtooth<T>
 where
-    T: Clone + Scale + Add<Output = T>,
+    T: Sample,
 {
     type Input = ();
     type Output = T;
 
     fn block(&mut self, _input: Self::Input, sim_state: SimulationState) -> Self::Output {
-        let t = sim_state.sim_time().as_secs_f64();
-        let period_secs = self.period.as_secs_f64();
-        let alpha_f64 = (t % period_secs) / period_secs;
-        let alpha = <T::Alpha as FromF64>::from_f64(alpha_f64);
+        let t = <T::Alpha as FloatPoint>::from_duration(sim_state.sim_time());
+        let period_secs = <T::Alpha as FloatPoint>::from_duration(self.period);
+        let alpha = (t % period_secs) / period_secs;
 
         self.amplitude.clone().scale(alpha) + self.offset.clone()
     }
@@ -57,12 +55,14 @@ where
 mod tests {
     use super::*;
     use crate::prelude::Simulation;
-    use nalgebra::{DMatrix, SMatrix};
+    use nalgebra::SMatrix;
     use num_complex::Complex;
 
     fn state_at(sim_time_s: f64, dt_s: f64) -> SimulationState {
         let mut sim = Simulation::new(dt_s as f32, (sim_time_s + dt_s * 2.0) as f32);
-        let initial = sim.next().expect("simulation should yield at least one state");
+        let initial = sim
+            .next()
+            .expect("simulation should yield at least one state");
         let delta = Duration::from_secs_f64(sim_time_s) - initial.sim_time();
         initial + delta
     }
@@ -112,26 +112,6 @@ mod tests {
         let v = s.block((), state_at(0.25, 0.01));
         assert!(approx_eq_f64(v.re, 1.5), "re: {}", v.re);
         assert!(approx_eq_f64(v.im, 3.0), "im: {}", v.im);
-    }
-
-    #[test]
-    fn dmatrix_f32_sawtooth_at_quarter_period() {
-        let amp = DMatrix::<f32>::from_row_slice(2, 1, &[4.0, 8.0]);
-        let off = DMatrix::<f32>::from_row_slice(2, 1, &[0.5, 1.0]);
-        let mut s = Sawtooth::new(amp, Duration::from_secs_f64(1.0), off);
-        let v = s.block((), state_at(0.25, 0.01));
-        assert!(approx_eq_f32(v[(0, 0)], 1.5));
-        assert!(approx_eq_f32(v[(1, 0)], 3.0));
-    }
-
-    #[test]
-    fn dmatrix_f64_sawtooth_at_quarter_period() {
-        let amp = DMatrix::<f64>::from_row_slice(2, 1, &[4.0, 8.0]);
-        let off = DMatrix::<f64>::from_row_slice(2, 1, &[0.5, 1.0]);
-        let mut s = Sawtooth::new(amp, Duration::from_secs_f64(1.0), off);
-        let v = s.block((), state_at(0.25, 0.01));
-        assert!(approx_eq_f64(v[(0, 0)], 1.5));
-        assert!(approx_eq_f64(v[(1, 0)], 3.0));
     }
 
     #[test]

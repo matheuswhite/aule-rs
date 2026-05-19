@@ -1,21 +1,20 @@
 use crate::{
     block::Block,
     continuous::solver::StateEstimation,
+    math::{number::Number, sample::Sample},
     prelude::{SimulationState, Solver},
 };
+use alloc::vec;
 use core::{
     fmt::{Debug, Display},
     marker::PhantomData,
 };
-use alloc::vec;
-use nalgebra::{ClosedAddAssign, ClosedMulAssign, DMatrix, Scalar, dmatrix};
-use num_traits::{One, Zero};
+use nalgebra::{DMatrix, Scalar, dmatrix};
 
 #[derive(Debug, Clone)]
 pub struct SS<I, T>
 where
-    T: Copy + Zero + One + Scalar + ClosedAddAssign + ClosedMulAssign,
-    I: Solver<T> + Debug,
+    I: Solver<T>,
 {
     a: DMatrix<T>,
     b: DMatrix<T>,
@@ -30,8 +29,8 @@ where
 
 impl<I, T> SS<I, T>
 where
-    T: Copy + Zero + One + Scalar + ClosedAddAssign + ClosedMulAssign,
-    I: Solver<T> + Debug,
+    T: Number + 'static,
+    I: Solver<T>,
 {
     pub fn new(a: DMatrix<T>, b: DMatrix<T>, c: DMatrix<T>, d: T) -> Self {
         let n = a.shape().0;
@@ -51,7 +50,7 @@ where
             state: DMatrix::zeros(n, 1),
             initial_state: None,
             last_output: None,
-            current_input: dmatrix![T::zero()],
+            current_input: dmatrix![Sample::zero()],
             _marker: PhantomData,
         }
     }
@@ -82,18 +81,18 @@ where
 
 impl<I, T> StateEstimation<T> for SS<I, T>
 where
-    T: Copy + Zero + One + Scalar + ClosedAddAssign + ClosedMulAssign,
-    I: Solver<T> + Debug,
+    T: Number + Scalar,
+    I: Solver<T>,
 {
     fn estimate(&self, state: DMatrix<T>) -> DMatrix<T> {
-        &self.a * &state + &self.b * &self.current_input
+        &self.a * state + &self.b * &self.current_input
     }
 }
 
 impl<I, T> Block for SS<I, T>
 where
-    T: Copy + Zero + One + Scalar + ClosedAddAssign + ClosedMulAssign,
-    I: Solver<T> + Debug,
+    T: Number + Scalar,
+    I: Solver<T>,
 {
     type Input = T;
     type Output = T;
@@ -127,7 +126,7 @@ where
 
 impl<I, T> Display for SS<I, T>
 where
-    T: Copy + Zero + One + Display + Scalar + ClosedAddAssign + ClosedMulAssign,
+    T: Number,
     I: Solver<T> + Debug,
 {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {

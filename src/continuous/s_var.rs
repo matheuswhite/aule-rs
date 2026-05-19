@@ -1,7 +1,9 @@
-use crate::{continuous::Polynomial, prelude::Tf};
-use core::ops::{Add, AddAssign, Div, Mul, Sub};
-use nalgebra::{ClosedAddAssign, ClosedMulAssign, ClosedSubAssign, Scalar};
-use num_traits::Float;
+use crate::{
+    continuous::Polynomial,
+    math::{number::Number, sample::Sample},
+    prelude::Tf,
+};
+use core::ops::{Add, Div, Mul, Sub};
 
 #[allow(non_camel_case_types)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -9,7 +11,7 @@ pub struct s;
 
 impl<T> Add<T> for s
 where
-    T: Float + Default + AddAssign<T> + Scalar + ClosedAddAssign + ClosedSubAssign + ClosedMulAssign,
+    T: Sample,
 {
     type Output = Polynomial<T>;
 
@@ -20,7 +22,7 @@ where
 
 impl<T> Add<Polynomial<T>> for s
 where
-    T: Float + Default + AddAssign<T> + Scalar + ClosedAddAssign + ClosedSubAssign + ClosedMulAssign,
+    T: Sample,
 {
     type Output = Polynomial<T>;
 
@@ -31,7 +33,7 @@ where
 
 impl<T> Sub<T> for s
 where
-    T: Float + Default + AddAssign<T> + Scalar + ClosedAddAssign + ClosedSubAssign + ClosedMulAssign,
+    T: Sample,
 {
     type Output = Polynomial<T>;
 
@@ -42,7 +44,7 @@ where
 
 impl<T> Sub<Polynomial<T>> for s
 where
-    T: Float + Default + AddAssign<T> + Scalar + ClosedAddAssign + ClosedSubAssign + ClosedMulAssign,
+    T: Sample,
 {
     type Output = Polynomial<T>;
 
@@ -53,7 +55,7 @@ where
 
 impl<T> Mul<T> for s
 where
-    T: Float + Default + AddAssign<T> + Scalar + ClosedAddAssign + ClosedSubAssign + ClosedMulAssign,
+    T: Number,
 {
     type Output = Polynomial<T>;
 
@@ -64,7 +66,7 @@ where
 
 impl<T> Mul<Polynomial<T>> for s
 where
-    T: Float + Default + AddAssign<T> + Scalar + ClosedAddAssign + ClosedSubAssign + ClosedMulAssign,
+    T: Number,
 {
     type Output = Polynomial<T>;
 
@@ -83,7 +85,7 @@ impl Mul<s> for s {
 
 impl<T> Div<Polynomial<T>> for s
 where
-    T: Float + Default + AddAssign<T> + Scalar + ClosedAddAssign + ClosedSubAssign + ClosedMulAssign,
+    T: Number + 'static,
 {
     type Output = Tf<T>;
 
@@ -131,16 +133,16 @@ macro_rules! impl_s_ops {
 impl_s_ops!(f32, f32);
 impl_s_ops!(f64, f64);
 
-impl_s_ops!(u8, f64);
-impl_s_ops!(u16, f64);
-impl_s_ops!(u32, f64);
+impl_s_ops!(u8, f32);
+impl_s_ops!(u16, f32);
+impl_s_ops!(u32, f32);
 impl_s_ops!(u64, f64);
 impl_s_ops!(u128, f64);
 impl_s_ops!(usize, f64);
 
-impl_s_ops!(i8, f64);
-impl_s_ops!(i16, f64);
-impl_s_ops!(i32, f64);
+impl_s_ops!(i8, f32);
+impl_s_ops!(i16, f32);
+impl_s_ops!(i32, f32);
 impl_s_ops!(i64, f64);
 impl_s_ops!(i128, f64);
 impl_s_ops!(isize, f64);

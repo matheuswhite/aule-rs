@@ -1,7 +1,8 @@
-use crate::discrete::{DTf, PolynomialInverse};
-use core::ops::{Add, AddAssign, Div, Mul, Sub};
-use nalgebra::{ClosedAddAssign, ClosedMulAssign, ClosedSubAssign, Scalar};
-use num_traits::Float;
+use crate::{
+    discrete::{DTf, PolynomialInverse},
+    math::{number::Number, sample::Sample},
+};
+use core::ops::{Add, Div, Mul, Sub};
 
 #[allow(non_camel_case_types)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -9,7 +10,7 @@ pub struct z_inv;
 
 impl<T> Add<T> for z_inv
 where
-    T: Float + Default + AddAssign<T> + Scalar + ClosedAddAssign + ClosedSubAssign + ClosedMulAssign,
+    T: Sample,
 {
     type Output = PolynomialInverse<T>;
 
@@ -20,7 +21,7 @@ where
 
 impl<T> Add<PolynomialInverse<T>> for z_inv
 where
-    T: Float + Default + AddAssign<T> + Scalar + ClosedAddAssign + ClosedSubAssign + ClosedMulAssign,
+    T: Sample,
 {
     type Output = PolynomialInverse<T>;
 
@@ -31,7 +32,7 @@ where
 
 impl<T> Sub<T> for z_inv
 where
-    T: Float + Default + AddAssign<T> + Scalar + ClosedAddAssign + ClosedSubAssign + ClosedMulAssign,
+    T: Sample,
 {
     type Output = PolynomialInverse<T>;
 
@@ -42,7 +43,7 @@ where
 
 impl<T> Sub<PolynomialInverse<T>> for z_inv
 where
-    T: Float + Default + AddAssign<T> + Scalar + ClosedAddAssign + ClosedSubAssign + ClosedMulAssign,
+    T: Sample,
 {
     type Output = PolynomialInverse<T>;
 
@@ -53,7 +54,7 @@ where
 
 impl<T> Mul<T> for z_inv
 where
-    T: Float + Default + AddAssign<T> + Scalar + ClosedAddAssign + ClosedSubAssign + ClosedMulAssign,
+    T: Number,
 {
     type Output = PolynomialInverse<T>;
 
@@ -64,7 +65,7 @@ where
 
 impl<T> Mul<PolynomialInverse<T>> for z_inv
 where
-    T: Float + Default + AddAssign<T> + Scalar + ClosedAddAssign + ClosedSubAssign + ClosedMulAssign,
+    T: Number,
 {
     type Output = PolynomialInverse<T>;
 
@@ -83,7 +84,7 @@ impl Mul<z_inv> for z_inv {
 
 impl<T> Div<PolynomialInverse<T>> for z_inv
 where
-    T: Float + Default + AddAssign<T> + Scalar + ClosedAddAssign + ClosedSubAssign + ClosedMulAssign,
+    T: Number,
 {
     type Output = DTf<T>;
 
@@ -131,16 +132,16 @@ macro_rules! impl_z_inv_ops {
 impl_z_inv_ops!(f32, f32);
 impl_z_inv_ops!(f64, f64);
 
-impl_z_inv_ops!(u8, f64);
-impl_z_inv_ops!(u16, f64);
-impl_z_inv_ops!(u32, f64);
+impl_z_inv_ops!(u8, f32);
+impl_z_inv_ops!(u16, f32);
+impl_z_inv_ops!(u32, f32);
 impl_z_inv_ops!(u64, f64);
 impl_z_inv_ops!(u128, f64);
 impl_z_inv_ops!(usize, f64);
 
-impl_z_inv_ops!(i8, f64);
-impl_z_inv_ops!(i16, f64);
-impl_z_inv_ops!(i32, f64);
+impl_z_inv_ops!(i8, f32);
+impl_z_inv_ops!(i16, f32);
+impl_z_inv_ops!(i32, f32);
 impl_z_inv_ops!(i64, f64);
 impl_z_inv_ops!(i128, f64);
 impl_z_inv_ops!(isize, f64);

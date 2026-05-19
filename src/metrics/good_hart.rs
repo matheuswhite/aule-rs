@@ -1,18 +1,14 @@
 use crate::{
     block::Block,
-    math::{absolute::Absolute, recip_of_count::RecipOfCount, scale::Scale, zeroish::Zeroish},
+    math::{float_point::FloatPoint, sample::Sample},
     prelude::SimulationState,
 };
 use alloc::vec::Vec;
-use core::{
-    iter::Sum,
-    ops::{Add, Sub},
-};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GoodHart<T>
 where
-    T: Scale,
+    T: Sample,
 {
     error: Vec<T>,
     control_signal: Vec<T>,
@@ -21,7 +17,7 @@ where
 
 impl<T> GoodHart<T>
 where
-    T: Clone + Sum + Scale + Sub<Output = T> + Absolute + Add<Output = T> + Zeroish + Default,
+    T: Sample,
 {
     pub fn new(alpha1: T::Alpha, alpha2: T::Alpha, alpha3: T::Alpha) -> Self {
         Self {
@@ -33,11 +29,11 @@ where
 
     pub fn value(&self) -> T {
         if self.error.is_empty() || self.control_signal.is_empty() {
-            return T::zeroish(&T::default());
+            return T::zero();
         }
 
         let n = self.error.len();
-        let one_n = <T::Alpha as RecipOfCount>::recip_of_count(n);
+        let one_n = <T::Alpha as FloatPoint>::recip_of_count(n);
 
         let e1 = self.control_signal.iter().cloned().sum::<T>().scale(one_n);
         let e2 = self
@@ -59,7 +55,7 @@ where
 
 impl<T> Block for GoodHart<T>
 where
-    T: Scale + Clone,
+    T: Sample,
 {
     type Input = (T, T);
     type Output = (T, T);
@@ -85,7 +81,7 @@ mod tests {
     use super::*;
     use crate::prelude::Simulation;
     use alloc::vec;
-    use nalgebra::{DMatrix, SMatrix};
+    use nalgebra::SMatrix;
     use num_complex::Complex;
 
     fn first_state() -> SimulationState {
@@ -235,105 +231,6 @@ mod tests {
         assert!(v.im.abs() < 1e-12);
     }
 
-    // ───────────────────────────── DMatrix<f32> ─────────────────────────────
-
-    #[test]
-    fn dmatrix_f32_block_accumulates_samples() {
-        let mut gh = GoodHart::<DMatrix<f32>> {
-            error: vec![],
-            control_signal: vec![],
-            alphas: (1.0, 1.0, 1.0),
-        };
-        let state = first_state();
-        let err = DMatrix::<f32>::from_row_slice(2, 1, &[1.0, 2.0]);
-        let u = DMatrix::<f32>::from_row_slice(2, 1, &[3.0, 4.0]);
-        gh.block((err.clone(), u.clone()), state);
-        gh.block((err.clone(), u.clone()), state);
-        assert_eq!(gh.error.len(), 2);
-        assert_eq!(gh.control_signal.len(), 2);
-        gh.reset();
-        assert!(gh.error.is_empty());
-    }
-
-    #[test]
-    fn dmatrix_f32_value_weighted_sum() {
-        let mut gh = GoodHart::<DMatrix<f32>>::new(1.0, 1.0, 1.0);
-        let state = first_state();
-        gh.block(
-            (
-                DMatrix::<f32>::from_row_slice(2, 1, &[1.0, 2.0]),
-                DMatrix::<f32>::from_row_slice(2, 1, &[1.0, 2.0]),
-            ),
-            state,
-        );
-        gh.block(
-            (
-                DMatrix::<f32>::from_row_slice(2, 1, &[-2.0, -4.0]),
-                DMatrix::<f32>::from_row_slice(2, 1, &[2.0, 4.0]),
-            ),
-            state,
-        );
-        gh.block(
-            (
-                DMatrix::<f32>::from_row_slice(2, 1, &[3.0, 6.0]),
-                DMatrix::<f32>::from_row_slice(2, 1, &[3.0, 6.0]),
-            ),
-            state,
-        );
-        let expected = DMatrix::<f32>::from_row_slice(2, 1, &[4.0, 8.0]);
-        let diff = gh.value() - expected;
-        assert!(diff.iter().all(|x| x.abs() < 1e-6));
-    }
-
-    // ───────────────────────────── DMatrix<f64> ─────────────────────────────
-
-    #[test]
-    fn dmatrix_f64_block_accumulates_samples() {
-        let mut gh = GoodHart::<DMatrix<f64>> {
-            error: vec![],
-            control_signal: vec![],
-            alphas: (1.0, 1.0, 1.0),
-        };
-        let state = first_state();
-        let err = DMatrix::<f64>::from_row_slice(1, 3, &[0.1, 0.2, 0.3]);
-        let u = DMatrix::<f64>::from_row_slice(1, 3, &[1.0, 2.0, 3.0]);
-        gh.block((err, u), state);
-        assert_eq!(gh.error.len(), 1);
-        assert_eq!(gh.control_signal.len(), 1);
-        gh.reset();
-        assert!(gh.error.is_empty());
-    }
-
-    #[test]
-    fn dmatrix_f64_value_weighted_sum() {
-        let mut gh = GoodHart::<DMatrix<f64>>::new(1.0, 1.0, 1.0);
-        let state = first_state();
-        gh.block(
-            (
-                DMatrix::<f64>::from_row_slice(2, 1, &[1.0, 2.0]),
-                DMatrix::<f64>::from_row_slice(2, 1, &[1.0, 2.0]),
-            ),
-            state,
-        );
-        gh.block(
-            (
-                DMatrix::<f64>::from_row_slice(2, 1, &[-2.0, -4.0]),
-                DMatrix::<f64>::from_row_slice(2, 1, &[2.0, 4.0]),
-            ),
-            state,
-        );
-        gh.block(
-            (
-                DMatrix::<f64>::from_row_slice(2, 1, &[3.0, 6.0]),
-                DMatrix::<f64>::from_row_slice(2, 1, &[3.0, 6.0]),
-            ),
-            state,
-        );
-        let expected = DMatrix::<f64>::from_row_slice(2, 1, &[4.0, 8.0]);
-        let diff = gh.value() - expected;
-        assert!(diff.iter().all(|x| x.abs() < 1e-12));
-    }
-
     // ───────────────────────────── SMatrix<f32, R, C> ─────────────────────────────
 
     #[test]
@@ -432,177 +329,6 @@ mod tests {
         let expected = SMatrix::<f64, 3, 1>::new(4.0, 8.0, 12.0);
         let diff = gh.value() - expected;
         assert!(diff.iter().all(|x| x.abs() < 1e-12));
-    }
-
-    // ───────────────────────────── DMatrix<Complex<f32>> ─────────────────────────────
-
-    #[test]
-    fn dmatrix_complex_f32_block_accumulates_samples() {
-        let mut gh = GoodHart::<DMatrix<Complex<f32>>> {
-            error: vec![],
-            control_signal: vec![],
-            alphas: (1.0, 1.0, 1.0),
-        };
-        let state = first_state();
-        let err = DMatrix::<Complex<f32>>::from_row_slice(
-            2,
-            1,
-            &[Complex::new(1.0, 0.5), Complex::new(2.0, -0.5)],
-        );
-        let u = DMatrix::<Complex<f32>>::from_row_slice(
-            2,
-            1,
-            &[Complex::new(3.0, 0.0), Complex::new(4.0, 1.0)],
-        );
-        gh.block((err.clone(), u.clone()), state);
-        gh.block((err.clone(), u.clone()), state);
-        assert_eq!(gh.error.len(), 2);
-        assert_eq!(gh.control_signal.len(), 2);
-        gh.reset();
-        assert!(gh.error.is_empty());
-    }
-
-    #[test]
-    fn dmatrix_complex_f32_value_weighted_sum() {
-        let mut gh = GoodHart::<DMatrix<Complex<f32>>>::new(1.0, 1.0, 1.0);
-        let state = first_state();
-        gh.block(
-            (
-                DMatrix::<Complex<f32>>::from_row_slice(
-                    2,
-                    1,
-                    &[Complex::new(1.0, 0.0), Complex::new(2.0, 0.0)],
-                ),
-                DMatrix::<Complex<f32>>::from_row_slice(
-                    2,
-                    1,
-                    &[Complex::new(1.0, 0.0), Complex::new(2.0, 0.0)],
-                ),
-            ),
-            state,
-        );
-        gh.block(
-            (
-                DMatrix::<Complex<f32>>::from_row_slice(
-                    2,
-                    1,
-                    &[Complex::new(-2.0, 0.0), Complex::new(-4.0, 0.0)],
-                ),
-                DMatrix::<Complex<f32>>::from_row_slice(
-                    2,
-                    1,
-                    &[Complex::new(2.0, 0.0), Complex::new(4.0, 0.0)],
-                ),
-            ),
-            state,
-        );
-        gh.block(
-            (
-                DMatrix::<Complex<f32>>::from_row_slice(
-                    2,
-                    1,
-                    &[Complex::new(3.0, 0.0), Complex::new(6.0, 0.0)],
-                ),
-                DMatrix::<Complex<f32>>::from_row_slice(
-                    2,
-                    1,
-                    &[Complex::new(3.0, 0.0), Complex::new(6.0, 0.0)],
-                ),
-            ),
-            state,
-        );
-        let expected = DMatrix::<Complex<f32>>::from_row_slice(
-            2,
-            1,
-            &[Complex::new(4.0, 0.0), Complex::new(8.0, 0.0)],
-        );
-        let diff = gh.value() - expected;
-        assert!(diff.iter().all(|x| x.re.abs() < 1e-6 && x.im.abs() < 1e-6));
-    }
-
-    // ───────────────────────────── DMatrix<Complex<f64>> ─────────────────────────────
-
-    #[test]
-    fn dmatrix_complex_f64_block_accumulates_samples() {
-        let mut gh = GoodHart::<DMatrix<Complex<f64>>> {
-            error: vec![],
-            control_signal: vec![],
-            alphas: (1.0, 1.0, 1.0),
-        };
-        let state = first_state();
-        let err = DMatrix::<Complex<f64>>::from_row_slice(
-            1,
-            2,
-            &[Complex::new(0.5, 0.0), Complex::new(-0.5, 1.0)],
-        );
-        let u = DMatrix::<Complex<f64>>::from_row_slice(
-            1,
-            2,
-            &[Complex::new(1.0, 0.0), Complex::new(2.0, -1.0)],
-        );
-        gh.block((err, u), state);
-        assert_eq!(gh.error.len(), 1);
-        assert_eq!(gh.control_signal.len(), 1);
-        gh.reset();
-        assert!(gh.error.is_empty());
-    }
-
-    #[test]
-    fn dmatrix_complex_f64_value_weighted_sum() {
-        let mut gh = GoodHart::<DMatrix<Complex<f64>>>::new(1.0, 1.0, 1.0);
-        let state = first_state();
-        gh.block(
-            (
-                DMatrix::<Complex<f64>>::from_row_slice(
-                    2,
-                    1,
-                    &[Complex::new(1.0, 0.0), Complex::new(2.0, 0.0)],
-                ),
-                DMatrix::<Complex<f64>>::from_row_slice(
-                    2,
-                    1,
-                    &[Complex::new(1.0, 0.0), Complex::new(2.0, 0.0)],
-                ),
-            ),
-            state,
-        );
-        gh.block(
-            (
-                DMatrix::<Complex<f64>>::from_row_slice(
-                    2,
-                    1,
-                    &[Complex::new(-2.0, 0.0), Complex::new(-4.0, 0.0)],
-                ),
-                DMatrix::<Complex<f64>>::from_row_slice(
-                    2,
-                    1,
-                    &[Complex::new(2.0, 0.0), Complex::new(4.0, 0.0)],
-                ),
-            ),
-            state,
-        );
-        gh.block(
-            (
-                DMatrix::<Complex<f64>>::from_row_slice(
-                    2,
-                    1,
-                    &[Complex::new(3.0, 0.0), Complex::new(6.0, 0.0)],
-                ),
-                DMatrix::<Complex<f64>>::from_row_slice(
-                    2,
-                    1,
-                    &[Complex::new(3.0, 0.0), Complex::new(6.0, 0.0)],
-                ),
-            ),
-            state,
-        );
-        let expected = DMatrix::<Complex<f64>>::from_row_slice(
-            2,
-            1,
-            &[Complex::new(4.0, 0.0), Complex::new(8.0, 0.0)],
-        );
-        let diff = gh.value() - expected;
-        assert!(diff.iter().all(|x| x.re.abs() < 1e-12 && x.im.abs() < 1e-12));
     }
 
     // ───────────────────────────── SMatrix<Complex<f32>, R, C> ─────────────────────────────
@@ -775,6 +501,9 @@ mod tests {
             Complex::new(12.0, 0.0),
         );
         let diff = gh.value() - expected;
-        assert!(diff.iter().all(|x| x.re.abs() < 1e-12 && x.im.abs() < 1e-12));
+        assert!(
+            diff.iter()
+                .all(|x| x.re.abs() < 1e-12 && x.im.abs() < 1e-12)
+        );
     }
 }

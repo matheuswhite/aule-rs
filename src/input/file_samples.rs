@@ -1,6 +1,6 @@
 use crate::{
     block::Block,
-    math::{from_f64::FromF64, lerp::Lerp},
+    math::{float_point::FloatPoint, sample::Sample},
     prelude::SimulationState,
 };
 use core::time::Duration;
@@ -175,7 +175,7 @@ where
 
 impl<T> Block for FileSamples<T>
 where
-    T: Clone + FromCsvRecord + Lerp,
+    T: FromCsvRecord + Sample,
 {
     type Input = ();
     type Output = Option<T>;
@@ -200,13 +200,9 @@ where
             return Some(record.value);
         }
 
-        let t = sim_state.sim_time().as_secs_f64();
-        let alpha = (t - start) / (end - start);
-        let alpha = <T::Alpha as FromF64>::from_f64(alpha);
+        let alpha = <T::Alpha as FloatPoint>::from_duration(sim_state.sim_time());
 
-        let value = T::lerp(&last_record.value, &record.value, alpha);
-
-        Some(value)
+        Some(T::lerp(&last_record.value, &record.value, alpha))
     }
 }
 
@@ -225,13 +221,16 @@ mod tests {
         let pid = std::process::id();
         let path = std::env::temp_dir().join(format!("aule_file_samples_{}_{}.csv", pid, id));
         let mut f = File::create(&path).expect("failed to create tmp csv");
-        f.write_all(contents.as_bytes()).expect("failed to write tmp csv");
+        f.write_all(contents.as_bytes())
+            .expect("failed to write tmp csv");
         path
     }
 
     fn make_state(sim_time_s: f64, dt_s: f64) -> SimulationState {
         let mut sim = Simulation::new(dt_s as f32, (sim_time_s + dt_s * 2.0) as f32);
-        let initial = sim.next().expect("simulation should yield at least one state");
+        let initial = sim
+            .next()
+            .expect("simulation should yield at least one state");
         let delta = Duration::from_secs_f64(sim_time_s) - initial.sim_time();
         initial + delta
     }
@@ -290,7 +289,8 @@ mod tests {
         }
         assert!(last_some.is_some(), "expected at least one Some");
         assert_eq!(
-            last_result, Some(None),
+            last_result,
+            Some(None),
             "expected None after exhausting samples"
         );
     }
@@ -387,82 +387,6 @@ mod tests {
         assert!(approx_eq_f32(v.im, 2.0, 1e-4), "im: {}", v.im);
     }
 
-    // ───────────────────────────── DMatrix<f64> ─────────────────────────────
-
-    #[test]
-    fn mat_returns_first_value_before_first_sample() {
-        let path = write_tmp_csv("time,a,b,c\n1.0,1.0,2.0,3.0\n2.0,4.0,5.0,6.0\n");
-        let mut fs = FileSamples::<DMatrix<f64>>::from_csv(path.to_str().unwrap(), 0, 1).unwrap();
-        let state = make_state(0.5, 0.5);
-        let v = fs.block((), state).expect("should produce a value");
-        assert_eq!((v.nrows(), v.ncols()), (3, 1));
-        assert!(approx_eq_f64(v[(0, 0)], 1.0, 1e-9));
-        assert!(approx_eq_f64(v[(1, 0)], 2.0, 1e-9));
-        assert!(approx_eq_f64(v[(2, 0)], 3.0, 1e-9));
-    }
-
-    #[test]
-    fn mat_midpoint_interpolation() {
-        let path = write_tmp_csv("time,a,b,c\n0.0,0.0,0.0,0.0\n1.0,2.0,4.0,6.0\n");
-        let mut fs = FileSamples::<DMatrix<f64>>::from_csv(path.to_str().unwrap(), 0, 1).unwrap();
-        let state = make_state(0.5, 0.1);
-        let v = fs.block((), state).expect("should produce a value");
-        assert_eq!((v.nrows(), v.ncols()), (3, 1));
-        assert!(approx_eq_f64(v[(0, 0)], 1.0, 1e-6), "{}", v[(0, 0)]);
-        assert!(approx_eq_f64(v[(1, 0)], 2.0, 1e-6), "{}", v[(1, 0)]);
-        assert!(approx_eq_f64(v[(2, 0)], 3.0, 1e-6), "{}", v[(2, 0)]);
-    }
-
-    #[test]
-    fn mat_full_traversal() {
-        let path =
-            write_tmp_csv("time,a,b\n0.0,0.0,0.0\n1.0,10.0,20.0\n2.0,20.0,40.0\n");
-        let mut fs = FileSamples::<DMatrix<f64>>::from_csv(path.to_str().unwrap(), 0, 1).unwrap();
-        let state = make_state(1.5, 0.1);
-        let v = fs.block((), state).expect("should produce a value");
-        assert_eq!((v.nrows(), v.ncols()), (2, 1));
-        assert!(approx_eq_f64(v[(0, 0)], 15.0, 1e-6), "{}", v[(0, 0)]);
-        assert!(approx_eq_f64(v[(1, 0)], 30.0, 1e-6), "{}", v[(1, 0)]);
-    }
-
-    // ───────────────────────────── DMatrix<f32> ─────────────────────────────
-
-    #[test]
-    fn mat_f32_returns_first_value_before_first_sample() {
-        let path = write_tmp_csv("time,a,b,c\n1.0,1.0,2.0,3.0\n2.0,4.0,5.0,6.0\n");
-        let mut fs = FileSamples::<DMatrix<f32>>::from_csv(path.to_str().unwrap(), 0, 1).unwrap();
-        let state = make_state(0.5, 0.5);
-        let v = fs.block((), state).expect("should produce a value");
-        assert_eq!((v.nrows(), v.ncols()), (3, 1));
-        assert!(approx_eq_f32(v[(0, 0)], 1.0, 1e-6));
-        assert!(approx_eq_f32(v[(1, 0)], 2.0, 1e-6));
-        assert!(approx_eq_f32(v[(2, 0)], 3.0, 1e-6));
-    }
-
-    #[test]
-    fn mat_f32_midpoint_interpolation() {
-        let path = write_tmp_csv("time,a,b,c\n0.0,0.0,0.0,0.0\n1.0,2.0,4.0,6.0\n");
-        let mut fs = FileSamples::<DMatrix<f32>>::from_csv(path.to_str().unwrap(), 0, 1).unwrap();
-        let state = make_state(0.5, 0.1);
-        let v = fs.block((), state).expect("should produce a value");
-        assert_eq!((v.nrows(), v.ncols()), (3, 1));
-        assert!(approx_eq_f32(v[(0, 0)], 1.0, 1e-4), "{}", v[(0, 0)]);
-        assert!(approx_eq_f32(v[(1, 0)], 2.0, 1e-4), "{}", v[(1, 0)]);
-        assert!(approx_eq_f32(v[(2, 0)], 3.0, 1e-4), "{}", v[(2, 0)]);
-    }
-
-    #[test]
-    fn mat_f32_full_traversal() {
-        let path =
-            write_tmp_csv("time,a,b\n0.0,0.0,0.0\n1.0,10.0,20.0\n2.0,20.0,40.0\n");
-        let mut fs = FileSamples::<DMatrix<f32>>::from_csv(path.to_str().unwrap(), 0, 1).unwrap();
-        let state = make_state(1.5, 0.1);
-        let v = fs.block((), state).expect("should produce a value");
-        assert_eq!((v.nrows(), v.ncols()), (2, 1));
-        assert!(approx_eq_f32(v[(0, 0)], 15.0, 1e-4), "{}", v[(0, 0)]);
-        assert!(approx_eq_f32(v[(1, 0)], 30.0, 1e-4), "{}", v[(1, 0)]);
-    }
-
     // ───────────────────────────── SMatrix<f64, R, C> ─────────────────────────────
 
     #[test]
@@ -492,9 +416,8 @@ mod tests {
     #[test]
     fn smatrix_f64_square_matrix_midpoint_interpolation() {
         // CSV row-major: m00, m01, m10, m11
-        let path = write_tmp_csv(
-            "time,m00,m01,m10,m11\n0.0,0.0,0.0,0.0,0.0\n1.0,2.0,4.0,6.0,8.0\n",
-        );
+        let path =
+            write_tmp_csv("time,m00,m01,m10,m11\n0.0,0.0,0.0,0.0,0.0\n1.0,2.0,4.0,6.0,8.0\n");
         let mut fs =
             FileSamples::<SMatrix<f64, 2, 2>>::from_csv(path.to_str().unwrap(), 0, 1).unwrap();
         let state = make_state(0.5, 0.1);
@@ -521,9 +444,8 @@ mod tests {
 
     #[test]
     fn smatrix_f32_square_matrix_midpoint_interpolation() {
-        let path = write_tmp_csv(
-            "time,m00,m01,m10,m11\n0.0,0.0,0.0,0.0,0.0\n1.0,2.0,4.0,6.0,8.0\n",
-        );
+        let path =
+            write_tmp_csv("time,m00,m01,m10,m11\n0.0,0.0,0.0,0.0,0.0\n1.0,2.0,4.0,6.0,8.0\n");
         let mut fs =
             FileSamples::<SMatrix<f32, 2, 2>>::from_csv(path.to_str().unwrap(), 0, 1).unwrap();
         let state = make_state(0.5, 0.1);

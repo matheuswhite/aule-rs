@@ -1,9 +1,8 @@
 use crate::{
     block::Block,
-    math::{recip_of_count::RecipOfCount, scale::Scale, zeroish::Zeroish},
+    math::{float_point::FloatPoint, number::Number},
     prelude::SimulationState,
 };
-use core::ops::{AddAssign, Mul};
 
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct ISE<T> {
@@ -13,34 +12,34 @@ pub struct ISE<T> {
 
 impl<T> ISE<T>
 where
-    T: Zeroish + Clone + Scale,
+    T: Number,
 {
     pub fn value(&self) -> T {
         if self.n == 0 {
-            T::zeroish(&self.acc)
+            T::zero()
         } else {
             self.acc
                 .clone()
-                .scale(<T::Alpha as RecipOfCount>::recip_of_count(self.n))
+                .scale(<T::Alpha as FloatPoint>::recip_of_count(self.n))
         }
     }
 }
 
 impl<T> Block for ISE<T>
 where
-    T: Mul<Output = T> + AddAssign + Clone + Zeroish,
+    T: Number,
 {
     type Input = T;
     type Output = T;
 
     fn block(&mut self, input: Self::Input, _sim_state: SimulationState) -> Self::Output {
-        self.acc += input.clone() * input.clone();
+        self.acc += input * input;
         self.n += 1;
         input
     }
 
     fn reset(&mut self) {
-        self.acc = T::zeroish(&self.acc);
+        self.acc = T::zero();
         self.n = 0;
     }
 }
@@ -49,7 +48,6 @@ where
 mod tests {
     use super::*;
     use crate::prelude::Simulation;
-    use nalgebra::{DMatrix, SMatrix};
     use num_complex::Complex;
 
     fn first_state() -> SimulationState {
@@ -166,269 +164,5 @@ mod tests {
             n: 3,
         };
         assert_eq!(ise.value(), Complex::new(3.0_f64, -4.0));
-    }
-
-    // ───────────────────────────── DMatrix<f32> ─────────────────────────────
-
-    #[test]
-    fn dmatrix_f32_empty_returns_zero_shaped_like_prototype() {
-        let ise = ISE::<DMatrix<f32>> {
-            acc: DMatrix::<f32>::from_row_slice(2, 3, &[1.0, 2.0, 3.0, 4.0, 5.0, 6.0]),
-            n: 0,
-        };
-        assert_eq!(ise.value(), DMatrix::<f32>::zeros(2, 3));
-    }
-
-    #[test]
-    fn dmatrix_f32_divides_accumulated_by_count() {
-        let ise = ISE::<DMatrix<f32>> {
-            acc: DMatrix::<f32>::from_row_slice(2, 2, &[2.0, 4.0, 6.0, 8.0]),
-            n: 2,
-        };
-        let expected = DMatrix::<f32>::from_row_slice(2, 2, &[1.0, 2.0, 3.0, 4.0]);
-        assert_eq!(ise.value(), expected);
-    }
-
-    // ───────────────────────────── DMatrix<f64> ─────────────────────────────
-
-    #[test]
-    fn dmatrix_f64_empty_returns_zero_shaped_like_prototype() {
-        let ise = ISE::<DMatrix<f64>> {
-            acc: DMatrix::<f64>::from_row_slice(3, 1, &[1.0, 2.0, 3.0]),
-            n: 0,
-        };
-        assert_eq!(ise.value(), DMatrix::<f64>::zeros(3, 1));
-    }
-
-    #[test]
-    fn dmatrix_f64_divides_accumulated_by_count() {
-        let ise = ISE::<DMatrix<f64>> {
-            acc: DMatrix::<f64>::from_row_slice(2, 2, &[4.0, 8.0, 12.0, 16.0]),
-            n: 4,
-        };
-        let expected = DMatrix::<f64>::from_row_slice(2, 2, &[1.0, 2.0, 3.0, 4.0]);
-        assert_eq!(ise.value(), expected);
-    }
-
-    // ───────────────────────────── SMatrix<f32, R, C> ─────────────────────────────
-
-    #[test]
-    fn smatrix_f32_empty_returns_zero() {
-        let ise = ISE::<SMatrix<f32, 3, 1>> {
-            acc: SMatrix::<f32, 3, 1>::new(1.0, 2.0, 3.0),
-            n: 0,
-        };
-        assert_eq!(ise.value(), SMatrix::<f32, 3, 1>::zeros());
-    }
-
-    #[test]
-    fn smatrix_f32_column_vector_divides_by_count() {
-        let ise = ISE::<SMatrix<f32, 3, 1>> {
-            acc: SMatrix::<f32, 3, 1>::new(2.0, 4.0, 6.0),
-            n: 2,
-        };
-        assert_eq!(ise.value(), SMatrix::<f32, 3, 1>::new(1.0, 2.0, 3.0));
-    }
-
-    #[test]
-    fn smatrix_f32_square_divides_by_count() {
-        let ise = ISE::<SMatrix<f32, 2, 2>> {
-            acc: SMatrix::<f32, 2, 2>::new(3.0, 6.0, 9.0, 12.0),
-            n: 3,
-        };
-        assert_eq!(ise.value(), SMatrix::<f32, 2, 2>::new(1.0, 2.0, 3.0, 4.0));
-    }
-
-    // ───────────────────────────── SMatrix<f64, R, C> ─────────────────────────────
-
-    #[test]
-    fn smatrix_f64_empty_returns_zero() {
-        let ise = ISE::<SMatrix<f64, 3, 1>> {
-            acc: SMatrix::<f64, 3, 1>::new(1.0, 2.0, 3.0),
-            n: 0,
-        };
-        assert_eq!(ise.value(), SMatrix::<f64, 3, 1>::zeros());
-    }
-
-    #[test]
-    fn smatrix_f64_column_vector_divides_by_count() {
-        let ise = ISE::<SMatrix<f64, 3, 1>> {
-            acc: SMatrix::<f64, 3, 1>::new(5.0, 10.0, 15.0),
-            n: 5,
-        };
-        assert_eq!(ise.value(), SMatrix::<f64, 3, 1>::new(1.0, 2.0, 3.0));
-    }
-
-    #[test]
-    fn smatrix_f64_square_divides_by_count() {
-        let ise = ISE::<SMatrix<f64, 2, 2>> {
-            acc: SMatrix::<f64, 2, 2>::new(2.0, 4.0, 6.0, 8.0),
-            n: 2,
-        };
-        assert_eq!(ise.value(), SMatrix::<f64, 2, 2>::new(1.0, 2.0, 3.0, 4.0));
-    }
-
-    // ───────────────────────────── DMatrix<Complex<f32>> ─────────────────────────────
-
-    #[test]
-    fn dmatrix_complex_f32_empty_returns_zero_shaped_like_prototype() {
-        let ise = ISE::<DMatrix<Complex<f32>>> {
-            acc: DMatrix::<Complex<f32>>::from_row_slice(
-                2,
-                2,
-                &[
-                    Complex::new(1.0, 2.0),
-                    Complex::new(3.0, 4.0),
-                    Complex::new(5.0, 6.0),
-                    Complex::new(7.0, 8.0),
-                ],
-            ),
-            n: 0,
-        };
-        assert_eq!(ise.value(), DMatrix::<Complex<f32>>::zeros(2, 2));
-    }
-
-    #[test]
-    fn dmatrix_complex_f32_divides_accumulated_by_count() {
-        let ise = ISE::<DMatrix<Complex<f32>>> {
-            acc: DMatrix::<Complex<f32>>::from_row_slice(
-                2,
-                2,
-                &[
-                    Complex::new(2.0, 4.0),
-                    Complex::new(4.0, 8.0),
-                    Complex::new(6.0, 12.0),
-                    Complex::new(8.0, 16.0),
-                ],
-            ),
-            n: 2,
-        };
-        let expected = DMatrix::<Complex<f32>>::from_row_slice(
-            2,
-            2,
-            &[
-                Complex::new(1.0, 2.0),
-                Complex::new(2.0, 4.0),
-                Complex::new(3.0, 6.0),
-                Complex::new(4.0, 8.0),
-            ],
-        );
-        assert_eq!(ise.value(), expected);
-    }
-
-    // ───────────────────────────── DMatrix<Complex<f64>> ─────────────────────────────
-
-    #[test]
-    fn dmatrix_complex_f64_empty_returns_zero_shaped_like_prototype() {
-        let ise = ISE::<DMatrix<Complex<f64>>> {
-            acc: DMatrix::<Complex<f64>>::from_row_slice(
-                3,
-                1,
-                &[
-                    Complex::new(1.0, 2.0),
-                    Complex::new(3.0, 4.0),
-                    Complex::new(5.0, 6.0),
-                ],
-            ),
-            n: 0,
-        };
-        assert_eq!(ise.value(), DMatrix::<Complex<f64>>::zeros(3, 1));
-    }
-
-    #[test]
-    fn dmatrix_complex_f64_divides_accumulated_by_count() {
-        let ise = ISE::<DMatrix<Complex<f64>>> {
-            acc: DMatrix::<Complex<f64>>::from_row_slice(
-                2,
-                2,
-                &[
-                    Complex::new(4.0, -8.0),
-                    Complex::new(8.0, -16.0),
-                    Complex::new(12.0, -24.0),
-                    Complex::new(16.0, -32.0),
-                ],
-            ),
-            n: 4,
-        };
-        let expected = DMatrix::<Complex<f64>>::from_row_slice(
-            2,
-            2,
-            &[
-                Complex::new(1.0, -2.0),
-                Complex::new(2.0, -4.0),
-                Complex::new(3.0, -6.0),
-                Complex::new(4.0, -8.0),
-            ],
-        );
-        assert_eq!(ise.value(), expected);
-    }
-
-    // ───────────────────────────── SMatrix<Complex<f32>, R, C> ─────────────────────────────
-
-    #[test]
-    fn smatrix_complex_f32_empty_returns_zero() {
-        let ise = ISE::<SMatrix<Complex<f32>, 3, 1>> {
-            acc: SMatrix::<Complex<f32>, 3, 1>::new(
-                Complex::new(1.0, 2.0),
-                Complex::new(3.0, 4.0),
-                Complex::new(5.0, 6.0),
-            ),
-            n: 0,
-        };
-        assert_eq!(ise.value(), SMatrix::<Complex<f32>, 3, 1>::zeros());
-    }
-
-    #[test]
-    fn smatrix_complex_f32_divides_by_count() {
-        let ise = ISE::<SMatrix<Complex<f32>, 3, 1>> {
-            acc: SMatrix::<Complex<f32>, 3, 1>::new(
-                Complex::new(2.0, 4.0),
-                Complex::new(4.0, 8.0),
-                Complex::new(6.0, 12.0),
-            ),
-            n: 2,
-        };
-        let expected = SMatrix::<Complex<f32>, 3, 1>::new(
-            Complex::new(1.0, 2.0),
-            Complex::new(2.0, 4.0),
-            Complex::new(3.0, 6.0),
-        );
-        assert_eq!(ise.value(), expected);
-    }
-
-    // ───────────────────────────── SMatrix<Complex<f64>, R, C> ─────────────────────────────
-
-    #[test]
-    fn smatrix_complex_f64_empty_returns_zero() {
-        let ise = ISE::<SMatrix<Complex<f64>, 2, 2>> {
-            acc: SMatrix::<Complex<f64>, 2, 2>::new(
-                Complex::new(1.0, 0.0),
-                Complex::new(2.0, 0.0),
-                Complex::new(3.0, 0.0),
-                Complex::new(4.0, 0.0),
-            ),
-            n: 0,
-        };
-        assert_eq!(ise.value(), SMatrix::<Complex<f64>, 2, 2>::zeros());
-    }
-
-    #[test]
-    fn smatrix_complex_f64_divides_by_count() {
-        let ise = ISE::<SMatrix<Complex<f64>, 2, 2>> {
-            acc: SMatrix::<Complex<f64>, 2, 2>::new(
-                Complex::new(3.0, -3.0),
-                Complex::new(6.0, -6.0),
-                Complex::new(9.0, -9.0),
-                Complex::new(12.0, -12.0),
-            ),
-            n: 3,
-        };
-        let expected = SMatrix::<Complex<f64>, 2, 2>::new(
-            Complex::new(1.0, -1.0),
-            Complex::new(2.0, -2.0),
-            Complex::new(3.0, -3.0),
-            Complex::new(4.0, -4.0),
-        );
-        assert_eq!(ise.value(), expected);
     }
 }

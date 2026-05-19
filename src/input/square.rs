@@ -1,6 +1,9 @@
-use crate::{block::Block, prelude::SimulationState};
-use core::{f32::consts::PI, ops::Add, time::Duration};
-use num_traits::{One, Zero};
+use crate::{
+    block::Block,
+    math::{float_point::FloatPoint, sample::Sample},
+    prelude::SimulationState,
+};
+use core::{f32::consts::PI, time::Duration};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Square<T> {
@@ -21,7 +24,7 @@ impl<T> Square<T> {
 
 impl<T> Default for Square<T>
 where
-    T: Zero + One,
+    T: Sample,
 {
     fn default() -> Self {
         Self {
@@ -34,16 +37,16 @@ where
 
 impl<T> Block for Square<T>
 where
-    T: Clone + Add<Output = T>,
+    T: Sample,
 {
     type Input = ();
     type Output = T;
 
     fn block(&mut self, _input: Self::Input, sim_state: SimulationState) -> Self::Output {
-        let t = sim_state.sim_time().as_secs_f32();
-        let period_secs = self.period.as_secs_f32();
+        let t = <T::Alpha as FloatPoint>::from_duration(sim_state.sim_time());
+        let period_secs = <T::Alpha as FloatPoint>::from_duration(self.period);
 
-        if (t % period_secs) < (period_secs / 2.0) {
+        if (t % period_secs) < (period_secs.half()) {
             self.amplitude.clone() + self.offset.clone()
         } else {
             self.offset.clone()
@@ -55,12 +58,14 @@ where
 mod tests {
     use super::*;
     use crate::prelude::Simulation;
-    use nalgebra::{DMatrix, SMatrix};
+    use nalgebra::SMatrix;
     use num_complex::Complex;
 
     fn state_at(sim_time_s: f64, dt_s: f64) -> SimulationState {
         let mut sim = Simulation::new(dt_s as f32, (sim_time_s + dt_s * 2.0) as f32);
-        let initial = sim.next().expect("simulation should yield at least one state");
+        let initial = sim
+            .next()
+            .expect("simulation should yield at least one state");
         let delta = Duration::from_secs_f64(sim_time_s) - initial.sim_time();
         initial + delta
     }
@@ -113,28 +118,6 @@ mod tests {
             sq.block((), state_at(0.6, 0.01)),
             Complex::new(0.5_f64, 0.5)
         );
-    }
-
-    #[test]
-    fn dmatrix_f32_high_and_low_phases() {
-        let amp = DMatrix::<f32>::from_row_slice(2, 1, &[1.0, 2.0]);
-        let off = DMatrix::<f32>::from_row_slice(2, 1, &[10.0, 20.0]);
-        let mut sq = Square::new(amp.clone(), Duration::from_secs_f64(1.0), off.clone());
-        let high = sq.block((), state_at(0.1, 0.01));
-        assert_eq!(high, DMatrix::<f32>::from_row_slice(2, 1, &[11.0, 22.0]));
-        let low = sq.block((), state_at(0.6, 0.01));
-        assert_eq!(low, off);
-    }
-
-    #[test]
-    fn dmatrix_f64_high_and_low_phases() {
-        let amp = DMatrix::<f64>::from_row_slice(2, 1, &[1.0, 2.0]);
-        let off = DMatrix::<f64>::from_row_slice(2, 1, &[10.0, 20.0]);
-        let mut sq = Square::new(amp.clone(), Duration::from_secs_f64(1.0), off.clone());
-        let high = sq.block((), state_at(0.1, 0.01));
-        assert_eq!(high, DMatrix::<f64>::from_row_slice(2, 1, &[11.0, 22.0]));
-        let low = sq.block((), state_at(0.6, 0.01));
-        assert_eq!(low, off);
     }
 
     #[test]

@@ -1,25 +1,21 @@
+use crate::math::number::Number;
+use crate::math::sample::Sample;
 use alloc::format;
 use alloc::string::String;
 use alloc::vec;
 use alloc::vec::Vec;
-use core::{
-    fmt::Display,
-    ops::{Add, AddAssign, Mul, Neg, Sub},
-};
-use nalgebra::{ClosedAddAssign, ClosedMulAssign, ClosedSubAssign, DMatrix, Scalar};
-use num_traits::Float;
+use core::fmt::Display;
+use core::ops::{Add, Mul, Neg, Sub};
+use nalgebra::DMatrix;
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct Polynomial<T>
-where
-    T: Float + Default + Scalar + ClosedAddAssign + ClosedSubAssign + ClosedMulAssign,
-{
+pub struct Polynomial<T> {
     coeff: Vec<T>,
 }
 
 impl<T> Polynomial<T>
 where
-    T: Float + Default + AddAssign<T> + Scalar + ClosedAddAssign + ClosedSubAssign + ClosedMulAssign,
+    T: Sample,
 {
     pub fn new(coeff: &[T]) -> Self {
         let output = Polynomial {
@@ -41,6 +37,27 @@ where
         Polynomial { coeff }
     }
 
+    pub fn degree(&self) -> isize {
+        self.coeff.len() as isize - 1
+    }
+
+    fn positive_degree(&self) -> usize {
+        self.coeff.len() - 1
+    }
+
+    pub fn coeff(&self) -> &[T] {
+        &self.coeff
+    }
+
+    pub fn lead_coeff(&self) -> T {
+        self.coeff.first().cloned().unwrap_or(T::zero())
+    }
+}
+
+impl<T> Polynomial<T>
+where
+    T: Number + 'static,
+{
     pub fn pow(self, exp: usize) -> Self {
         match exp {
             0 => Polynomial::new(&[T::one()]),
@@ -55,20 +72,33 @@ where
         }
     }
 
-    pub fn degree(&self) -> isize {
-        self.coeff.len() as isize - 1
-    }
+    pub fn poly_div(&self, other: &Polynomial<T>) -> (Polynomial<T>, Polynomial<T>) {
+        assert!(!other.coeff.is_empty(), "The divider cannot be empty");
 
-    fn positive_degree(&self) -> usize {
-        self.coeff.len() - 1
-    }
+        let mut remainder = self.coeff.clone();
+        let den_lead = other.coeff[0].clone();
+        let q_len = self.coeff.len().saturating_sub(other.coeff.len()) + 1;
+        let mut quotient = Vec::with_capacity(q_len);
 
-    pub fn coeff(&self) -> &[T] {
-        &self.coeff
-    }
+        while remainder.len() >= other.coeff.len() {
+            let coeff = remainder[0].clone() / den_lead.clone();
+            quotient.push(coeff.clone());
 
-    pub fn lead_coeff(&self) -> T {
-        self.coeff.first().copied().unwrap_or(T::zero())
+            for (i, rem) in remainder.iter_mut().enumerate().take(other.coeff.len()) {
+                *rem = rem.clone() - coeff.clone() * other.coeff[i].clone();
+            }
+
+            remainder.remove(0);
+        }
+
+        if remainder.is_empty() {
+            remainder.push(Sample::zero());
+        }
+
+        (
+            Polynomial { coeff: quotient },
+            Polynomial { coeff: remainder },
+        )
     }
 
     pub fn transposed_companion_matrix(self) -> DMatrix<T> {
@@ -81,7 +111,7 @@ where
 
         for i in 0..(n - 1) {
             let one_col = i + 1;
-            let mut line = vec![T::zero(); n];
+            let mut line = vec![Sample::zero(); n];
             line[one_col] = T::one();
             lines.push(line);
         }
@@ -90,46 +120,17 @@ where
             self.coeff[1..]
                 .iter()
                 .rev()
-                .map(|&c| -c)
+                .map(|c| -c.clone())
                 .collect::<Vec<_>>(),
         );
 
         DMatrix::from_fn(n, n, |i, j| lines[i][j])
     }
-
-    pub fn poly_div(&self, other: &Polynomial<T>) -> (Polynomial<T>, Polynomial<T>) {
-        assert!(!other.coeff.is_empty(), "The divider cannot be empty");
-
-        let mut remainder = self.coeff.clone();
-        let den_lead = other.coeff[0];
-        let q_len = self.coeff.len().saturating_sub(other.coeff.len()) + 1;
-        let mut quotient = Vec::with_capacity(q_len);
-
-        while remainder.len() >= other.coeff.len() {
-            let coeff = remainder[0] / den_lead;
-            quotient.push(coeff);
-
-            for (i, rem) in remainder.iter_mut().enumerate().take(other.coeff.len()) {
-                *rem -= coeff * other.coeff[i];
-            }
-
-            remainder.remove(0);
-        }
-
-        if remainder.is_empty() {
-            remainder.push(T::default());
-        }
-
-        (
-            Polynomial { coeff: quotient },
-            Polynomial { coeff: remainder },
-        )
-    }
 }
 
 impl<T> Add for Polynomial<T>
 where
-    T: Float + Default + AddAssign<T> + Scalar + ClosedAddAssign + ClosedSubAssign + ClosedMulAssign,
+    T: Sample,
 {
     type Output = Polynomial<T>;
 
@@ -148,10 +149,10 @@ where
         let mut rhs_coeff = rhs.coeff.iter().rev();
 
         for i in 0..=max_degree {
-            let self_c = self_coeff.next().copied();
-            let rhs_c = rhs_coeff.next().copied();
+            let self_c = self_coeff.next().cloned();
+            let rhs_c = rhs_coeff.next().cloned();
 
-            if let (Some(self_c), Some(rhs_c)) = (self_c, rhs_c) {
+            if let (Some(self_c), Some(rhs_c)) = (self_c.clone(), rhs_c.clone()) {
                 coeff[max_degree - i] = self_c + rhs_c;
             } else if let Some(self_c) = self_c {
                 coeff[max_degree - i] = self_c;
@@ -168,7 +169,7 @@ where
 
 impl<T> Sub for Polynomial<T>
 where
-    T: Float + Default + AddAssign<T> + Scalar + ClosedAddAssign + ClosedSubAssign + ClosedMulAssign,
+    T: Sample,
 {
     type Output = Polynomial<T>;
 
@@ -187,10 +188,10 @@ where
         let mut rhs_coeff = rhs.coeff.iter().rev();
 
         for i in 0..=max_degree {
-            let self_c = self_coeff.next().copied();
-            let rhs_c = rhs_coeff.next().copied();
+            let self_c = self_coeff.next().cloned();
+            let rhs_c = rhs_coeff.next().cloned();
 
-            if let (Some(self_c), Some(rhs_c)) = (self_c, rhs_c) {
+            if let (Some(self_c), Some(rhs_c)) = (self_c.clone(), rhs_c.clone()) {
                 coeff[max_degree - i] = self_c - rhs_c;
             } else if let Some(self_c) = self_c {
                 coeff[max_degree - i] = self_c;
@@ -207,7 +208,7 @@ where
 
 impl<T> Mul for Polynomial<T>
 where
-    T: Float + Default + AddAssign<T> + Scalar + ClosedAddAssign + ClosedSubAssign + ClosedMulAssign,
+    T: Number,
 {
     type Output = Polynomial<T>;
 
@@ -218,9 +219,9 @@ where
 
         let mut coeff = vec![T::zero(); self.positive_degree() + rhs.positive_degree() + 1];
 
-        for (i, &a) in self.coeff.iter().enumerate() {
-            for (j, &b) in rhs.coeff.iter().enumerate() {
-                coeff[i + j] += a * b;
+        for (i, a) in self.coeff.iter().enumerate() {
+            for (j, b) in rhs.coeff.iter().enumerate() {
+                coeff[i + j] = coeff[i + j].clone() + a.clone() * b.clone();
             }
         }
 
@@ -232,27 +233,20 @@ where
 
 impl<T> Neg for Polynomial<T>
 where
-    T: Float + Default + Scalar + ClosedAddAssign + ClosedSubAssign + ClosedMulAssign,
+    T: Sample,
 {
     type Output = Polynomial<T>;
 
     fn neg(self) -> Self::Output {
         Polynomial {
-            coeff: self.coeff.iter().map(|&c| -c).collect(),
+            coeff: self.coeff.iter().map(|c| -c.clone()).collect(),
         }
     }
 }
 
 impl<T> Display for Polynomial<T>
 where
-    T: Float
-        + Default
-        + AddAssign<T>
-        + Display
-        + Scalar
-        + ClosedAddAssign
-        + ClosedSubAssign
-        + ClosedMulAssign,
+    T: Sample,
 {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         let degree = self.degree();
@@ -260,7 +254,7 @@ where
             .coeff()
             .iter()
             .enumerate()
-            .map(|(i, &coeff)| {
+            .map(|(i, coeff)| {
                 let i = degree - i as isize;
                 if i == 0 {
                     format!("{}", coeff)

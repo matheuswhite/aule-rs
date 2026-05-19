@@ -70,9 +70,6 @@ pub mod prelude {
     pub use crate::input::sinusoid::Sinusoid;
     pub use crate::input::square::Square;
     pub use crate::input::step::Step;
-    pub use crate::math::from_f64::FromF64;
-    #[cfg(feature = "alloc")]
-    pub use crate::math::lerp::Lerp;
     pub use crate::math::line_equation::LineEquation;
     #[cfg(feature = "alloc")]
     pub use crate::metrics::good_hart::GoodHart;

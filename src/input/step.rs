@@ -1,6 +1,5 @@
-use crate::{block::Block, prelude::SimulationState};
+use crate::{block::Block, math::sample::Sample, prelude::SimulationState};
 use core::fmt::Display;
-use num_traits::One;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Step<T> {
@@ -15,7 +14,7 @@ impl<T> Step<T> {
 
 impl<T> Default for Step<T>
 where
-    T: One,
+    T: Sample,
 {
     fn default() -> Self {
         Step { value: T::one() }
@@ -33,7 +32,7 @@ where
 
 impl<T> Block for Step<T>
 where
-    T: Clone,
+    T: Sample,
 {
     type Input = ();
     type Output = T;
@@ -47,7 +46,7 @@ where
 mod tests {
     use super::*;
     use crate::prelude::Simulation;
-    use nalgebra::{DMatrix, SMatrix};
+    use nalgebra::SMatrix;
     use num_complex::Complex;
 
     fn first_state() -> SimulationState {
@@ -85,24 +84,6 @@ mod tests {
     fn complex_f64_returns_constant_value() {
         let v = Complex::new(3.0_f64, -4.0);
         let mut step = Step::new(v);
-        let state = first_state();
-        assert_eq!(step.block((), state), v);
-        assert_eq!(step.block((), state), v);
-    }
-
-    #[test]
-    fn dmatrix_f32_returns_constant_value() {
-        let v = DMatrix::<f32>::from_row_slice(2, 2, &[1.0, 2.0, 3.0, 4.0]);
-        let mut step = Step::new(v.clone());
-        let state = first_state();
-        assert_eq!(step.block((), state), v);
-        assert_eq!(step.block((), state), v);
-    }
-
-    #[test]
-    fn dmatrix_f64_returns_constant_value() {
-        let v = DMatrix::<f64>::from_row_slice(3, 1, &[1.0, 2.0, 3.0]);
-        let mut step = Step::new(v.clone());
         let state = first_state();
         assert_eq!(step.block((), state), v);
         assert_eq!(step.block((), state), v);

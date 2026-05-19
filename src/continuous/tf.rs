@@ -1,23 +1,22 @@
-use crate::{continuous::ss::SS, math::poly::Polynomial, prelude::Solver};
+use crate::{
+    continuous::ss::SS,
+    math::{number::Number, poly::Polynomial},
+    prelude::Solver,
+};
 use alloc::vec;
 use alloc::vec::Vec;
 use core::fmt::Debug;
-use core::ops::AddAssign;
-use nalgebra::{ClosedAddAssign, ClosedMulAssign, ClosedSubAssign, DMatrix, Scalar};
-use num_traits::Float;
+use nalgebra::DMatrix;
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct Tf<T>
-where
-    T: Float + Default + AddAssign<T> + Scalar + ClosedAddAssign + ClosedSubAssign + ClosedMulAssign,
-{
+pub struct Tf<T> {
     numerator: crate::continuous::poly::Polynomial<T>,
     denominator: crate::continuous::poly::Polynomial<T>,
 }
 
 impl<T> Tf<T>
 where
-    T: Float + Default + AddAssign<T> + Scalar + ClosedAddAssign + ClosedSubAssign + ClosedMulAssign,
+    T: Number + 'static,
 {
     pub fn new(numerator: &[T], denominator: &[T]) -> Self {
         assert!(!numerator.is_empty(), "Numerator cannot be empty.");

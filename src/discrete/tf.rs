@@ -1,16 +1,12 @@
+use crate::math::number::Number;
+use crate::math::sample::Sample;
 use crate::prelude::SimulationState;
 use crate::{block::Block, discrete::PolynomialInverse};
 use alloc::vec;
 use alloc::vec::Vec;
-use core::ops::AddAssign;
-use nalgebra::{ClosedAddAssign, ClosedMulAssign, ClosedSubAssign, Scalar};
-use num_traits::Float;
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct DTf<T>
-where
-    T: Float + Default + AddAssign<T> + Scalar + ClosedAddAssign + ClosedSubAssign + ClosedMulAssign,
-{
+pub struct DTf<T> {
     numerator: PolynomialInverse<T>,
     denominator: PolynomialInverse<T>,
     initial_conditions: Option<(Vec<T>, Vec<T>)>,
@@ -20,7 +16,7 @@ where
 
 impl<T> DTf<T>
 where
-    T: Float + Default + AddAssign<T> + Scalar + ClosedAddAssign + ClosedSubAssign + ClosedMulAssign,
+    T: Sample,
 {
     pub fn new(numerator: &[T], denominator: &[T]) -> Self {
         assert!(!denominator.is_empty(), "Denominator cannot be empty.");
@@ -63,7 +59,7 @@ where
 
 impl<T> Block for DTf<T>
 where
-    T: Float + Default + AddAssign<T> + Scalar + ClosedAddAssign + ClosedSubAssign + ClosedMulAssign,
+    T: Number,
 {
     type Input = T;
     type Output = T;
