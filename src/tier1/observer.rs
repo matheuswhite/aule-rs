@@ -1,18 +1,18 @@
 use crate::block::Block;
+use crate::math::number::Number;
+use crate::math::sample::Sample;
 use crate::prelude::{SimulationState, Solver, StateEstimation};
+use alloc::vec;
 use core::{
     fmt::{Debug, Display},
     marker::PhantomData,
 };
-use alloc::vec;
-use nalgebra::{ClosedAddAssign, ClosedMulAssign, ClosedSubAssign, DMatrix, Scalar, dmatrix};
-use num_traits::{One, Zero};
+use nalgebra::{DMatrix, dmatrix};
 
 #[derive(Debug, Clone)]
 pub struct Observer<I, T>
 where
-    T: Zero + One + Copy + Scalar + ClosedAddAssign + ClosedSubAssign + ClosedMulAssign,
-    I: Solver<T> + Debug,
+    I: Solver<T>,
 {
     a: DMatrix<T>,
     b: DMatrix<T>,
@@ -28,8 +28,8 @@ where
 
 impl<I, T> Observer<I, T>
 where
-    T: Zero + One + Copy + Scalar + ClosedAddAssign + ClosedSubAssign + ClosedMulAssign,
-    I: Solver<T> + Debug,
+    T: Number + 'static,
+    I: Solver<T>,
 {
     pub fn new(a: DMatrix<T>, b: DMatrix<T>, c: DMatrix<T>, d: T, l: DMatrix<T>) -> Self {
         let n = a.shape().0;
@@ -85,8 +85,8 @@ where
 
 impl<I, T> StateEstimation<T> for Observer<I, T>
 where
-    T: Zero + One + Copy + Scalar + ClosedAddAssign + ClosedSubAssign + ClosedMulAssign,
-    I: Solver<T> + Debug,
+    T: Number + 'static,
+    I: Solver<T>,
 {
     fn estimate(&self, state: DMatrix<T>) -> DMatrix<T> {
         let input_matrix = dmatrix![self.current_input.control_input];
@@ -100,7 +100,7 @@ where
 
 impl<I, T> Block for Observer<I, T>
 where
-    T: Zero + One + Copy + Scalar + ClosedAddAssign + ClosedSubAssign + ClosedMulAssign,
+    T: Number + 'static,
     I: Solver<T> + Debug,
 {
     type Input = ObserverInput<T>;
@@ -138,7 +138,7 @@ where
 
 impl<I, T> Display for Observer<I, T>
 where
-    T: Zero + One + Copy + Display + Scalar + ClosedAddAssign + ClosedSubAssign + ClosedMulAssign,
+    T: Number + 'static,
     I: Solver<T> + Debug,
 {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
@@ -151,17 +151,14 @@ where
 }
 
 #[derive(Debug, Clone)]
-pub struct ObserverInput<T>
-where
-    T: Zero + One + Copy + Scalar + ClosedAddAssign + ClosedSubAssign + ClosedMulAssign,
-{
+pub struct ObserverInput<T> {
     pub control_input: T,
     pub measured_output: T,
 }
 
 impl<T> Default for ObserverInput<T>
 where
-    T: Zero + One + Copy + Scalar + ClosedAddAssign + ClosedSubAssign + ClosedMulAssign,
+    T: Sample,
 {
     fn default() -> Self {
         ObserverInput {
@@ -172,18 +169,12 @@ where
 }
 
 #[derive(Debug, Clone)]
-pub struct ObserverOutput<T>
-where
-    T: Zero + One + Copy + Scalar + ClosedAddAssign + ClosedSubAssign + ClosedMulAssign,
-{
+pub struct ObserverOutput<T> {
     pub measured_output: T,
     pub state_estimate: DMatrix<T>,
 }
 
-impl<T> ObserverOutput<T>
-where
-    T: Zero + One + Copy + Scalar + ClosedAddAssign + ClosedSubAssign + ClosedMulAssign,
-{
+impl<T> ObserverOutput<T> {
     pub fn new(measured_output: T, state_estimate: DMatrix<T>) -> Self {
         ObserverOutput {
             measured_output,

@@ -1,29 +1,31 @@
-use crate::{block::Block, prelude::SimulationState, tier1::filter::Filter};
-use core::{
-    ops::{Add, Mul, Sub},
-    time::Duration,
+use crate::{
+    block::Block,
+    math::{float_point::FloatPoint, sample::Sample},
+    prelude::SimulationState,
+    tier1::filter::Filter,
 };
+use core::time::Duration;
 
 pub struct LowPass<T>
 where
-    T: Clone + Mul<f64, Output = T> + Add<Output = T> + Sub<Output = T>,
+    T: Sample,
 {
-    cutoff_freq: f64,
-    alpha: f64,
+    cutoff_freq: T::Alpha,
+    alpha: T::Alpha,
     prev_output: Option<T>,
     dt: Duration,
 }
 
 impl<T> LowPass<T>
 where
-    T: Clone + Mul<f64, Output = T> + Add<Output = T> + Sub<Output = T>,
+    T: Sample,
 {
-    pub fn new(cutoff_freq: f64, dt: Duration) -> Self {
-        let ts = dt.as_secs_f64();
-        let tau = 1.0 / (2.0 * core::f64::consts::PI * cutoff_freq);
+    pub fn new(cutoff_freq: T::Alpha, dt: Duration) -> Self {
+        let ts = T::Alpha::from_duration(dt);
+        let tau = T::Alpha::one() / (T::Alpha::two_pi() * cutoff_freq);
 
         #[cfg(feature = "std")]
-        let alpha = 1.0 - (-ts / tau).exp();
+        let alpha = T::Alpha::one() - (-ts / tau).exp();
         #[cfg(not(feature = "std"))]
         let alpha = ts / (tau + ts);
 
@@ -35,18 +37,18 @@ where
         }
     }
 
-    pub fn cutoff_freq(&self) -> f64 {
+    pub fn cutoff_freq(&self) -> T::Alpha {
         self.cutoff_freq
     }
 
-    pub fn alpha(&self) -> f64 {
+    pub fn alpha(&self) -> T::Alpha {
         self.alpha
     }
 }
 
 impl<T> Block for LowPass<T>
 where
-    T: Clone + Mul<f64, Output = T> + Add<Output = T> + Sub<Output = T>,
+    T: Sample,
 {
     type Input = T;
     type Output = T;
@@ -57,7 +59,7 @@ where
             .as_ref()
             .map_or_else(|| input.clone() - input.clone(), |prev| prev.clone());
 
-        let filtered = prev_value.clone() + (input - prev_value.clone()) * self.alpha;
+        let filtered = prev_value.clone() + (input - prev_value.clone()).scale(self.alpha);
         self.prev_output = Some(filtered.clone());
         filtered
     }
@@ -73,7 +75,7 @@ where
 
 impl<T> Filter for LowPass<T>
 where
-    T: Clone + Mul<f64, Output = T> + Add<Output = T> + Sub<Output = T>,
+    T: Sample,
 {
     type SignalValue = T;
 

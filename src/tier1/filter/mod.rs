@@ -17,8 +17,9 @@ pub trait Filter: Block<Input = Self::SignalValue, Output = Self::SignalValue> {
     where
         F: FnMut(SimulationState) -> Option<Signal<Self::SignalValue>> + 'static,
     {
-        let dt = self.dt().as_secs_f32();
-        EndlessSimulation::new(dt).map_while(move |sim_state| {
+        let dt = self.dt();
+
+        EndlessSimulation::from(dt).map_while(move |sim_state| {
             let input = input_generator(sim_state)?;
 
             Some(self.output(input))

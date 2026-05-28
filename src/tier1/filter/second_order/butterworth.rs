@@ -1,54 +1,44 @@
 use crate::{
     block::Block,
+    math::{
+        float_point::{AsFloatPoint, FloatPoint},
+        sample::Sample,
+    },
     prelude::{Biquad, Filter, SimulationState},
 };
-use core::{
-    ops::{Add, Mul, Sub},
-    time::Duration,
-};
+use core::time::Duration;
 
 pub struct Butterworth<T>
 where
-    T: Clone + Mul<f64, Output = T> + Add<Output = T> + Sub<Output = T>,
+    T: Sample,
 {
-    cutoff_freq: f64,
+    cutoff_freq: T::Alpha,
     biquad: Biquad<T>,
     dt: Duration,
 }
 
 impl<T> Butterworth<T>
 where
-    T: Clone + Mul<f64, Output = T> + Add<Output = T> + Sub<Output = T>,
+    T: Sample,
 {
-    fn base_parameters(cutoff_freq: f64, dt: Duration) -> (f64, f64, f64) {
-        let ts = dt.as_secs_f64();
-        #[cfg(feature = "std")]
-        let (k, d) = {
-            let k = (core::f64::consts::PI * cutoff_freq * ts).tan();
-            let d = 2f64.sqrt();
-
-            (k, d)
-        };
-        #[cfg(not(feature = "std"))]
-        let (k, d) = {
-            let k = libm::tan(core::f64::consts::PI * cutoff_freq * ts);
-            let d = libm::sqrt(2.0);
-
-            (k, d)
-        };
-        let a0 = 1.0 + d * k + k * k;
+    fn base_parameters(cutoff_freq: T::Alpha, dt: Duration) -> (T::Alpha, T::Alpha, T::Alpha) {
+        let ts = T::Alpha::from_duration(dt);
+        let k = (T::Alpha::pi() * cutoff_freq * ts).tangent();
+        let d: T::Alpha = 2.0.as_fp();
+        let d = d.square_root();
+        let a0 = d * k + k * k + 1.0.as_fp();
 
         (k, d, a0)
     }
 
-    pub fn low_pass(cutoff_freq: f64, dt: Duration) -> Self {
+    pub fn low_pass(cutoff_freq: T::Alpha, dt: Duration) -> Self {
         let (k, d, a0) = Self::base_parameters(cutoff_freq, dt);
 
         let b0 = k * k / a0;
-        let b1 = 2.0 * b0;
+        let b1 = b0 * 2.0.as_fp();
         let b2 = b0;
-        let a1 = 2.0 * (k * k - 1.0) / a0;
-        let a2 = (1.0 - d * k + k * k) / a0;
+        let a1 = (k * k - 1.0.as_fp()) * 2.0.as_fp() / a0;
+        let a2 = (-d * k + k * k + 1.0.as_fp()) / a0;
 
         Self {
             cutoff_freq,
@@ -57,14 +47,15 @@ where
         }
     }
 
-    pub fn high_pass(cutoff_freq: f64, dt: Duration) -> Self {
+    pub fn high_pass(cutoff_freq: T::Alpha, dt: Duration) -> Self {
         let (k, d, a0) = Self::base_parameters(cutoff_freq, dt);
 
-        let b0 = 1.0 / a0;
-        let b1 = -2.0 * b0;
+        let num: T::Alpha = 1.0.as_fp();
+        let b0 = num / a0;
+        let b1 = b0 * (-2.0).as_fp();
         let b2 = b0;
-        let a1 = 2.0 * (k * k - 1.0) / a0;
-        let a2 = (1.0 - d * k + k * k) / a0;
+        let a1 = (k * k - 1.0.as_fp()) * 2.0.as_fp() / a0;
+        let a2 = (-d * k + k * k + 1.0.as_fp()) / a0;
 
         Self {
             cutoff_freq,
@@ -73,18 +64,18 @@ where
         }
     }
 
-    pub fn cutoff_freq(&self) -> f64 {
+    pub fn cutoff_freq(&self) -> T::Alpha {
         self.cutoff_freq
     }
 
-    pub fn biquad_coefficients(&self) -> (f64, f64, f64, f64, f64) {
+    pub fn biquad_coefficients(&self) -> (T::Alpha, T::Alpha, T::Alpha, T::Alpha, T::Alpha) {
         self.biquad.coefficients()
     }
 }
 
 impl<T> Block for Butterworth<T>
 where
-    T: Clone + Mul<f64, Output = T> + Add<Output = T> + Sub<Output = T>,
+    T: Sample,
 {
     type Input = T;
     type Output = T;
@@ -104,7 +95,7 @@ where
 
 impl<T> Filter for Butterworth<T>
 where
-    T: Clone + Mul<f64, Output = T> + Add<Output = T> + Sub<Output = T>,
+    T: Sample,
 {
     type SignalValue = T;
 

@@ -1,17 +1,15 @@
 use crate::block::Block;
+use crate::math::float_point::FloatPoint;
+use crate::math::number::Number;
+use crate::math::sample::Sample;
 use crate::prelude::SimulationState;
 use crate::signal::Signal;
 use alloc::vec;
 use alloc::vec::Vec;
-use core::ops::Mul;
 use core::time::Duration;
-use num_traits::Zero;
 
 #[derive(Clone, Debug)]
-pub struct Delay<T>
-where
-    T: Zero + Copy + Mul<f64, Output = T>,
-{
+pub struct Delay<T> {
     delay: Duration,
     initial_value: T,
     input_buffer: Vec<Signal<T>>,
@@ -20,7 +18,7 @@ where
 
 impl<T> Delay<T>
 where
-    T: Zero + Copy + Mul<f64, Output = T>,
+    T: Sample,
 {
     pub fn new(delay: Duration) -> Self {
         assert!(
@@ -37,7 +35,7 @@ where
     }
 
     pub fn with_initial_signal(mut self, initial_signal: Signal<T>) -> Self {
-        self.initial_value = initial_signal.value;
+        self.initial_value = initial_signal.clone().value;
 
         if self.input_buffer.is_empty() {
             self.input_buffer.push(initial_signal);
@@ -62,7 +60,7 @@ where
 
 impl<T> Block for Delay<T>
 where
-    T: Zero + Copy + Mul<f64, Output = T>,
+    T: Number,
 {
     type Input = T;
     type Output = T;
@@ -107,23 +105,25 @@ where
             first_input = &input_delayed;
         }
 
-        let gama = if first_input.sim_state.sim_time().as_secs_f64()
-            != second_input.sim_state.sim_time().as_secs_f64()
+        let gama = if <T::Alpha as FloatPoint>::from_duration(first_input.sim_state.sim_time())
+            != <T::Alpha as FloatPoint>::from_duration(second_input.sim_state.sim_time())
         {
-            let num = current_time.as_secs_f64() - first_input.sim_state.sim_time().as_secs_f64();
-            let dem = second_input.sim_state.sim_time().as_secs_f64()
-                - first_input.sim_state.sim_time().as_secs_f64();
+            let num = <T::Alpha as FloatPoint>::from_duration(current_time)
+                - <T::Alpha as FloatPoint>::from_duration(first_input.sim_state.sim_time());
+            let dem = <T::Alpha as FloatPoint>::from_duration(second_input.sim_state.sim_time())
+                - <T::Alpha as FloatPoint>::from_duration(first_input.sim_state.sim_time());
             num / dem
         } else {
-            0.0
+            T::Alpha::zero()
         };
         assert!(
-            (0.0..=1.0).contains(&gama),
+            T::Alpha::zero() <= gama && gama <= T::Alpha::one(),
             "gama must be in [0, 1], got {}",
             gama
         );
 
-        let output = first_input.value * (1.0 - gama) + second_input.value * gama;
+        let output =
+            first_input.value.scale(T::Alpha::one() - gama) + second_input.value.scale(gama);
         self.last_output = Some(output);
         output
     }

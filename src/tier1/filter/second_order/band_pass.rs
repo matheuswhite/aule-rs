@@ -1,40 +1,38 @@
 use crate::{
     block::Block,
+    math::{
+        float_point::{AsFloatPoint, FloatPoint},
+        sample::Sample,
+    },
     prelude::{Biquad, Filter, SimulationState},
 };
-use core::{
-    ops::{Add, Mul, Sub},
-    time::Duration,
-};
+use core::time::Duration;
 
 pub struct BandPass<T>
 where
-    T: Clone + Mul<f64, Output = T> + Add<Output = T> + Sub<Output = T>,
+    T: Sample,
 {
-    center_freq: f64,
-    q_factor: f64,
+    center_freq: T::Alpha,
+    q_factor: T::Alpha,
     biquad: Biquad<T>,
     dt: Duration,
 }
 
 impl<T> BandPass<T>
 where
-    T: Clone + Mul<f64, Output = T> + Add<Output = T> + Sub<Output = T>,
+    T: Sample,
 {
-    pub fn new(center_freq: f64, q_factor: f64, dt: Duration) -> Self {
-        let ts = dt.as_secs_f64();
+    pub fn new(center_freq: T::Alpha, q_factor: T::Alpha, dt: Duration) -> Self {
+        let ts = T::Alpha::from_duration(dt);
 
-        #[cfg(feature = "std")]
-        let k = (core::f64::consts::PI * center_freq * ts).tan();
-        #[cfg(not(feature = "std"))]
-        let k = libm::tan(core::f64::consts::PI * center_freq * ts);
-        let a0 = 1.0 + k / q_factor + k * k;
+        let k = (T::Alpha::pi() * center_freq * ts).tangent();
+        let a0 = k / q_factor + k * k + 1.0.as_fp();
 
         let b0 = k / q_factor / a0;
-        let b1 = 0.0;
+        let b1 = 0.0.as_fp();
         let b2 = -b0;
-        let a1 = 2.0 * (k * k - 1.0) / a0;
-        let a2 = (1.0 - k / q_factor + k * k) / a0;
+        let a1 = (k * k - 1.0.as_fp()) * 2.0.as_fp() / a0;
+        let a2 = (k / q_factor + k * k - 1.0.as_fp()) / a0;
 
         Self {
             center_freq,
@@ -44,22 +42,22 @@ where
         }
     }
 
-    pub fn center_freq(&self) -> f64 {
+    pub fn center_freq(&self) -> T::Alpha {
         self.center_freq
     }
 
-    pub fn q_factor(&self) -> f64 {
+    pub fn q_factor(&self) -> T::Alpha {
         self.q_factor
     }
 
-    pub fn biquad_coefficients(&self) -> (f64, f64, f64, f64, f64) {
+    pub fn biquad_coefficients(&self) -> (T::Alpha, T::Alpha, T::Alpha, T::Alpha, T::Alpha) {
         self.biquad.coefficients()
     }
 }
 
 impl<T> Block for BandPass<T>
 where
-    T: Clone + Mul<f64, Output = T> + Add<Output = T> + Sub<Output = T>,
+    T: Sample,
 {
     type Input = T;
     type Output = T;
@@ -79,7 +77,7 @@ where
 
 impl<T> Filter for BandPass<T>
 where
-    T: Clone + Mul<f64, Output = T> + Add<Output = T> + Sub<Output = T>,
+    T: Sample,
 {
     type SignalValue = T;
 
