@@ -19,30 +19,27 @@ const HEAP_SIZE: usize = 1024;
 fn main() -> ! {
     init_heap();
 
-    let simulation = Time::new(1e-3, 10.0);
+    let simulation = Simulation::new(1e-3, 10.0);
 
     let mut step = Step::default();
     let mut pid = PID::new(40.0, 10.0, 10.00);
     let mut plant = Tf::new(&[1.0], &[1.0, 6.0, 11.0, 6.0]).to_ss_controllable(RK4);
-    let mut iae = IAE::default();
-    let mut ise = ISE::default();
-    let mut itae = ITAE::default();
+    let mut iae = IAE::<f64>::default();
+    let mut ise = ISE::<f64>::default();
+    let mut itae = ITAE::<f64>::default();
     let mut printer = DefmtPrinter;
 
     println!("Starting simulation...");
 
-    for sim_state in time {
-        let input = dt * step.as_block();
+    for sim_state in simulation {
+        let input = sim_state * step.as_block();
         let error = input - plant.last_output();
-        iae.output(error);
-        ise.output(error);
-        itae.output(error);
+        let _ = error * iae.as_block() * ise.as_block() * itae.as_block();
 
         let control_signal = error * pid.as_block();
-        let output = plant.output(control_signal);
+        let output = control_signal * plant.as_block();
 
-        let printer_input = input.map(|i| [i, output.value]);
-        printer.output(printer_input);
+        let _ = [input, output].pack() * printer.as_block();
     }
 
     println!("IAE Value: {}", iae.value());
@@ -60,12 +57,12 @@ impl Block for DefmtPrinter {
     type Input = [f64; 2];
     type Output = [f64; 2];
 
-    fn output(&mut self, input: Signal<Self::Input>) -> Signal<Self::Output> {
+    fn block(&mut self, input: Self::Input, sim_state: SimulationState) -> Self::Output {
         println!(
             "Time: {}, Input: {}, Output: {}",
-            input.delta.sim_time().as_secs_f64(),
-            input.value[0],
-            input.value[1]
+            sim_state.sim_time().as_secs_f64(),
+            input[0],
+            input[1]
         );
         input
     }

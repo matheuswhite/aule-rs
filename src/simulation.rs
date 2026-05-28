@@ -1,10 +1,9 @@
+use crate::{block::Block, math::float_point::FloatPoint, signal::Signal};
 use core::{
     fmt::Debug,
     ops::{Add, AddAssign, Mul},
     time::Duration,
 };
-
-use crate::{block::Block, signal::Signal};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct SimulationState {
@@ -26,11 +25,15 @@ pub struct EndlessSimulation {
 }
 
 impl Simulation {
-    pub fn new(dt: f32, max_time: f32) -> Self {
+    pub fn new<T, U>(dt: T, max_time: U) -> Self
+    where
+        T: FloatPoint,
+        U: FloatPoint,
+    {
         Self {
-            dt: Duration::from_secs_f32(dt),
+            dt: dt.to_duration(),
             sim_time: Duration::default(),
-            max_time: Duration::from_secs_f32(max_time),
+            max_time: max_time.to_duration(),
         }
     }
 
@@ -42,21 +45,30 @@ impl Simulation {
         self.max_time
     }
 
-    pub fn set_dt(&mut self, dt: f32) {
-        self.dt = Duration::from_secs_f32(dt);
+    pub fn set_dt<T>(&mut self, dt: T)
+    where
+        T: FloatPoint,
+    {
+        self.dt = dt.to_duration();
     }
 }
 
 impl EndlessSimulation {
-    pub fn new(dt: f32) -> Self {
+    pub fn new<T>(dt: T) -> Self
+    where
+        T: FloatPoint,
+    {
         Self {
-            dt: Duration::from_secs_f32(dt),
+            dt: dt.to_duration(),
             sim_time: Duration::default(),
         }
     }
 
-    pub fn set_dt(&mut self, dt: f32) {
-        self.dt = Duration::from_secs_f32(dt);
+    pub fn set_dt<T>(&mut self, dt: T)
+    where
+        T: FloatPoint,
+    {
+        self.dt = dt.to_duration();
     }
 }
 
@@ -178,5 +190,24 @@ impl Iterator for EndlessSimulation {
             dt: self.dt,
             sim_time: self.sim_time,
         })
+    }
+}
+
+impl From<Duration> for EndlessSimulation {
+    fn from(dt: Duration) -> Self {
+        Self {
+            dt,
+            sim_time: Duration::default(),
+        }
+    }
+}
+
+impl From<(Duration, Duration)> for Simulation {
+    fn from(value: (Duration, Duration)) -> Self {
+        Self {
+            dt: value.0,
+            sim_time: Duration::default(),
+            max_time: value.1,
+        }
     }
 }

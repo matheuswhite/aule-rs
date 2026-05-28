@@ -1,33 +1,28 @@
-use crate::discrete::{DTf, z_inv};
+use crate::{
+    discrete::{DTf, z_inv},
+    math::{number::Number, sample::Sample},
+};
 use alloc::format;
 use alloc::string::String;
 use alloc::vec::Vec;
 use core::{
     fmt::Display,
-    ops::{Add, AddAssign, Div, Mul, Neg, Sub},
+    ops::{Add, Div, Mul, Neg, Sub},
 };
-use faer::traits::ComplexField;
-use num_traits::Float;
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct PolynomialInverse<T>(crate::poly::Polynomial<T>)
-where
-    T: Float + Default + AddAssign<T> + ComplexField;
+pub struct PolynomialInverse<T>(crate::math::poly::Polynomial<T>);
 
 impl<T> PolynomialInverse<T>
 where
-    T: Float + Default + AddAssign<T> + ComplexField,
+    T: Sample,
 {
     pub fn new(coeff: &[T]) -> Self {
-        Self(crate::poly::Polynomial::new(coeff))
+        Self(crate::math::poly::Polynomial::new(coeff))
     }
 
     pub fn empty() -> Self {
-        Self(crate::poly::Polynomial::empty())
-    }
-
-    pub fn pow(self, exp: usize) -> Self {
-        Self(self.0.pow(exp))
+        Self(crate::math::poly::Polynomial::empty())
     }
 
     pub fn degree(&self) -> isize {
@@ -42,14 +37,23 @@ where
         self.0.lead_coeff()
     }
 
-    pub fn inner(&self) -> &crate::poly::Polynomial<T> {
+    pub fn inner(&self) -> &crate::math::poly::Polynomial<T> {
         &self.0
+    }
+}
+
+impl<T> PolynomialInverse<T>
+where
+    T: Number + 'static,
+{
+    pub fn pow(self, exp: usize) -> Self {
+        Self(self.0.pow(exp))
     }
 }
 
 impl<T> Add for PolynomialInverse<T>
 where
-    T: Float + Default + AddAssign<T> + ComplexField,
+    T: Sample,
 {
     type Output = Self;
 
@@ -60,7 +64,7 @@ where
 
 impl<T> Sub for PolynomialInverse<T>
 where
-    T: Float + Default + AddAssign<T> + ComplexField,
+    T: Sample,
 {
     type Output = Self;
 
@@ -71,7 +75,7 @@ where
 
 impl<T> Mul for PolynomialInverse<T>
 where
-    T: Float + Default + AddAssign<T> + ComplexField,
+    T: Number,
 {
     type Output = Self;
 
@@ -82,7 +86,7 @@ where
 
 impl<T> Div for PolynomialInverse<T>
 where
-    T: Float + Default + AddAssign<T> + ComplexField,
+    T: Number,
 {
     type Output = DTf<T>;
 
@@ -93,7 +97,7 @@ where
 
 impl<T> Neg for PolynomialInverse<T>
 where
-    T: Float + Default + AddAssign<T> + ComplexField,
+    T: Sample,
 {
     type Output = Self;
 
@@ -104,7 +108,7 @@ where
 
 impl<T> Add<T> for PolynomialInverse<T>
 where
-    T: Float + Default + AddAssign<T> + ComplexField,
+    T: Sample,
 {
     type Output = PolynomialInverse<T>;
 
@@ -115,7 +119,7 @@ where
 
 impl<T> Sub<T> for PolynomialInverse<T>
 where
-    T: Float + Default + AddAssign<T> + ComplexField,
+    T: Sample,
 {
     type Output = PolynomialInverse<T>;
 
@@ -126,7 +130,7 @@ where
 
 impl<T> Mul<T> for PolynomialInverse<T>
 where
-    T: Float + Default + AddAssign<T> + ComplexField,
+    T: Number,
 {
     type Output = PolynomialInverse<T>;
 
@@ -137,7 +141,7 @@ where
 
 impl<T> Div<T> for PolynomialInverse<T>
 where
-    T: Float + Default + AddAssign<T> + ComplexField,
+    T: Number,
 {
     type Output = DTf<T>;
 
@@ -148,7 +152,7 @@ where
 
 impl<T> Add<z_inv> for PolynomialInverse<T>
 where
-    T: Float + Default + AddAssign<T> + ComplexField,
+    T: Sample,
 {
     type Output = PolynomialInverse<T>;
 
@@ -159,7 +163,7 @@ where
 
 impl<T> Sub<z_inv> for PolynomialInverse<T>
 where
-    T: Float + Default + AddAssign<T> + ComplexField,
+    T: Sample,
 {
     type Output = PolynomialInverse<T>;
 
@@ -170,7 +174,7 @@ where
 
 impl<T> Mul<z_inv> for PolynomialInverse<T>
 where
-    T: Float + Default + AddAssign<T> + ComplexField,
+    T: Number,
 {
     type Output = PolynomialInverse<T>;
 
@@ -181,7 +185,7 @@ where
 
 impl<T> Div<z_inv> for PolynomialInverse<T>
 where
-    T: Float + Default + AddAssign<T> + ComplexField,
+    T: Number,
 {
     type Output = DTf<T>;
 
@@ -229,48 +233,48 @@ macro_rules! impl_poly_ops {
 impl_poly_ops!(f32, f32);
 impl_poly_ops!(f64, f64);
 
-impl_poly_ops!(u8, f64);
-impl_poly_ops!(u16, f64);
-impl_poly_ops!(u32, f64);
+impl_poly_ops!(u8, f32);
+impl_poly_ops!(u16, f32);
+impl_poly_ops!(u32, f32);
 impl_poly_ops!(u64, f64);
 impl_poly_ops!(usize, f64);
 impl_poly_ops!(u128, f64);
 
-impl_poly_ops!(i8, f64);
-impl_poly_ops!(i16, f64);
-impl_poly_ops!(i32, f64);
+impl_poly_ops!(i8, f32);
+impl_poly_ops!(i16, f32);
+impl_poly_ops!(i32, f32);
 impl_poly_ops!(i64, f64);
 impl_poly_ops!(isize, f64);
 impl_poly_ops!(i128, f64);
 
 impl<T> From<T> for PolynomialInverse<T>
 where
-    T: Float + Default + AddAssign<T> + ComplexField,
+    T: Sample,
 {
     fn from(value: T) -> Self {
-        PolynomialInverse(crate::poly::Polynomial::new(&[value]))
+        PolynomialInverse(crate::math::poly::Polynomial::new(&[value]))
     }
 }
 
 impl<T> From<z_inv> for PolynomialInverse<T>
 where
-    T: Float + Default + AddAssign<T> + ComplexField,
+    T: Sample,
 {
     fn from(_value: z_inv) -> Self {
-        PolynomialInverse(crate::poly::Polynomial::new(&[T::one(), T::zero()]))
+        PolynomialInverse(crate::math::poly::Polynomial::new(&[T::one(), T::zero()]))
     }
 }
 
 impl<T> Display for PolynomialInverse<T>
 where
-    T: Float + Default + AddAssign<T> + Display + ComplexField,
+    T: Sample,
 {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         let string = self
             .coeff()
             .iter()
             .enumerate()
-            .map(|(i, &coeff)| {
+            .map(|(i, coeff)| {
                 if i == 0 {
                     format!("{}", coeff)
                 } else {

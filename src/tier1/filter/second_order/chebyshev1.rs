@@ -1,69 +1,62 @@
 use crate::{
     block::Block,
+    math::{
+        float_point::{AsFloatPoint, FloatPoint},
+        sample::Sample,
+    },
     prelude::{Biquad, Filter, SimulationState},
 };
-use core::{
-    ops::{Add, Mul, Sub},
-    time::Duration,
-};
+use core::time::Duration;
 
 pub struct Chebyshev1<T>
 where
-    T: Clone + Mul<f64, Output = T> + Add<Output = T> + Sub<Output = T>,
+    T: Sample,
 {
-    cutoff_freq: f64,
-    ripple_db: f64,
+    cutoff_freq: T::Alpha,
+    ripple_db: T::Alpha,
     biquad: Biquad<T>,
     dt: Duration,
 }
 
 impl<T> Chebyshev1<T>
 where
-    T: Clone + Mul<f64, Output = T> + Add<Output = T> + Sub<Output = T>,
+    T: Sample,
 {
-    fn base_parameters(cutoff_freq: f64, ripple_db: f64, dt: Duration) -> (f64, f64, f64) {
-        let ts = dt.as_secs_f64();
+    fn base_parameters(
+        cutoff_freq: T::Alpha,
+        ripple_db: T::Alpha,
+        dt: Duration,
+    ) -> (T::Alpha, T::Alpha, T::Alpha) {
+        let ts = T::Alpha::from_duration(dt);
 
-        #[cfg(feature = "std")]
-        let epsilon = (10f64.powf(ripple_db / 10.0) - 1.0).sqrt();
-        #[cfg(not(feature = "std"))]
-        let epsilon = libm::sqrt(libm::pow(10.0, ripple_db / 10.0) - 1.0);
+        let base: T::Alpha = 10.0.as_fp();
+        let epsilon = (base.power(ripple_db / 10.0.as_fp()) - 1.0.as_fp()).square_root();
 
-        #[cfg(feature = "std")]
-        let gamma = 0.5 * (1.0 / epsilon).asinh();
-        #[cfg(not(feature = "std"))]
-        let gamma = 0.5 * libm::asinh(1.0 / epsilon);
+        let num: T::Alpha = 1.0.as_fp();
+        let gamma = (num / epsilon).arc_sin_h() * 0.5.as_fp();
 
-        #[cfg(feature = "std")]
-        let (sinh_g, cosh_g) = (gamma.sinh(), gamma.cosh());
-        #[cfg(not(feature = "std"))]
-        let (sinh_g, cosh_g) = (libm::sinh(gamma), libm::cosh(gamma));
+        let (sinh_g, cosh_g) = (gamma.sin_h(), gamma.cos_h());
 
-        #[cfg(feature = "std")]
-        let wn = ((sinh_g * sinh_g + cosh_g * cosh_g) / 2.0).sqrt();
-        #[cfg(not(feature = "std"))]
-        let wn = libm::sqrt((sinh_g * sinh_g + cosh_g * cosh_g) / 2.0);
+        let wn = ((sinh_g * sinh_g + cosh_g * cosh_g) / 2.0.as_fp()).square_root();
 
-        let d = core::f64::consts::SQRT_2 * sinh_g / wn;
+        let d: T::Alpha = 2.0.as_fp();
+        let d = d.square_root() * sinh_g / wn;
 
-        #[cfg(feature = "std")]
-        let k = (core::f64::consts::PI * cutoff_freq * ts).tan() * wn;
-        #[cfg(not(feature = "std"))]
-        let k = libm::tan(core::f64::consts::PI * cutoff_freq * ts) * wn;
+        let k = (T::Alpha::pi() * cutoff_freq * ts).tangent() * wn;
 
-        let a0 = k * k + d * k + 1.0;
+        let a0 = k * k + d * k + 1.0.as_fp();
 
         (d, k, a0)
     }
 
-    pub fn low_pass(cutoff_freq: f64, ripple_db: f64, dt: Duration) -> Self {
+    pub fn low_pass(cutoff_freq: T::Alpha, ripple_db: T::Alpha, dt: Duration) -> Self {
         let (d, k, a0) = Self::base_parameters(cutoff_freq, ripple_db, dt);
 
         let b0 = k * k / a0;
-        let b1 = 2.0 * b0;
+        let b1 = b0 * 2.0.as_fp();
         let b2 = b0;
-        let a1 = 2.0 * (k * k - 1.0) / a0;
-        let a2 = (1.0 - d * k + k * k) / a0;
+        let a1 = (k * k - 1.0.as_fp()) * 2.0.as_fp() / a0;
+        let a2 = (-d * k + k * k + 1.0.as_fp()) / a0;
 
         Self {
             cutoff_freq,
@@ -73,14 +66,15 @@ where
         }
     }
 
-    pub fn high_pass(cutoff_freq: f64, ripple_db: f64, dt: Duration) -> Self {
+    pub fn high_pass(cutoff_freq: T::Alpha, ripple_db: T::Alpha, dt: Duration) -> Self {
         let (d, k, a0) = Self::base_parameters(cutoff_freq, ripple_db, dt);
 
-        let b0 = 1.0 / a0;
-        let b1 = -2.0 * b0;
+        let num: T::Alpha = 1.0.as_fp();
+        let b0 = num / a0;
+        let b1 = b0 * (-2.0).as_fp();
         let b2 = b0;
-        let a1 = 2.0 * (k * k - 1.0) / a0;
-        let a2 = (1.0 - d * k + k * k) / a0;
+        let a1 = (k * k - 1.0.as_fp()) * 2.0.as_fp() / a0;
+        let a2 = (-d * k + k * k + 1.0.as_fp()) / a0;
 
         Self {
             cutoff_freq,
@@ -90,26 +84,26 @@ where
         }
     }
 
-    pub fn cutoff_freq(&self) -> f64 {
+    pub fn cutoff_freq(&self) -> T::Alpha {
         self.cutoff_freq
     }
 
-    pub fn center_freq(&self) -> f64 {
+    pub fn center_freq(&self) -> T::Alpha {
         self.cutoff_freq
     }
 
-    pub fn ripple_db(&self) -> f64 {
+    pub fn ripple_db(&self) -> T::Alpha {
         self.ripple_db
     }
 
-    pub fn biquad_coefficients(&self) -> (f64, f64, f64, f64, f64) {
+    pub fn biquad_coefficients(&self) -> (T::Alpha, T::Alpha, T::Alpha, T::Alpha, T::Alpha) {
         self.biquad.coefficients()
     }
 }
 
 impl<T> Block for Chebyshev1<T>
 where
-    T: Clone + Mul<f64, Output = T> + Add<Output = T> + Sub<Output = T>,
+    T: Sample,
 {
     type Input = T;
     type Output = T;
@@ -129,7 +123,7 @@ where
 
 impl<T> Filter for Chebyshev1<T>
 where
-    T: Clone + Mul<f64, Output = T> + Add<Output = T> + Sub<Output = T>,
+    T: Sample,
 {
     type SignalValue = T;
 

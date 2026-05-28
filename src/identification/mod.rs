@@ -1,19 +1,22 @@
-use crate::signal::Signal;
+use crate::{math::float_point::FloatPoint, signal::Signal};
 
 pub mod first_order;
 pub mod second_order;
 
-fn find_time_at_value(signals: impl Iterator<Item = Signal<f64>>, value: f64) -> Option<f64> {
+fn find_time_at_value<T>(signals: impl Iterator<Item = Signal<T>>, value: T) -> Option<T>
+where
+    T: FloatPoint,
+{
     let mut closest_signal = None;
-    let mut min_diff = f64::INFINITY;
+    let mut min_diff = T::infinity();
 
     for sig in signals {
-        let diff = (sig.value - value).abs();
+        let diff = (sig.value - value).absolute();
         if diff < min_diff {
             min_diff = diff;
             closest_signal = Some(sig);
         }
     }
 
-    Some(closest_signal?.sim_state.sim_time().as_secs_f64())
+    Some(T::from_duration(closest_signal?.sim_state.sim_time()))
 }

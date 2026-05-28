@@ -1,24 +1,25 @@
-use crate::{continuous::solver::StateEstimation, prelude::Solver};
-use core::{
-    ops::{Add, Mul},
-    time::Duration,
+use crate::{
+    continuous::solver::StateEstimation,
+    math::{float_point::FloatPoint, number::Number},
+    prelude::Solver,
 };
-use faer::{Mat, traits::ComplexField};
+use core::time::Duration;
+use nalgebra::DMatrix;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Euler;
 
 impl<T> Solver<T> for Euler
 where
-    T: Copy + Add<Output = T> + Mul<f64, Output = T> + ComplexField,
+    T: Number + 'static,
 {
     fn integrate(
-        old_value: Mat<T>,
+        old_value: DMatrix<T>,
         dt: Duration,
         state_estimation: &impl StateEstimation<T>,
-    ) -> Mat<T> {
-        let dt_seconds = dt.as_secs_f64();
+    ) -> DMatrix<T> {
+        let dt = <T::Alpha as FloatPoint>::from_duration(dt);
         let estimation = state_estimation.estimate(old_value.clone());
-        old_value + estimation * dt_seconds
+        old_value + estimation.map(|v| v.scale(dt))
     }
 }

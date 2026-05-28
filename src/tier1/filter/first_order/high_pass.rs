@@ -1,15 +1,17 @@
-use crate::{block::Block, prelude::SimulationState, tier1::filter::Filter};
-use core::{
-    ops::{Add, Mul, Sub},
-    time::Duration,
+use crate::{
+    block::Block,
+    math::{float_point::FloatPoint, sample::Sample},
+    prelude::SimulationState,
+    tier1::filter::Filter,
 };
+use core::time::Duration;
 
 pub struct HighPass<T>
 where
-    T: Clone + Mul<f64, Output = T> + Add<Output = T> + Sub<Output = T>,
+    T: Sample,
 {
-    cutoff_freq: f64,
-    alpha: f64,
+    cutoff_freq: T::Alpha,
+    alpha: T::Alpha,
     prev_input: Option<T>,
     prev_output: Option<T>,
     dt: Duration,
@@ -17,11 +19,11 @@ where
 
 impl<T> HighPass<T>
 where
-    T: Clone + Mul<f64, Output = T> + Add<Output = T> + Sub<Output = T>,
+    T: Sample,
 {
-    pub fn new(cutoff_freq: f64, dt: Duration) -> Self {
-        let ts = dt.as_secs_f64();
-        let tau = 1.0 / (2.0 * core::f64::consts::PI * cutoff_freq);
+    pub fn new(cutoff_freq: T::Alpha, dt: Duration) -> Self {
+        let ts = T::Alpha::from_duration(dt);
+        let tau = T::Alpha::one() / (cutoff_freq * T::Alpha::two_pi());
 
         #[cfg(feature = "std")]
         let alpha = (-ts / tau).exp();
@@ -37,18 +39,18 @@ where
         }
     }
 
-    pub fn cutoff_freq(&self) -> f64 {
+    pub fn cutoff_freq(&self) -> T::Alpha {
         self.cutoff_freq
     }
 
-    pub fn alpha(&self) -> f64 {
+    pub fn alpha(&self) -> T::Alpha {
         self.alpha
     }
 }
 
 impl<T> Block for HighPass<T>
 where
-    T: Clone + Mul<f64, Output = T> + Add<Output = T> + Sub<Output = T>,
+    T: Sample,
 {
     type Input = T;
     type Output = T;
@@ -67,7 +69,7 @@ where
         );
 
         let input_clone = input.clone();
-        let filtered = (prev_out_value.clone() + input - prev_in.clone()) * self.alpha;
+        let filtered = (prev_out_value.clone() + input - prev_in.clone()).scale(self.alpha);
         self.prev_input = Some(input_clone);
         self.prev_output = Some(filtered.clone());
 
@@ -86,7 +88,7 @@ where
 
 impl<T> Filter for HighPass<T>
 where
-    T: Clone + Mul<f64, Output = T> + Add<Output = T> + Sub<Output = T>,
+    T: Sample,
 {
     type SignalValue = T;
 
@@ -128,7 +130,7 @@ mod tests {
     fn test_high_pass_uses_null_initial_condition() {
         let sim_state = Simulation::new(0.1, 0.1).next().unwrap();
         let mut filter = HighPass::new(1.0, Duration::from_secs_f32(0.1));
-        let expected = 0.0;
+        let expected = 0.0_f64;
 
         let output = filter.block(1.0, sim_state);
 

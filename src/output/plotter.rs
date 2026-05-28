@@ -6,7 +6,6 @@ use crate::signal::Signal;
 use alloc::vec::Vec;
 use core::fmt::Display;
 use core::marker::PhantomData;
-use num_traits::real::Real;
 use std::boxed::Box;
 use std::format;
 use std::string::String;
@@ -46,10 +45,7 @@ impl Display for LegendPosition {
 }
 
 #[derive(Debug)]
-pub struct Plotter<const N: usize, T>
-where
-    T: Real + ToString,
-{
+pub struct Plotter<const N: usize, T> {
     data: Vec<[Signal<T>; N]>,
     variable_names: [String; N],
     magmar: Option<Magmar>,
@@ -59,10 +55,7 @@ where
 }
 
 #[derive(Debug)]
-pub struct RTPlotter<const N: usize, T>
-where
-    T: Real + ToString,
-{
+pub struct RTPlotter<const N: usize, T> {
     variable_names: [String; N],
     magmar: Option<Magmar>,
     title: String,
@@ -72,10 +65,7 @@ where
 }
 
 #[derive(Debug)]
-pub struct PlotterDynamic<T>
-where
-    T: Real + ToString,
-{
+pub struct PlotterDynamic<T> {
     data: Vec<Vec<Signal<T>>>,
     variable_names: Vec<String>,
     magmar: Option<Magmar>,
@@ -94,7 +84,7 @@ pub trait Savable {
 
 impl<const N: usize, T> Plotter<N, T>
 where
-    T: Real + ToString,
+    T: ToString,
 {
     pub fn new(title: String, variable_names: [impl AsRef<str>; N]) -> Self {
         Self {
@@ -151,7 +141,7 @@ where
 
 impl<T> PlotterDynamic<T>
 where
-    T: Real + ToString,
+    T: ToString,
 {
     pub fn new(title: String, variable_names: Vec<impl AsRef<str>>) -> Self {
         Self {
@@ -209,10 +199,7 @@ where
     }
 }
 
-impl<const N: usize, T> RTPlotter<N, T>
-where
-    T: Real + ToString,
-{
+impl<const N: usize, T> RTPlotter<N, T> {
     pub fn new(title: String, variable_names: [impl AsRef<str>; N]) -> Self {
         Self {
             magmar: None,
@@ -237,13 +224,14 @@ where
 
 impl<const N: usize, T> Block for Plotter<N, T>
 where
-    T: Real + ToString,
+    T: Clone,
 {
     type Input = [T; N];
     type Output = [T; N];
 
     fn block(&mut self, input: Self::Input, sim_state: SimulationState) -> Self::Output {
-        self.data.push(input.map(|s| s.as_signal(sim_state)));
+        self.data
+            .push(input.clone().map(|s| s.as_signal(sim_state)));
         input
     }
 
@@ -258,7 +246,7 @@ where
 
 impl<T> Block for PlotterDynamic<T>
 where
-    T: Real + ToString,
+    T: Clone,
 {
     type Input = Vec<T>;
     type Output = Vec<T>;
@@ -285,7 +273,7 @@ where
 
 impl<const N: usize, T> Block for RTPlotter<N, T>
 where
-    T: Real + ToString,
+    T: ToString,
 {
     type Input = [T; N];
     type Output = [T; N];
@@ -333,10 +321,7 @@ where
     }
 }
 
-impl<const N: usize, T> Drop for Plotter<N, T>
-where
-    T: Real + ToString,
-{
+impl<const N: usize, T> Drop for Plotter<N, T> {
     fn drop(&mut self) {
         if let Some(magmar) = &mut self.magmar {
             magmar.kill().unwrap();
@@ -344,10 +329,7 @@ where
     }
 }
 
-impl<T> Drop for PlotterDynamic<T>
-where
-    T: Real + ToString,
-{
+impl<T> Drop for PlotterDynamic<T> {
     fn drop(&mut self) {
         if let Some(magmar) = &mut self.magmar {
             magmar.kill().unwrap();
@@ -355,10 +337,7 @@ where
     }
 }
 
-impl<const N: usize, T> Drop for RTPlotter<N, T>
-where
-    T: Real + ToString,
-{
+impl<const N: usize, T> Drop for RTPlotter<N, T> {
     fn drop(&mut self) {
         if let Some(magmar) = &mut self.magmar {
             magmar.kill().unwrap();
@@ -366,10 +345,7 @@ where
     }
 }
 
-impl<const N: usize, T> Joinable for Plotter<N, T>
-where
-    T: Real + ToString,
-{
+impl<const N: usize, T> Joinable for Plotter<N, T> {
     fn join(&mut self) {
         if let Some(magmar) = &mut self.magmar {
             magmar.wait().ok();
@@ -377,10 +353,7 @@ where
     }
 }
 
-impl<T> Joinable for PlotterDynamic<T>
-where
-    T: Real + ToString,
-{
+impl<T> Joinable for PlotterDynamic<T> {
     fn join(&mut self) {
         if let Some(magmar) = &mut self.magmar {
             magmar.wait().ok();
@@ -388,10 +361,7 @@ where
     }
 }
 
-impl<const N: usize, T> Joinable for RTPlotter<N, T>
-where
-    T: Real + ToString,
-{
+impl<const N: usize, T> Joinable for RTPlotter<N, T> {
     fn join(&mut self) {
         if let Some(magmar) = &mut self.magmar {
             magmar.wait().ok();
@@ -399,10 +369,7 @@ where
     }
 }
 
-impl<const N: usize, T> Savable for Plotter<N, T>
-where
-    T: Real + ToString,
-{
+impl<const N: usize, T> Savable for Plotter<N, T> {
     fn save(&mut self, path: &str) -> Result<String, String> {
         let Some(magmar) = self.magmar.as_mut() else {
             return Err("Plotter process is not running.".to_string());
@@ -412,10 +379,7 @@ where
     }
 }
 
-impl<T> Savable for PlotterDynamic<T>
-where
-    T: Real + ToString,
-{
+impl<T> Savable for PlotterDynamic<T> {
     fn save(&mut self, path: &str) -> Result<String, String> {
         let Some(magmar) = self.magmar.as_mut() else {
             return Err("Plotter process is not running.".to_string());
@@ -425,10 +389,7 @@ where
     }
 }
 
-impl<const N: usize, T> Savable for RTPlotter<N, T>
-where
-    T: Real + ToString,
-{
+impl<const N: usize, T> Savable for RTPlotter<N, T> {
     fn save(&mut self, path: &str) -> Result<String, String> {
         let Some(magmar) = self.magmar.as_mut() else {
             return Err("Plotter process is not running.".to_string());

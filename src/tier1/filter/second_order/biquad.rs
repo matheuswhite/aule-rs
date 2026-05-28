@@ -1,21 +1,19 @@
 use crate::{
     block::Block,
+    math::sample::Sample,
     prelude::{Filter, SimulationState},
 };
-use core::{
-    ops::{Add, Mul, Sub},
-    time::Duration,
-};
+use core::time::Duration;
 
 pub struct Biquad<T>
 where
-    T: Clone + Mul<f64, Output = T> + Add<Output = T> + Sub<Output = T>,
+    T: Sample,
 {
-    b0: f64,
-    b1: f64,
-    b2: f64,
-    a1: f64,
-    a2: f64,
+    b0: T::Alpha,
+    b1: T::Alpha,
+    b2: T::Alpha,
+    a1: T::Alpha,
+    a2: T::Alpha,
     prev_input: [Option<T>; 2],
     prev_output: [Option<T>; 2],
     dt: Duration,
@@ -23,9 +21,16 @@ where
 
 impl<T> Biquad<T>
 where
-    T: Clone + Mul<f64, Output = T> + Add<Output = T> + Sub<Output = T>,
+    T: Sample,
 {
-    pub fn new(b0: f64, b1: f64, b2: f64, a1: f64, a2: f64, dt: Duration) -> Self {
+    pub fn new(
+        b0: T::Alpha,
+        b1: T::Alpha,
+        b2: T::Alpha,
+        a1: T::Alpha,
+        a2: T::Alpha,
+        dt: Duration,
+    ) -> Self {
         Self {
             b0,
             b1,
@@ -38,14 +43,14 @@ where
         }
     }
 
-    pub fn coefficients(&self) -> (f64, f64, f64, f64, f64) {
+    pub fn coefficients(&self) -> (T::Alpha, T::Alpha, T::Alpha, T::Alpha, T::Alpha) {
         (self.b0, self.b1, self.b2, self.a1, self.a2)
     }
 }
 
 impl<T> Block for Biquad<T>
 where
-    T: Clone + Mul<f64, Output = T> + Add<Output = T> + Sub<Output = T>,
+    T: Sample,
 {
     type Input = T;
     type Output = T;
@@ -70,10 +75,11 @@ where
             .unwrap_or_else(|| input.clone() - input.clone());
 
         let input_clone = input.clone();
-        let filtered =
-            input * self.b0 + prev_in_value_1.clone() * self.b1 + prev_in_value_2.clone() * self.b2
-                - prev_out_value_1.clone() * self.a1
-                - prev_out_value_2.clone() * self.a2;
+        let filtered = input.scale(self.b0)
+            + prev_in_value_1.clone().scale(self.b1)
+            + prev_in_value_2.clone().scale(self.b2)
+            - prev_out_value_1.clone().scale(self.a1)
+            - prev_out_value_2.clone().scale(self.a2);
 
         self.prev_input[1] = self.prev_input[0].take();
         self.prev_input[0] = Some(input_clone);
@@ -95,7 +101,7 @@ where
 
 impl<T> Filter for Biquad<T>
 where
-    T: Clone + Mul<f64, Output = T> + Add<Output = T> + Sub<Output = T>,
+    T: Sample,
 {
     type SignalValue = T;
 
@@ -157,8 +163,8 @@ mod tests {
 
         let output = filter.block(1.0, sim_state);
 
-        assert!((output - 0.0).abs() < 1e-9);
-        assert!((filter.last_output().unwrap() - 0.0).abs() < 1e-9);
+        assert!((output - 0.0_f64).abs() < 1e-9);
+        assert!((filter.last_output().unwrap() - 0.0_f64).abs() < 1e-9);
     }
 
     /// Resposta ao degrau: Butterworth LP de ganho DC = 1 deve convergir para 1.0.

@@ -1,23 +1,26 @@
-use std::vec::Vec;
-
 use crate::{
     identification::first_order::{
         FirstOrderIdentification, FirstOrderModel, FirstOrderModelError,
     },
+    math::float_point::{AsFloatPoint, FloatPoint},
     prelude::LineEquation,
     signal::Signal,
 };
+use std::vec::Vec;
 
 pub struct Hagglund;
 
-impl FirstOrderIdentification for Hagglund {
+impl<T> FirstOrderIdentification<T> for Hagglund
+where
+    T: FloatPoint,
+{
     fn from_step_response(
         &self,
-        signals: Vec<Signal<f64>>,
-    ) -> Result<FirstOrderModel, FirstOrderModelError> {
+        signals: Vec<Signal<T>>,
+    ) -> Result<FirstOrderModel<T>, FirstOrderModelError<T>> {
         let line_eq = LineEquation::from_signals_with_maximum_slope(signals.clone().into_iter())
             .map_err(|err| match err {
-                crate::line_equation::LineEquationError::NotEnoughSignals => {
+                crate::math::line_equation::LineEquationError::NotEnoughSignals => {
                     FirstOrderModelError::NotEnoughSamples
                 }
             })?;
@@ -31,7 +34,7 @@ impl FirstOrderIdentification for Hagglund {
             .last()
             .ok_or(FirstOrderModelError::NotEnoughSamples)?
             .value;
-        let y632 = yf * 0.632 + y0;
+        let y632 = yf * 0.632.as_fp() + y0;
 
         let t1 = line_eq.time_at(y0);
         let t2 = line_eq.time_at(y632);

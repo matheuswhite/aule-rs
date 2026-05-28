@@ -1,21 +1,23 @@
-use std::vec::Vec;
-
 use crate::{
     identification::first_order::{
         FirstOrderIdentification, FirstOrderModel, FirstOrderModelError,
     },
-    line_equation::LineEquationError,
+    math::{float_point::FloatPoint, line_equation::LineEquationError},
     prelude::LineEquation,
     signal::Signal,
 };
+use std::vec::Vec;
 
 pub struct ZieglerNichols;
 
-impl FirstOrderIdentification for ZieglerNichols {
+impl<T> FirstOrderIdentification<T> for ZieglerNichols
+where
+    T: FloatPoint,
+{
     fn from_step_response(
         &self,
-        signals: Vec<Signal<f64>>,
-    ) -> Result<FirstOrderModel, FirstOrderModelError> {
+        signals: Vec<Signal<T>>,
+    ) -> Result<FirstOrderModel<T>, FirstOrderModelError<T>> {
         let line_eq = LineEquation::from_signals_with_maximum_slope(signals.clone().into_iter())
             .map_err(|err| match err {
                 LineEquationError::NotEnoughSignals => FirstOrderModelError::NotEnoughSamples,

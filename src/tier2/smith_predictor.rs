@@ -1,13 +1,12 @@
 use crate::block::Block;
+use crate::math::number::Number;
+use crate::math::sample::Sample;
 use crate::prelude::{Delay, SimulationState};
 use crate::signal::Signal;
-use core::ops::{Mul, Sub};
 use core::time::Duration;
-use num_traits::Zero;
 
 pub struct SmithPredictor<T, P>
 where
-    T: Zero + Copy + Mul<f64, Output = T> + Sub<Output = T>,
     P: Block<Input = T, Output = T>,
 {
     process: P,
@@ -17,7 +16,6 @@ where
 
 pub struct SmithPredictorFiltered<T, P, F>
 where
-    T: Zero + Copy + Mul<f64, Output = T> + Sub<Output = T>,
     P: Block<Input = T, Output = T>,
     F: Block<Input = T, Output = T>,
 {
@@ -27,17 +25,14 @@ where
     last_output: Option<T>,
 }
 
-pub struct SmithPredictorInput<T>
-where
-    T: Zero + Copy + Mul<f64, Output = T> + Sub<Output = T>,
-{
+pub struct SmithPredictorInput<T> {
     pub control_signal: T,
     pub measured_output: T,
 }
 
 impl<T, P> SmithPredictor<T, P>
 where
-    T: Zero + Copy + Mul<f64, Output = T> + Sub<Output = T>,
+    T: Sample,
     P: Block<Input = T, Output = T>,
 {
     pub fn new(process: P, delay: Duration) -> Self {
@@ -51,7 +46,7 @@ where
 
 impl<T, P, F> SmithPredictorFiltered<T, P, F>
 where
-    T: Zero + Copy + Mul<f64, Output = T> + Sub<Output = T>,
+    T: Sample,
     P: Block<Input = T, Output = T>,
     F: Block<Input = T, Output = T>,
 {
@@ -65,10 +60,7 @@ where
     }
 }
 
-impl<T> SmithPredictorInput<T>
-where
-    T: Zero + Copy + Mul<f64, Output = T> + Sub<Output = T>,
-{
+impl<T> SmithPredictorInput<T> {
     pub fn from_signals(control_signal: Signal<T>, measured_output: Signal<T>) -> Signal<Self> {
         Signal {
             value: Self {
@@ -82,7 +74,7 @@ where
 
 impl<T, P> Block for SmithPredictor<T, P>
 where
-    T: Zero + Copy + Mul<f64, Output = T> + Sub<Output = T>,
+    T: Number,
     P: Block<Input = T, Output = T>,
 {
     type Input = SmithPredictorInput<T>;
@@ -112,7 +104,7 @@ where
 
 impl<T, P, F> Block for SmithPredictorFiltered<T, P, F>
 where
-    T: Zero + Copy + Mul<f64, Output = T> + Sub<Output = T>,
+    T: Number,
     P: Block<Input = T, Output = T>,
     F: Block<Input = T, Output = T>,
 {

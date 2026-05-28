@@ -1,21 +1,15 @@
 use crate::block::Block;
+use crate::math::float_point::FloatPoint;
 use crate::prelude::SimulationState;
-use num_traits::Float;
 
 #[derive(Debug, Clone)]
-pub struct Saturation<T>
-where
-    T: Float,
-{
+pub struct Saturation<T> {
     min: T,
     max: T,
     last_output: Option<T>,
 }
 
-impl<T> Saturation<T>
-where
-    T: Float,
-{
+impl<T> Saturation<T> {
     pub fn new(min: T, max: T) -> Self {
         Self {
             min,
@@ -27,7 +21,7 @@ where
 
 impl<T> Block for Saturation<T>
 where
-    T: Float,
+    T: Clone + FloatPoint,
 {
     type Input = T;
     type Output = T;
@@ -39,7 +33,7 @@ where
     }
 
     fn last_output(&self) -> Option<Self::Output> {
-        self.last_output
+        self.last_output.clone()
     }
 
     fn reset(&mut self) {

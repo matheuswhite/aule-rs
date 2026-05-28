@@ -1,28 +1,34 @@
-use crate::{continuous::solver::StateEstimation, prelude::Solver};
-use core::{
-    ops::{Add, Mul},
-    time::Duration,
+use crate::{
+    continuous::solver::StateEstimation,
+    math::{float_point::FloatPoint, number::Number},
+    prelude::Solver,
 };
-use faer::{Mat, traits::ComplexField};
+use core::time::Duration;
+use nalgebra::DMatrix;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct RK4;
 
 impl<T> Solver<T> for RK4
 where
-    T: Copy + Add<Output = T> + Mul<f64, Output = T> + ComplexField,
+    T: Number + 'static,
 {
     fn integrate(
-        old_value: Mat<T>,
+        old_value: DMatrix<T>,
         dt: Duration,
         state_estimation: &impl StateEstimation<T>,
-    ) -> Mat<T> {
-        let dt_seconds = dt.as_secs_f64();
-        let k1 = state_estimation.estimate(old_value.clone());
-        let k2 = state_estimation.estimate(old_value.clone() + k1.clone() * (dt_seconds / 2.0));
-        let k3 = state_estimation.estimate(old_value.clone() + k2.clone() * (dt_seconds / 2.0));
-        let k4 = state_estimation.estimate(old_value.clone() + k3.clone() * dt_seconds);
+    ) -> DMatrix<T> {
+        let dt = <T::Alpha as FloatPoint>::from_duration(dt);
+        let scale = |m: DMatrix<T>, s: T::Alpha| m.map(|v| v.scale(s));
+        let two = <T::Alpha as FloatPoint>::from_usize(2);
+        let six = <T::Alpha as FloatPoint>::from_usize(6);
 
-        old_value + (k1 + k2 * 2.0 + k3 * 2.0 + k4) * (dt_seconds / 6.0)
+        let k1 = state_estimation.estimate(old_value.clone());
+        let k2 = state_estimation.estimate(old_value.clone() + scale(k1.clone(), dt / two));
+        let k3 = state_estimation.estimate(old_value.clone() + scale(k2.clone(), dt / two));
+        let k4 = state_estimation.estimate(old_value.clone() + scale(k3.clone(), dt));
+
+        let combo = k1 + scale(k2, two) + scale(k3, two) + k4;
+        old_value + scale(combo, dt / six)
     }
 }

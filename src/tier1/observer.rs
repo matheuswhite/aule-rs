@@ -1,37 +1,37 @@
 use crate::block::Block;
+use crate::math::number::Number;
+use crate::math::sample::Sample;
 use crate::prelude::{SimulationState, Solver, StateEstimation};
+use alloc::vec;
 use core::{
     fmt::{Debug, Display},
     marker::PhantomData,
 };
-use faer::traits::ComplexField;
-use faer::{Mat, mat};
-use num_traits::Zero;
+use nalgebra::{DMatrix, dmatrix};
 
 #[derive(Debug, Clone)]
 pub struct Observer<I, T>
 where
-    T: Zero + Copy + ComplexField,
-    I: Solver<T> + Debug,
+    I: Solver<T>,
 {
-    a: Mat<T>,
-    b: Mat<T>,
-    c: Mat<T>,
-    d: Mat<T>,
-    l: Mat<T>,
-    initial_state: Option<Mat<T>>,
+    a: DMatrix<T>,
+    b: DMatrix<T>,
+    c: DMatrix<T>,
+    d: DMatrix<T>,
+    l: DMatrix<T>,
+    initial_state: Option<DMatrix<T>>,
     current_input: ObserverInput<T>,
-    state: Mat<T>,
+    state: DMatrix<T>,
     last_output: Option<ObserverOutput<T>>,
     _marker: PhantomData<I>,
 }
 
 impl<I, T> Observer<I, T>
 where
-    T: Zero + Copy + ComplexField,
-    I: Solver<T> + Debug,
+    T: Number + 'static,
+    I: Solver<T>,
 {
-    pub fn new(a: Mat<T>, b: Mat<T>, c: Mat<T>, d: T, l: Mat<T>) -> Self {
+    pub fn new(a: DMatrix<T>, b: DMatrix<T>, c: DMatrix<T>, d: T, l: DMatrix<T>) -> Self {
         let n = a.shape().0;
 
         assert_eq!(a.shape().0, a.shape().1, "A must be a square matrix");
@@ -49,9 +49,9 @@ where
             a,
             b,
             c,
-            d: mat![[d]],
+            d: dmatrix![d],
             l,
-            state: Mat::zeros(n, 1),
+            state: DMatrix::zeros(n, 1),
             initial_state: None,
             last_output: None,
             current_input: ObserverInput::default(),
@@ -59,7 +59,7 @@ where
         }
     }
 
-    pub fn with_initial_state(mut self, initial_state: Mat<T>) -> Self {
+    pub fn with_initial_state(mut self, initial_state: DMatrix<T>) -> Self {
         let n = self.a.shape().0;
         assert_eq!(
             initial_state.shape().0,
@@ -85,13 +85,13 @@ where
 
 impl<I, T> StateEstimation<T> for Observer<I, T>
 where
-    T: Zero + Copy + ComplexField,
-    I: Solver<T> + Debug,
+    T: Number + 'static,
+    I: Solver<T>,
 {
-    fn estimate(&self, state: Mat<T>) -> Mat<T> {
-        let input_matrix = mat![[self.current_input.control_input]];
+    fn estimate(&self, state: DMatrix<T>) -> DMatrix<T> {
+        let input_matrix = dmatrix![self.current_input.control_input];
         let y_hat = &self.c * &state + &self.d + &input_matrix;
-        let y = mat![[self.current_input.measured_output]];
+        let y = dmatrix![self.current_input.measured_output];
         let y_err = y - y_hat;
 
         &self.a * &state + &self.b * &input_matrix + &self.l * &y_err
@@ -100,7 +100,7 @@ where
 
 impl<I, T> Block for Observer<I, T>
 where
-    T: Zero + Copy + ComplexField,
+    T: Number + 'static,
     I: Solver<T> + Debug,
 {
     type Input = ObserverInput<T>;
@@ -112,7 +112,7 @@ where
         self.current_input = input.clone();
         self.state = I::integrate(self.state.clone(), dt, self);
 
-        let u = mat![[input.control_input]];
+        let u = dmatrix![input.control_input];
         let y = &self.c * &self.state + &self.d * &u;
 
         let output = ObserverOutput::new(y[(0, 0)], self.state.clone());
@@ -138,7 +138,7 @@ where
 
 impl<I, T> Display for Observer<I, T>
 where
-    T: Zero + Copy + Display + ComplexField,
+    T: Number + 'static,
     I: Solver<T> + Debug,
 {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
@@ -151,17 +151,14 @@ where
 }
 
 #[derive(Debug, Clone)]
-pub struct ObserverInput<T>
-where
-    T: Zero + Copy + ComplexField,
-{
+pub struct ObserverInput<T> {
     pub control_input: T,
     pub measured_output: T,
 }
 
 impl<T> Default for ObserverInput<T>
 where
-    T: Zero + Copy + ComplexField,
+    T: Sample,
 {
     fn default() -> Self {
         ObserverInput {
@@ -172,19 +169,13 @@ where
 }
 
 #[derive(Debug, Clone)]
-pub struct ObserverOutput<T>
-where
-    T: Zero + Copy + ComplexField,
-{
+pub struct ObserverOutput<T> {
     pub measured_output: T,
-    pub state_estimate: Mat<T>,
+    pub state_estimate: DMatrix<T>,
 }
 
-impl<T> ObserverOutput<T>
-where
-    T: Zero + Copy + ComplexField,
-{
-    pub fn new(measured_output: T, state_estimate: Mat<T>) -> Self {
+impl<T> ObserverOutput<T> {
+    pub fn new(measured_output: T, state_estimate: DMatrix<T>) -> Self {
         ObserverOutput {
             measured_output,
             state_estimate,

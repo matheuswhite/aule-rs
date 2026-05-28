@@ -12,13 +12,20 @@ num-traits = { version = "0.2.19", default-features = false, features = [
 
 [features]
 default = ["std", "swd"]
-alloc = ["faer"]
+alloc = ["nalgebra", "num-complex"]
 std = ["alloc", "probe-rs", "csv"]
 swd = []
 
-[dependencies.faer]
-version = "0.24.0"
+[dependencies.nalgebra]
+version = "0.34"
 default-features = false
+features = ["libm", "alloc", "macros"]
+optional = true
+
+[dependencies.num-complex]
+version = "0.4"
+default-features = false
+features = ["libm"]
 optional = true
 
 [dependencies.csv]

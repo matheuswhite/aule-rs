@@ -1,26 +1,23 @@
-use crate::{block::Block, prelude::SimulationState};
+use crate::{block::Block, math::number::Number, prelude::SimulationState};
+use alloc::vec;
 use core::fmt::Display;
-use faer::{Mat, mat, traits::ComplexField};
-use num_traits::Zero;
+use nalgebra::{DMatrix, dmatrix};
 
-pub struct DSS<T>
-where
-    T: Copy + Zero + ComplexField,
-{
-    a: Mat<T>,
-    b: Mat<T>,
-    c: Mat<T>,
-    d: Mat<T>,
-    initial_state: Option<Mat<T>>,
-    state: Mat<T>,
+pub struct DSS<T> {
+    a: DMatrix<T>,
+    b: DMatrix<T>,
+    c: DMatrix<T>,
+    d: DMatrix<T>,
+    initial_state: Option<DMatrix<T>>,
+    state: DMatrix<T>,
     last_output: Option<T>,
 }
 
 impl<T> DSS<T>
 where
-    T: Copy + Zero + ComplexField,
+    T: Number + 'static,
 {
-    pub fn new(a: Mat<T>, b: Mat<T>, c: Mat<T>, d: T) -> Self {
+    pub fn new(a: DMatrix<T>, b: DMatrix<T>, c: DMatrix<T>, d: T) -> Self {
         let n = a.shape().0;
         assert_eq!(a.shape().0, a.shape().1, "A must be a square matrix");
 
@@ -34,14 +31,14 @@ where
             a,
             b,
             c,
-            d: mat![[d]],
-            state: Mat::zeros(n, 1),
+            d: dmatrix![d],
+            state: DMatrix::zeros(n, 1),
             initial_state: None,
             last_output: None,
         }
     }
 
-    pub fn with_initial_state(mut self, initial_state: Mat<T>) -> Self {
+    pub fn with_initial_state(mut self, initial_state: DMatrix<T>) -> Self {
         let n = self.a.shape().0;
         assert_eq!(
             initial_state.shape().0,
@@ -63,13 +60,13 @@ where
 
 impl<T> Block for DSS<T>
 where
-    T: Copy + Zero + ComplexField,
+    T: Number + 'static,
 {
     type Input = T;
     type Output = T;
 
     fn block(&mut self, input: Self::Input, _sim_state: SimulationState) -> Self::Output {
-        let input_matrix = mat![[input]];
+        let input_matrix = dmatrix![input];
         self.state = &self.a * &self.state + &self.b * &input_matrix;
 
         let output = &self.c * &self.state + &self.d * &input_matrix;
@@ -94,7 +91,7 @@ where
 
 impl<T> Display for DSS<T>
 where
-    T: Copy + Zero + Display + ComplexField,
+    T: Number,
 {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         write!(

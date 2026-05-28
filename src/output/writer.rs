@@ -4,7 +4,6 @@ use alloc::format;
 use alloc::string::String;
 use alloc::string::ToString;
 use alloc::vec::Vec;
-use core::fmt::Display;
 use core::marker::PhantomData;
 use std::fs;
 use std::path::Path;
@@ -14,19 +13,13 @@ use std::{
 };
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct Writter<const N: usize, T>
-where
-    T: Display,
-{
+pub struct Writter<const N: usize, T> {
     filename: String,
     variable_names: [String; N],
     _marker: PhantomData<T>,
 }
 
-impl<const N: usize, T> Writter<N, T>
-where
-    T: Display,
-{
+impl<const N: usize, T> Writter<N, T> {
     pub fn new(filename: &str, variable_names: [&str; N]) -> Self {
         let writer = Self {
             filename: filename.to_string(),
@@ -62,7 +55,7 @@ where
 
 impl<const N: usize, T> Block for Writter<N, T>
 where
-    T: Display,
+    T: ToString,
 {
     type Input = [T; N];
     type Output = [T; N];
