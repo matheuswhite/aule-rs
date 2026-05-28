@@ -4,6 +4,7 @@ use core::{
     iter::Sum,
     ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign},
 };
+#[cfg(feature = "alloc")]
 use nalgebra::Complex;
 use num_traits::{One, Zero};
 
@@ -85,6 +86,7 @@ impl Number for f64 {
     }
 }
 
+#[cfg(feature = "alloc")]
 impl Number for Complex<f32> {
     type Alpha = f32;
 
@@ -120,6 +122,7 @@ impl Number for Complex<f32> {
     }
 }
 
+#[cfg(feature = "alloc")]
 impl Number for Complex<f64> {
     type Alpha = f64;
 

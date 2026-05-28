@@ -4,6 +4,7 @@ use core::{
     iter::Sum,
     ops::{Add, Neg, Sub},
 };
+#[cfg(feature = "alloc")]
 use nalgebra::SMatrix;
 
 pub trait Sample:
@@ -63,6 +64,7 @@ where
     }
 }
 
+#[cfg(feature = "alloc")]
 impl<T, const R: usize, const C: usize> Sample for SMatrix<T, R, C>
 where
     T: Number + 'static,

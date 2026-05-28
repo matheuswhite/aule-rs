@@ -1,6 +1,5 @@
 use crate::math::number::Number;
-use core::{ops::Rem, time::Duration};
-use std::{f32, f64};
+use core::{f32, f64, ops::Rem, time::Duration};
 
 trait Sealed {}
 
@@ -54,7 +53,7 @@ impl FloatPoint for f32 {
         }
         #[cfg(not(feature = "std"))]
         {
-            libm::asinh(self)
+            libm::asinhf(self)
         }
     }
 
@@ -65,7 +64,7 @@ impl FloatPoint for f32 {
         }
         #[cfg(not(feature = "std"))]
         {
-            libm::sinh(self)
+            libm::sinhf(self)
         }
     }
 
@@ -76,7 +75,7 @@ impl FloatPoint for f32 {
         }
         #[cfg(not(feature = "std"))]
         {
-            libm::cosh(self)
+            libm::coshf(self)
         }
     }
 
@@ -87,7 +86,7 @@ impl FloatPoint for f32 {
         }
         #[cfg(not(feature = "std"))]
         {
-            libm::pow(self, exp)
+            libm::powf(self, exp)
         }
     }
     fn square_root(self) -> Self {
@@ -97,7 +96,7 @@ impl FloatPoint for f32 {
         }
         #[cfg(not(feature = "std"))]
         {
-            libm::sqrt(self)
+            libm::sqrtf(self)
         }
     }
 
@@ -110,7 +109,14 @@ impl FloatPoint for f32 {
     }
 
     fn exp(self) -> Self {
-        f32::exp(self)
+        #[cfg(feature = "std")]
+        {
+            f32::exp(self)
+        }
+        #[cfg(not(feature = "std"))]
+        {
+            libm::expf(self)
+        }
     }
 
     fn from_usize(value: usize) -> Self {
@@ -152,7 +158,7 @@ impl FloatPoint for f32 {
         }
         #[cfg(not(feature = "std"))]
         {
-            libm::tan(self)
+            libm::tanf(self)
         }
     }
 }
@@ -232,7 +238,14 @@ impl FloatPoint for f64 {
     }
 
     fn exp(self) -> Self {
-        f64::exp(self)
+        #[cfg(feature = "std")]
+        {
+            f64::exp(self)
+        }
+        #[cfg(not(feature = "std"))]
+        {
+            libm::exp(self)
+        }
     }
 
     fn from_usize(value: usize) -> Self {
