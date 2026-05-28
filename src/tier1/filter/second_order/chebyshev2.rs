@@ -31,7 +31,7 @@ where
         let ten: T::Alpha = 10.0.as_fp();
         let half: T::Alpha = 0.5.as_fp();
 
-        let epsilon = (ten.power_f(ripple_db / 10.0.as_fp()) - 1.0.as_fp()).square_root();
+        let epsilon = (ten.power(ripple_db / 10.0.as_fp()) - 1.0.as_fp()).square_root();
         let gamma: T::Alpha = half * (T::Alpha::one() / epsilon).arc_sin_h();
 
         let (sinh_g, cosh_g) = (gamma.sin_h(), gamma.cos_h());

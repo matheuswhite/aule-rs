@@ -6,6 +6,8 @@ trait Sealed {}
 
 #[allow(private_bounds)]
 pub trait FloatPoint: Number + Rem<Output = Self> + PartialOrd + Sealed {
+    fn is_sign_negative(self) -> bool;
+    fn infinity() -> Self;
     fn square_root(self) -> Self;
     fn arc_sin_h(self) -> Self;
     fn sin_h(self) -> Self;
@@ -23,7 +25,6 @@ pub trait FloatPoint: Number + Rem<Output = Self> + PartialOrd + Sealed {
     fn sqrt_2() -> Self;
     fn exp(self) -> Self;
     fn tangent(self) -> Self;
-    fn power_f(self, exp: Self) -> Self;
     fn clamp(self, min: Self, max: Self) -> Self {
         if self < min {
             min
@@ -38,15 +39,12 @@ pub trait FloatPoint: Number + Rem<Output = Self> + PartialOrd + Sealed {
 impl Sealed for f32 {}
 
 impl FloatPoint for f32 {
-    fn power_f(self, exp: Self) -> Self {
-        #[cfg(feature = "std")]
-        {
-            self.powf(exp)
-        }
-        #[cfg(not(feature = "std"))]
-        {
-            libm::pow(self, exp)
-        }
+    fn is_sign_negative(self) -> bool {
+        self.is_sign_negative()
+    }
+
+    fn infinity() -> Self {
+        f32::INFINITY
     }
 
     fn arc_sin_h(self) -> Self {
@@ -162,15 +160,12 @@ impl FloatPoint for f32 {
 impl Sealed for f64 {}
 
 impl FloatPoint for f64 {
-    fn power_f(self, exp: Self) -> Self {
-        #[cfg(feature = "std")]
-        {
-            self.powf(exp)
-        }
-        #[cfg(not(feature = "std"))]
-        {
-            libm::pow(self, exp)
-        }
+    fn is_sign_negative(self) -> bool {
+        self.is_sign_negative()
+    }
+
+    fn infinity() -> Self {
+        f64::INFINITY
     }
 
     fn arc_sin_h(self) -> Self {
