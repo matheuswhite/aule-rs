@@ -31,10 +31,14 @@ fn test_rt_dc_motor() -> RTPlotter<2, f64> {
     let mut plotter = RTPlotter::new("Real Time DC Motor".to_string(), ["input", "output"])
         .with_light_theme()
         .with_legend_position(LegendPosition::Right);
+    let mut plotter_control = Plotter::new("Control Signals".to_string(), ["control_signal"]);
 
     for sim_state in simulation {
         let signal = sim_state * input.as_block();
-        let output = (signal - plant.last_output()) * pid.as_block() * plant.as_block();
+        let output = (signal - plant.last_output())
+            * pid.as_block()
+            * plotter_control.as_block()
+            * plant.as_block();
         let output = output * writer.as_block();
 
         let _ = [signal, output].pack() * plotter.as_block();
@@ -46,6 +50,9 @@ fn test_rt_dc_motor() -> RTPlotter<2, f64> {
         .save("output/rt_dc_motor.png")
         .expect("Failed to save plot");
     print!("{}", res);
+
+    plotter_control.display();
+    plotter_control.join();
 
     plotter
 }
