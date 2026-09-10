@@ -5,6 +5,10 @@ edition = "2024"
 
 
 [dependencies]
+bbqueue = { version = "0.7.0", default-features = false, features = [
+    "critical-section",
+] }
+critical-section = "1.2.0"
 libm = { version = "0.2" }
 num-traits = { version = "0.2.19", default-features = false, features = [
     "libm",
@@ -14,7 +18,7 @@ num-traits = { version = "0.2.19", default-features = false, features = [
 default = ["std", "swd"]
 alloc = ["nalgebra", "num-complex"]
 std = ["alloc", "probe-rs", "csv"]
-swd = []
+swd = ["alloc"]
 
 [dependencies.nalgebra]
 version = "0.34"
