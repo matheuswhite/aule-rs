@@ -7,6 +7,7 @@ pub mod std {
     use crate::prelude::SimulationState;
     use crate::tier1::bridge::swd::BridgeId;
     use core::marker::PhantomData;
+    use core::unreachable;
     use num_traits::{FromBytes, ToBytes};
     use probe_rs::probe::WireProtocol;
     use probe_rs::{Core, MemoryInterface, Session, SessionConfig};
@@ -463,18 +464,57 @@ pub mod no_std {
             let data_ptr: *mut T = &mut self.data;
 
             loop {
-                // TODO: Write down why this is safe
+                // SAFETY: `ready_ptr` derives from `&mut self.ready`, so it is non-null, aligned and
+                // valid for reads of a `bool` for as long as `self` is borrowed.
+                //
+                // The read must be volatile because this field is mutated by an agent the compiler
+                // cannot see: the host writes it straight into target RAM over the SWD debug port
+                // while this code runs. A plain read would let the optimizer treat the load as
+                // loop-invariant and hoist it out of the spin loop, so the handshake would never be
+                // observed. Volatile also forbids merging or eliding the successive loads.
+                //
+                // Protocol invariant the host must uphold: it writes `data` first and only then sets
+                // `ready = true`, and it does not touch `data` again until it has observed
+                // `ready == false`. Volatile is not atomicity and establishes no happens-before edge
+                // — this ordering is a contract with the host, not a property the Rust abstract
+                // machine enforces.
                 let ready = unsafe { ptr::read_volatile(ready_ptr) };
                 if ready {
                     break;
                 }
             }
+            // SAFETY: `data_ptr` derives from `&mut self.data`, so it is non-null, aligned and
+            // valid for reads of a `T`. `ready` was observed set and then cleared above, so by
+            // the host-side protocol documented on the flag read the buffer holds one complete
+            // value and the host will not write it again until it sees the cleared flag. The read
+            // is volatile for the same reason as the flag read: the store originated outside the
+            // compiler's view.
+            let value  = unsafe { ptr::read_volatile(data_ptr) };
+
+            // SAFETY: `ready_ptr` derives from `&mut self.ready`, so it is non-null, aligned and
+            // valid for writes of a `bool` for as long as `self` is borrowed. `bool` has no
+            // invalid bit pattern for the value written here, so the store cannot leave the field
+            // in an invalid state even if the host observes it mid-flight.
+            //
+            // Write must be volatile because it is the observable half of the handshake, and
+            // its only observer is invisible to the compiler: the host reads this byte out of
+            // target RAM over the SWD debug port. Nothing in this function reads `self.ready`
+            // after the store, so a plain write would be a dead store and the optimizer would be
+            // entitled to remove it outright, stalling the host forever. Volatile forbids that,
+            // and forbids reordering the store across the volatile accesses around it.
+            //
+            // Protocol role: clearing the flag is this side's acknowledgement — it means "the
+            // payload has been copied out, you may refill". It is therefore issued only after
+            // `read_volatile(data_ptr)` has completed. Clearing it before reading the payload
+            // would license the host to overwrite `data` while this side is still reading it,
+            // yielding a torn aggregate. As with the flag read, volatile provides no atomicity
+            // and no happens-before edge: the mutual exclusion of `data` rests entirely on the
+            // host honoring this ordering, which is why the acknowledgement must come last.
             unsafe {
                 ptr::write_volatile(ready_ptr, false);
             }
 
-            // TODO: Write down why this is safe
-            unsafe { ptr::read_volatile(data_ptr) }
+            value
         }
     }
 

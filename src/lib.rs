@@ -5,22 +5,34 @@ extern crate alloc;
 #[cfg(feature = "std")]
 extern crate std;
 
+#[forbid(unsafe_code)]
 mod block;
+#[forbid(unsafe_code)]
 #[cfg(feature = "alloc")]
 pub mod continuous;
+#[forbid(unsafe_code)]
 #[cfg(feature = "alloc")]
 mod discrete;
+#[forbid(unsafe_code)]
 #[cfg(feature = "std")]
 mod identification;
+#[forbid(unsafe_code)]
 mod input;
+#[forbid(unsafe_code)]
 pub mod math;
+#[forbid(unsafe_code)]
 mod metrics;
+#[forbid(unsafe_code)]
 #[cfg(feature = "std")]
 mod output;
+#[forbid(unsafe_code)]
 mod signal;
+#[forbid(unsafe_code)]
 mod simulation;
 mod tier1;
+#[forbid(unsafe_code)]
 pub mod tier2;
+#[forbid(unsafe_code)]
 pub mod tier3;
 
 #[cfg(feature = "alloc")]
@@ -102,6 +114,14 @@ pub mod prelude {
     pub use crate::tier1::observer::Observer;
     pub use crate::tier1::pid::PID;
     pub use crate::tier1::saturation::Saturation;
+    #[cfg(target_has_atomic = "8")]
+    pub use crate::tier1::sync::billboard::{Billboard, Poster, Viewer};
+    pub use crate::tier1::sync::conveyor::{
+        BlockingFeeder, BlockingPicker, Conveyor, Feeder, Picker,
+    };
+    pub use crate::tier1::sync::jackpot::{Claimer, Jackpot, Staker};
+    pub use crate::tier1::sync::mirror::{Mirror, MirrorInput, MirrorOutput};
+    pub use crate::tier1::sync::sync_policy::{AtomicPolicy, CriticalSectionPolicy};
 }
 
 #[cfg(all(test, feature = "std"))]
