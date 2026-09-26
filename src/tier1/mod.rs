@@ -4,6 +4,7 @@ pub mod bridge;
 pub mod delay;
 #[forbid(unsafe_code)]
 pub mod filter;
+mod kalman;
 #[forbid(unsafe_code)]
 #[cfg(feature = "alloc")]
 pub mod observer;
